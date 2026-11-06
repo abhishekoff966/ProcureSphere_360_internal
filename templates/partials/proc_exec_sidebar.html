@@ -68,11 +68,32 @@
         color: #fff;
     }
     .vendor-navlink.active-nav-item,
-    .proc-navlink.active-nav-item {
-        background: #0d6efd !important;
-        color: #fff !important;
-        font-weight: 700;
-        box-shadow: 0 2px 8px rgba(13,110,253,0.35);
+    .proc-navlink.active-nav-item,
+    .vendor-navlink.active,
+    .proc-navlink.active {
+        background: linear-gradient(135deg, #1677FF 0%, #0866E8 100%) !important;
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        font-weight: 600 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 10px rgba(22, 119, 255, 0.22) !important;
+        text-decoration: none !important;
+    }
+    .vendor-navlink.active-nav-item span,
+    .proc-navlink.active-nav-item span,
+    .vendor-navlink.active span,
+    .proc-navlink.active span {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+    }
+    .vendor-navlink.active-nav-item i,
+    .proc-navlink.active-nav-item i,
+    .vendor-navlink.active i,
+    .proc-navlink.active i,
+    .vendor-navlink.active-nav-item i[class*="text-"],
+    .proc-navlink.active-nav-item i[class*="text-"] {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
     .vendor-navlink .nav-icon,
     .proc-navlink .nav-icon {
@@ -83,7 +104,7 @@
     }
 </style>
 
-<aside class="offcanvas-lg offcanvas-start bg-dark text-white border-end border-secondary border-opacity-25 shadow-sm proc-exec-sidebar-desktop" tabindex="-1" id="procExecSidebar" aria-labelledby="procExecSidebarLabel" style="width: 260px; min-width: 260px; background-color: #212529 !important;">
+<aside class="offcanvas-lg offcanvas-start border-end shadow-sm enterprise-sidebar text-white border-end border-secondary border-opacity-25 shadow-sm proc-exec-sidebar-desktop" tabindex="-1" id="procExecSidebar" aria-labelledby="procExecSidebarLabel" style="width: 260px; min-width: 260px; background-color: #212529 !important;">
     <!-- Mobile Drawer Header (Hidden on Desktop) -->
     <div class="sidebar-brand-box px-3 py-3 border-bottom border-secondary border-opacity-25 flex-shrink-0 d-flex d-lg-none align-items-center justify-content-between">
         <a href="/procurement/" class="d-flex align-items-center text-white text-decoration-none" id="procExecSidebarLabel">

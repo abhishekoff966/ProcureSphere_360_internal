@@ -5,15 +5,13 @@
 
 {% block navbar %}
 <!-- Top Navigation Bar for Compliance Auditor (Vendor Dashboard Standard) -->
-<nav class="navbar navbar-dark bg-dark shadow-sm py-2 border-bottom border-secondary border-opacity-25 sticky-top">
+<nav class="navbar shadow-sm py-2 sticky-top enterprise-topbar">
     <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
         <div class="d-flex align-items-center flex-nowrap auditor-brand-wrapper">
-            <button class="navbar-toggler border-0 me-2 d-lg-none p-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#auditorSidebar" aria-controls="auditorSidebar" aria-label="Toggle navigation">
-                <i class="fa-solid fa-bars text-white fs-4"></i>
-            </button>
             <a href="/audit/dashboard/" class="dashboard-brand-badge auditor-top-brand" aria-label="ProcureSphere 360 Home">
                 <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
             </a>
+            {% include 'partials/sidebar_toggle_button.html' with sidebar_id='auditorSidebar' %}
         </div>
 
         <div class="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
@@ -67,12 +65,12 @@
 <!-- Mobile & Tablet Sidebar Backdrop Overlay -->
 <div id="auditorSidebarBackdrop" class="auditor-backdrop d-lg-none" onclick="toggleAuditorSidebar()"></div>
 
-<div class="d-flex align-items-start w-100" style="min-height: calc(100vh - 79px); max-width: 100vw;">
+<div class="d-flex align-items-start w-100" style="min-height: calc(100vh - 84px); max-width: 100vw;">
 
     <!-- ========================================================================= -->
     <!-- 1. STICKY DARK SIDEBAR (Vendor Dashboard Standard: 260px, sticky top: 79px) -->
     <!-- ========================================================================= -->
-    <aside id="auditorSidebar" class="offcanvas-lg offcanvas-start bg-dark border-end border-secondary border-opacity-25 shadow-sm text-white auditor-sidebar" tabindex="-1" aria-labelledby="auditorSidebarLabel" style="width: 260px; min-width: 260px; height: calc(100vh - 79px); position: sticky; top: 79px; z-index: 1000; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent;">
+    <aside id="auditorSidebar" class="offcanvas-lg offcanvas-start border-end shadow-sm enterprise-sidebar border-end border-secondary border-opacity-25 shadow-sm text-white auditor-sidebar" tabindex="-1" aria-labelledby="auditorSidebarLabel" style="width: 260px; min-width: 260px; height: calc(100vh - 79px); position: sticky; top: 79px; z-index: 1000; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent;">
         
         <!-- Mobile Drawer Header (Hidden on Desktop) -->
         <div class="sidebar-brand-box px-3 py-3 border-bottom border-secondary border-opacity-25 flex-shrink-0 d-flex d-lg-none align-items-center justify-content-between">
@@ -152,7 +150,7 @@
     <!-- ========================================================================= -->
     <!-- 2. MAIN CONTENT WRAPPER                                                   -->
     <!-- ========================================================================= -->
-    <main class="auditor-main-content flex-grow-1 p-3 p-md-4" style="min-width: 0; background-color: #f8fafc; min-height: calc(100vh - 79px); max-width: 100vw; overflow-x: hidden;">
+    <main class="auditor-main-content flex-grow-1 p-3 p-md-4" style="min-width: 0; background-color: #f8fafc; min-height: calc(100vh - 84px); max-width: 100vw; overflow-x: hidden;">
         
         {% block auditor_breadcrumbs %}{% endblock auditor_breadcrumbs %}
 
@@ -254,7 +252,7 @@
         min-width: 240px !important;
         max-width: 320px !important;
         padding: 14px 18px 12px 18px !important;
-        margin-top: 8px !important;
+        margin-top: 84px !important;
     }
     .vendor-dropdown-header {
         padding: 0 !important;
@@ -307,7 +305,7 @@
         --slate-200: #E2E8F0;
     }
 
-    .bg-hpe-navy { background-color: #212529 !important; }
+    
     .bg-slate-50 { background-color: var(--slate-50) !important; }
     .bg-slate-100 { background-color: var(--slate-100) !important; }
     .text-cyan { color: #00B0B9 !important; }
@@ -348,8 +346,8 @@
     /* Brand sizing */
     @media (min-width: 992px) {
         .auditor-brand-wrapper {
-            width: 244px;
-            max-width: 244px;
+            min-width: 260px;
+            max-min-width: 260px;
             flex-shrink: 0;
         }
         .auditor-top-brand {
@@ -386,10 +384,10 @@
         .auditor-sidebar {
             width: 260px !important;
             min-width: 260px !important;
-            height: calc(100vh - 79px) !important;
+            height: calc(100vh - 84px) !important;
             position: -webkit-sticky !important;
             position: sticky !important;
-            top: 79px !important;
+            top: 84px !important;
             z-index: 1000;
             background-color: #212529 !important;
             border-right: 1px solid rgba(255, 255, 255, 0.15) !important;
@@ -414,10 +412,30 @@
     .unified-navlink.active-nav-item,
     .vendor-navlink.active,
     .unified-navlink.active {
-        background: #0d6efd !important;
-        color: #fff !important;
-        font-weight: 700;
-        box-shadow: 0 2px 8px rgba(13,110,253,0.35);
+        background: linear-gradient(135deg, #1677FF 0%, #0866E8 100%) !important;
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        font-weight: 600 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 10px rgba(22, 119, 255, 0.22) !important;
+        text-decoration: none !important;
+    }
+    .vendor-navlink.active-nav-item span,
+    .unified-navlink.active-nav-item span,
+    .vendor-navlink.active span,
+    .unified-navlink.active span {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+    }
+    .vendor-navlink.active-nav-item i,
+    .unified-navlink.active-nav-item i,
+    .vendor-navlink.active i,
+    .unified-navlink.active i,
+    .vendor-navlink.active-nav-item i[class*="text-"],
+    .unified-navlink.active-nav-item i[class*="text-"],
+    .unified-navlink.active-nav-item i[style] {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
 
     /* Mobile & Tablet Responsive Sidebar Drawer (< 992px) */

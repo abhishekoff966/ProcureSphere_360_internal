@@ -5,15 +5,13 @@
 
 {% block navbar %}
 <!-- Top Navigation for Finance (Vendor Design Standard) -->
-<nav class="navbar navbar-dark bg-dark shadow-sm py-2 sticky-top border-bottom border-secondary border-opacity-25">
+<nav class="navbar shadow-sm py-2 sticky-top enterprise-topbar">
     <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
         <div class="d-flex align-items-center flex-nowrap finance-brand-wrapper">
-            <button class="navbar-toggler border-0 me-2 d-lg-none p-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#financeSidebar" aria-controls="financeSidebar" aria-label="Toggle navigation">
-                <i class="fa-solid fa-bars text-white fs-4"></i>
-            </button>
             <a href="/finance/" class="dashboard-brand-badge finance-top-brand" aria-label="ProcureSphere 360 Home">
                 <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
             </a>
+            {% include 'partials/sidebar_toggle_button.html' with sidebar_id='financeSidebar' %}
         </div>
 
         <div class="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
@@ -65,8 +63,8 @@
     /* Brand sizing to match vendor */
     @media (min-width: 992px) {
         .finance-brand-wrapper {
-            width: 244px;
-            max-width: 244px;
+            min-width: 260px;
+            max-min-width: 260px;
             flex-shrink: 0;
         }
         .finance-top-brand {
@@ -114,9 +112,9 @@
             min-width: 260px !important;
             flex-shrink: 0 !important;
             position: sticky !important;
-            top: 79px !important;
-            height: calc(100vh - 79px) !important;
-            max-height: calc(100vh - 79px) !important;
+            top: 84px !important;
+            height: calc(100vh - 84px) !important;
+            max-height: calc(100vh - 84px) !important;
             overflow: hidden !important;
             overflow-y: hidden !important;
             display: flex !important;
@@ -169,11 +167,27 @@
         background: rgba(255,255,255,0.08);
         color: #fff;
     }
-    .finance-navlink.active-nav-item {
-        background: #0d6efd;
-        color: #fff;
-        font-weight: 700;
-        box-shadow: 0 2px 8px rgba(13,110,253,0.35);
+    .finance-navlink.active-nav-item,
+    .finance-navlink.active {
+        background: linear-gradient(135deg, #1677FF 0%, #0866E8 100%) !important;
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        font-weight: 600 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 10px rgba(22, 119, 255, 0.22) !important;
+        text-decoration: none !important;
+    }
+    .finance-navlink.active-nav-item span,
+    .finance-navlink.active span {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+    }
+    .finance-navlink.active-nav-item i,
+    .finance-navlink.active i,
+    .finance-navlink.active-nav-item i[class*="text-"],
+    .finance-navlink.active-nav-item i[style] {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
     .finance-navlink .nav-icon {
         width: 20px;
@@ -183,9 +197,9 @@
     }
 </style>
 
-<div class="d-flex align-items-start w-100" style="min-height: calc(100vh - 79px); max-width: 100vw;">
+<div class="d-flex align-items-start w-100" style="min-height: calc(100vh - 84px); max-width: 100vw;">
     <!-- Sidebar Navigation -->
-    <aside class="offcanvas-lg offcanvas-start bg-dark border-end border-secondary border-opacity-25 shadow-sm text-white finance-sidebar-desktop" tabindex="-1" id="financeSidebar" aria-labelledby="financeSidebarLabel">
+    <aside class="offcanvas-lg offcanvas-start border-end shadow-sm enterprise-sidebar border-end border-secondary border-opacity-25 shadow-sm text-white finance-sidebar-desktop" tabindex="-1" id="financeSidebar" aria-labelledby="financeSidebarLabel">
 
         <!-- Mobile Drawer Header (Hidden on Desktop) -->
         <div class="sidebar-brand-box px-3 py-3 border-bottom border-secondary border-opacity-25 flex-shrink-0 d-flex d-lg-none align-items-center justify-content-between">

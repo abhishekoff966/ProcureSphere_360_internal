@@ -5,16 +5,14 @@
 
 {% block navbar %}
 <!-- Top Navigation Bar for Procurement Manager (Matching Vendor Dashboard Design System) -->
-<nav class="navbar navbar-dark bg-dark shadow-sm py-2 border-bottom border-secondary border-opacity-25 sticky-top proc-mgr-topbar" style="background-color: #212529 !important;">
+<nav class="navbar shadow-sm py-2 sticky-top enterprise-topbar">
     <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
         <!-- Brand & Mobile Drawer Toggle -->
         <div class="d-flex align-items-center flex-nowrap manager-brand-wrapper">
-            <button class="navbar-toggler border-0 me-2 d-lg-none p-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#managerSidebar" aria-controls="managerSidebar" aria-label="Toggle navigation">
-                <i class="fa-solid fa-bars text-white fs-4"></i>
-            </button>
             <a href="/manager/" class="dashboard-brand-badge manager-top-brand" aria-label="ProcureSphere 360 Home">
                 <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
             </a>
+            {% include 'partials/sidebar_toggle_button.html' with sidebar_id='managerSidebar' %}
         </div>
 
         <!-- Right Profile Actions -->
@@ -67,8 +65,8 @@
     /* Brand sizing */
     @media (min-width: 992px) {
         .manager-brand-wrapper {
-            width: 244px;
-            max-width: 244px;
+            min-width: 260px;
+            max-min-width: 260px;
             flex-shrink: 0;
         }
         .manager-top-brand {
@@ -109,9 +107,9 @@
             min-width: 260px !important;
             flex-shrink: 0 !important;
             position: sticky !important;
-            top: 79px !important;
-            height: calc(100vh - 79px) !important;
-            max-height: calc(100vh - 79px) !important;
+            top: 84px !important;
+            height: calc(100vh - 84px) !important;
+            max-height: calc(100vh - 84px) !important;
             overflow: hidden !important;
             overflow-y: hidden !important;
             display: flex !important;
@@ -165,14 +163,28 @@
         background: rgba(255,255,255,0.08) !important;
         color: #fff !important;
     }
-    .manager-nav-link.active {
-        background: #0d6efd !important;
-        color: #fff !important;
-        font-weight: 700 !important;
-        box-shadow: 0 2px 8px rgba(13,110,253,0.35);
+    .manager-nav-link.active,
+    .manager-nav-link.active-nav-item {
+        background: linear-gradient(135deg, #1677FF 0%, #0866E8 100%) !important;
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        font-weight: 600 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 10px rgba(22, 119, 255, 0.22) !important;
+        text-decoration: none !important;
     }
-    .manager-nav-link.active i {
-        color: #fff !important;
+    .manager-nav-link.active span,
+    .manager-nav-link.active-nav-item span {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+    }
+    .manager-nav-link.active i,
+    .manager-nav-link.active-nav-item i,
+    .manager-nav-link.active i[class*="text-"],
+    .manager-nav-link.active-nav-item i[class*="text-"],
+    .manager-nav-link.active i[style] {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
     .manager-nav-link .nav-icon,
     .manager-nav-link > i:first-child,
@@ -218,11 +230,11 @@
     .shadow-xs { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1) !important; }
 </style>
 
-<div class="d-flex align-items-start w-100" style="min-height: calc(100vh - 79px); max-width: 100vw; background-color: #F5F7FA;">
+<div class="d-flex align-items-start w-100" style="min-height: calc(100vh - 84px); max-width: 100vw; background-color: #F5F7FA;">
     <!-- ========================================================================= -->
     <!-- 1. STICKY DARK SIDEBAR (ProcureSphere 360 Theme: #212529)                 -->
     <!-- ========================================================================= -->
-    <aside class="offcanvas-lg offcanvas-start bg-dark text-white border-end border-secondary border-opacity-25 shadow-sm manager-sidebar-desktop" tabindex="-1" id="managerSidebar" aria-labelledby="managerSidebarLabel" style="width: 260px; min-width: 260px; background-color: #212529 !important;">
+    <aside class="offcanvas-lg offcanvas-start border-end shadow-sm enterprise-sidebar text-white border-end border-secondary border-opacity-25 shadow-sm manager-sidebar-desktop" tabindex="-1" id="managerSidebar" aria-labelledby="managerSidebarLabel" style="width: 260px; min-width: 260px; background-color: #212529 !important;">
         <!-- Mobile Drawer Header (Hidden on Desktop) -->
         <div class="sidebar-brand-box px-3 py-3 border-bottom border-secondary border-opacity-25 flex-shrink-0 d-flex d-lg-none align-items-center justify-content-between">
             <a href="/manager/" class="d-flex align-items-center text-white text-decoration-none" id="managerSidebarLabel">
