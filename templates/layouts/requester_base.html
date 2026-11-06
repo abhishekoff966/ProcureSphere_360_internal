@@ -9,7 +9,7 @@
     <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
         <div class="d-flex align-items-center flex-nowrap requester-brand-wrapper">
             <a href="/requester/" class="dashboard-brand-badge requester-top-brand" aria-label="ProcureSphere 360 Home">
-                <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
+                <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
             </a>
             {% include 'partials/sidebar_toggle_button.html' with sidebar_id='requesterSidebar' %}
         </div>
@@ -74,16 +74,16 @@
         .requester-top-brand {
             width: 100% !important;
             max-width: 100% !important;
-            height: 62px !important;
-            max-height: 62px !important;
-            padding: 2px 6px !important;
-            border-radius: 10px !important;
+            height: 44px !important;
+            max-height: 44px !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
             margin: 0 !important;
         }
         .requester-top-brand .dashboard-brand-logo {
             width: 100% !important;
             height: 100% !important;
-            max-height: 56px !important;
+            max-height: 34px !important;
             object-fit: contain !important;
         }
         aside.requester-sidebar-desktop,
@@ -123,10 +123,10 @@
         .requester-top-brand {
             width: 190px !important;
             max-width: 190px !important;
-            height: 48px !important;
-            max-height: 48px !important;
-            padding: 4px 8px !important;
-            border-radius: 8px !important;
+            height: 38px !important;
+            max-height: 38px !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
             margin: 0 !important;
         }
     }
@@ -135,7 +135,7 @@
 
     /* Section label style */
     .nav-section-label {
-        font-size: 0.63rem;
+        font-size: 0.68rem;
         letter-spacing: 0.08em;
         font-weight: 700;
         text-transform: uppercase;
@@ -221,37 +221,37 @@
         <nav class="flex-grow-1 overflow-y-auto px-2 py-3 d-flex flex-column gap-1" id="requesterNav" style="flex: 1 1 0%; min-height: 0;" aria-label="Requester Navigation">
             <div class="d-flex align-items-center justify-content-between px-2 mb-2 text-secondary text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.06em;">
                 <span>Requester Desk</span>
-                <i class="fa-solid fa-shield-halved text-cyan" style="font-size:0.75rem;"></i>
+                
             </div>
 
             <div class="nav-section-label">Main</div>
 
             <a href="/requester/"
                class="vendor-navlink req-navlink {% if request.path == '/requester/' or request.path == '/requester/dashboard/' or request.path == '/' or active_nav == 'dashboard' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-gauge-high nav-icon text-cyan"></i><span>Dashboard</span>
+                <span>Dashboard</span>
             </a>
 
             <div class="nav-section-label">Purchase Requisitions</div>
 
             <a href="/requisitions/"
                class="vendor-navlink req-navlink {% if '/requisitions/' in request.path and 'create' not in request.path or active_nav == 'my_prs' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-file-lines nav-icon text-info"></i><span>My PRs</span>
+                <span>My PRs</span>
             </a>
 
             <a href="/requisitions/create/"
                class="vendor-navlink req-navlink {% if '/requisitions/create' in request.path or active_nav == 'create_pr' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-cart-plus nav-icon text-success"></i><span>Create New PR</span>
+                <span>Create New PR</span>
             </a>
 
             <a href="/approvals/inbox/"
                class="vendor-navlink req-navlink {% if '/approvals/' in request.path or active_nav == 'approvals' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-clock-rotate-left nav-icon text-warning"></i><span>My Approvals</span>
+                <span>My Approvals</span>
             </a>
 
             <a href="/notifications/"
                class="vendor-navlink req-navlink d-flex align-items-center justify-content-between {% if '/notifications/' in request.path or active_nav == 'notifications' %}active-nav-item{% endif %}">
                 <div class="d-flex align-items-center min-width-0">
-                    <i class="fa-solid fa-bell nav-icon text-warning"></i><span class="text-truncate">Notifications</span>
+                    <span class="text-truncate">Notifications</span>
                 </div>
                 {% if unread_notifications_count > 0 %}
                 <span class="badge bg-danger rounded-pill flex-shrink-0" style="font-size: 0.65rem;">{{ unread_notifications_count }}</span>

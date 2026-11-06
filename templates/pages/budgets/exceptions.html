@@ -26,7 +26,7 @@
                 <div class="col-12 col-sm-6 col-md-4">
                     <label for="deptSelect" class="visually-hidden">Department</label>
                     <select name="dept" id="deptSelect" class="form-select form-select-sm rounded-pill shadow-none" onchange="this.form.submit()">
-                        <option value="">🏢 All Departments (Enterprise)</option>
+                        <option value="">All Departments (Enterprise)</option>
                         {% for d in departments %}
                         <option value="{{ d.id }}" {% if selected_dept_id == d.id|stringformat:"s" %}selected{% endif %}>
                             {{ d.name }} ({{ d.code }})
@@ -37,7 +37,7 @@
                 <div class="col-12 col-sm-6 col-md-4">
                     <label for="ccSelect" class="visually-hidden">Cost Center</label>
                     <select name="cost_center" id="ccSelect" class="form-select form-select-sm rounded-pill shadow-none" onchange="this.form.submit()">
-                        <option value="">💳 All Cost Centers</option>
+                        <option value="">All Cost Centers</option>
                         {% for cc in cost_centers %}
                         <option value="{{ cc.id }}" {% if selected_cc_id == cc.id|stringformat:"s" %}selected{% endif %}>
                             {{ cc.code }} - {{ cc.name }}

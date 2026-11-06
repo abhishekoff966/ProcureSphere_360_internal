@@ -26,7 +26,7 @@
                 <div class="col-12 col-sm-6 col-md-3">
                     <label for="deptSelect" class="visually-hidden">Department</label>
                     <select name="dept" id="deptSelect" class="form-select form-select-sm rounded-pill shadow-none" onchange="this.form.submit()">
-                        <option value="">🏢 All Departments (Enterprise)</option>
+                        <option value="">All Departments (Enterprise)</option>
                         {% for d in departments %}
                         <option value="{{ d.id }}" {% if selected_dept_id == d.id|stringformat:"s" %}selected{% endif %}>
                             {{ d.name }} ({{ d.code }})
@@ -37,7 +37,7 @@
                 <div class="col-12 col-sm-6 col-md-3">
                     <label for="ccSelect" class="visually-hidden">Cost Center</label>
                     <select name="cost_center" id="ccSelect" class="form-select form-select-sm rounded-pill shadow-none" onchange="this.form.submit()">
-                        <option value="">💳 All Cost Centers</option>
+                        <option value="">All Cost Centers</option>
                         {% for cc in cost_centers %}
                         <option value="{{ cc.id }}" {% if selected_cc_id == cc.id|stringformat:"s" %}selected{% endif %}>
                             {{ cc.code }} - {{ cc.name }}
@@ -48,7 +48,7 @@
                 <div class="col-12 col-sm-6 col-md-2">
                     <label for="typeSelect" class="visually-hidden">Entry Type</label>
                     <select name="entry_type" id="typeSelect" class="form-select form-select-sm rounded-pill shadow-none" onchange="this.form.submit()">
-                        <option value="">🏷️ All Entry Types</option>
+                        <option value="">All Entry Types</option>
                         {% for code, label in entry_types %}
                         <option value="{{ code }}" {% if selected_entry_type == code %}selected{% endif %}>
                             {{ label }}
@@ -123,11 +123,11 @@
                                 </span>
                             {% elif entry.entry_type == 'COMMITMENT' %}
                                 <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-2 py-1">
-                                    <i class="fa-solid fa-lock me-1"></i> Commitment
+                                    Commitment
                                 </span>
                             {% elif entry.entry_type == 'ACTUAL' %}
                                 <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2 py-1">
-                                    <i class="fa-solid fa-money-bill-transfer me-1"></i> Actual Spend
+                                    Actual Spend
                                 </span>
                             {% else %}
                                 <span class="badge bg-secondary">{{ entry.get_entry_type_display }}</span>

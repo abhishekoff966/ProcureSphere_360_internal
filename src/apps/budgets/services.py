@@ -63,20 +63,20 @@ def validate_budget_availability_service(*, cost_center: CostCenter, amount: Dec
         if not fp:
             year = today.year
             org = getattr(cost_center, "organization", None) or getattr(getattr(cost_center, "department", None), "organization", None)
-        if not org:
-            from apps.organization.models import Organization
-            org = Organization.objects.first()
-        fp, _ = FiscalPeriod.objects.get_or_create(
-            organization=org,
-            year=year,
-            period_number=1,
-            defaults={
-                "name": f"FY{year}-P1",
-                "start_date": f"{year}-01-01",
-                "end_date": f"{year}-12-31",
-                "is_closed": False,
-            }
-        )
+            if not org:
+                from apps.organization.models import Organization
+                org = Organization.objects.first()
+            fp, _ = FiscalPeriod.objects.get_or_create(
+                organization=org,
+                year=year,
+                period_number=1,
+                defaults={
+                    "name": f"FY{year}-P1",
+                    "start_date": f"{year}-01-01",
+                    "end_date": f"{year}-12-31",
+                    "is_closed": False,
+                }
+            )
         budget, _ = Budget.objects.get_or_create(
             cost_center=cost_center,
             fiscal_period=fp,
@@ -128,20 +128,20 @@ def check_and_reserve_budget_service(
         if not fp:
             year = today.year
             org = getattr(cost_center, "organization", None) or getattr(getattr(cost_center, "department", None), "organization", None)
-        if not org:
-            from apps.organization.models import Organization
-            org = Organization.objects.first()
-        fp, _ = FiscalPeriod.objects.get_or_create(
-            organization=org,
-            year=year,
-            period_number=1,
-            defaults={
-                "name": f"FY{year}-P1",
-                "start_date": f"{year}-01-01",
-                "end_date": f"{year}-12-31",
-                "is_closed": False,
-            }
-        )
+            if not org:
+                from apps.organization.models import Organization
+                org = Organization.objects.first()
+            fp, _ = FiscalPeriod.objects.get_or_create(
+                organization=org,
+                year=year,
+                period_number=1,
+                defaults={
+                    "name": f"FY{year}-P1",
+                    "start_date": f"{year}-01-01",
+                    "end_date": f"{year}-12-31",
+                    "is_closed": False,
+                }
+            )
         budget, _ = Budget.objects.get_or_create(
             cost_center=cost_center,
             fiscal_period=fp,

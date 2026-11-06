@@ -9,12 +9,28 @@
     <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
         <div class="d-flex align-items-center flex-nowrap vendor-brand-wrapper">
             <a href="/vendor/" class="dashboard-brand-badge vendor-top-brand" aria-label="ProcureSphere 360 Home">
-                <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
+                <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
             </a>
             {% include 'partials/sidebar_toggle_button.html' with sidebar_id='vendorSidebar' %}
         </div>
 
         <div class="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
+            <!-- Vendor Entity Information Pill (Cisco Systems Inc - Active) -->
+            {% with v=vendor|default:request.vendor|default:user.vendor %}
+            <div class="d-none d-md-flex align-items-center bg-dark bg-opacity-75 border border-secondary border-opacity-50 rounded-pill px-3 py-1 text-white">
+                <i class="fa-solid fa-building text-cyan me-2 fs-5"></i>
+                <div class="text-start lh-sm">
+                    <span class="fw-semibold small d-block mb-1">
+                        {% if v.legal_name %}{{ v.legal_name|truncatechars:35 }}{% elif v.trade_name %}{{ v.trade_name|truncatechars:35 }}{% else %}Cisco Systems Inc{% endif %}
+                    </span>
+                    <span class="text-white-50 d-block" style="font-size: 0.7rem; line-height: 1;">
+                        {% if v.vendor_number %}{{ v.vendor_number }}{% else %}VND-2026-00001{% endif %} &bull; {% if v.tax_identification_number %}{{ v.tax_identification_number }}{% else %}TAX-CISCO-991{% endif %}
+                    </span>
+                </div>
+                <span class="badge ms-2 rounded-pill bg-success" style="font-size: 0.65rem;">Active</span>
+            </div>
+            {% endwith %}
+
             <!-- Notifications Icon -->
             <a href="/vendor/notifications/" class="btn btn-outline-secondary btn-sm position-relative text-white border-0 d-flex align-items-center justify-content-center p-0" style="width: 36px; height: 36px;" title="Notifications">
                 <i class="fa-solid fa-bell fs-5"></i>
@@ -160,16 +176,16 @@
         .vendor-top-brand {
             width: 100% !important;
             max-width: 100% !important;
-            height: 62px !important;
-            max-height: 62px !important;
-            padding: 2px 6px !important;
-            border-radius: 10px !important;
+            height: 44px !important;
+            max-height: 44px !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
             margin: 0 !important;
         }
         .vendor-top-brand .dashboard-brand-logo {
             width: 100% !important;
             height: 100% !important;
-            max-height: 56px !important;
+            max-height: 34px !important;
             object-fit: contain !important;
         }
     }
@@ -181,10 +197,10 @@
         .vendor-top-brand {
             width: 190px !important;
             max-width: 190px !important;
-            height: 48px !important;
-            max-height: 48px !important;
-            padding: 4px 8px !important;
-            border-radius: 8px !important;
+            height: 38px !important;
+            max-height: 38px !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
             margin: 0 !important;
         }
     }
@@ -231,7 +247,7 @@
 
     /* Section label style */
     .nav-section-label {
-        font-size: 0.63rem;
+        font-size: 0.68rem;
         letter-spacing: 0.08em;
         font-weight: 700;
         text-transform: uppercase;
@@ -341,69 +357,69 @@
         <nav class="flex-grow-1 overflow-y-auto px-2 py-3 d-flex flex-column gap-1" id="vendorNav" style="flex: 1 1 0%; min-height: 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent;" aria-label="Vendor Navigation">
             <div class="d-flex align-items-center justify-content-between px-2 mb-2 text-secondary text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.06em;">
                 <span>Vendor Portal</span>
-                <i class="fa-solid fa-shield-check text-cyan" style="font-size:0.75rem;"></i>
+                
             </div>
 
             <a href="/vendor/"
                class="vendor-navlink {% if active_nav == 'dashboard' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-gauge-high nav-icon text-cyan"></i>Dashboard
+                Dashboard
             </a>
 
             <a href="/vendor/profile/"
                class="vendor-navlink {% if active_nav == 'profile' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-id-card nav-icon text-info"></i>Company Profile
+                Company Profile
             </a>
 
             <div class="nav-section-label">Sourcing &amp; Bids</div>
 
             <a href="/vendor/sourcing/"
                class="vendor-navlink {% if active_nav == 'sourcing' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-gavel nav-icon text-warning"></i>Sourcing Events
+                Sourcing Events
             </a>
 
             <a href="/vendor/bids/"
                class="vendor-navlink {% if active_nav == 'bids' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-file-invoice-dollar nav-icon text-success"></i>My Bids
+                My Bids
             </a>
 
             <a href="/vendor/clarifications/"
                class="vendor-navlink {% if active_nav == 'clarifications' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-circle-question nav-icon text-info"></i>Clarifications
+                Clarifications
             </a>
 
             <div class="nav-section-label">Orders &amp; Finance</div>
 
             <a href="/vendor/purchase-orders/"
                class="vendor-navlink {% if active_nav == 'orders' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-cart-shopping nav-icon text-cyan"></i>Purchase Orders
+                Purchase Orders
             </a>
 
             <a href="/vendor/invoices/"
                class="vendor-navlink {% if active_nav == 'invoices' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-file-invoice nav-icon" style="color:#a78bfa;"></i>Invoices
+                Invoices
             </a>
 
             <a href="/vendor/contracts/"
                class="vendor-navlink {% if active_nav == 'contracts' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-file-contract nav-icon" style="color:#f97316;"></i>Contracts
+                Contracts
             </a>
 
             <div class="nav-section-label">Compliance &amp; Insights</div>
 
             <a href="/vendor/performance/"
                class="vendor-navlink {% if active_nav == 'performance' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-chart-line nav-icon text-success"></i>Supplier Performance
+                Supplier Performance
             </a>
 
             <a href="/vendor/documents/"
                class="vendor-navlink {% if active_nav == 'documents' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-folder-closed nav-icon text-info"></i>Documents
+                Documents
             </a>
 
             <a href="/vendor/notifications/"
                class="vendor-navlink d-flex justify-content-between {% if active_nav == 'notifications' %}active-nav-item{% endif %}">
                 <span class="d-flex align-items-center">
-                    <i class="fa-solid fa-bell nav-icon text-warning"></i>Notifications
+                    Notifications
                 </span>
                 {% if metrics.unread_notifications and metrics.unread_notifications > 0 %}
                 <span class="badge bg-danger rounded-pill" style="font-size:0.65rem;">{{ metrics.unread_notifications }}</span>
@@ -412,14 +428,14 @@
 
             <a href="/vendor/reports/"
                class="vendor-navlink {% if active_nav == 'reports' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-clock-rotate-left nav-icon text-secondary"></i>Reports
+                Reports
             </a>
 
             <div class="nav-section-label">Security</div>
 
             <a href="/vendor/account/"
                class="vendor-navlink {% if active_nav == 'account' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-shield-halved nav-icon text-cyan"></i>Account &amp; Security
+                Account &amp; Security
             </a>
 
         </nav>

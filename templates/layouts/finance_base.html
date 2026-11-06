@@ -9,7 +9,7 @@
     <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
         <div class="d-flex align-items-center flex-nowrap finance-brand-wrapper">
             <a href="/finance/" class="dashboard-brand-badge finance-top-brand" aria-label="ProcureSphere 360 Home">
-                <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
+                <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
             </a>
             {% include 'partials/sidebar_toggle_button.html' with sidebar_id='financeSidebar' %}
         </div>
@@ -70,16 +70,16 @@
         .finance-top-brand {
             width: 100% !important;
             max-width: 100% !important;
-            height: 62px !important;
-            max-height: 62px !important;
-            padding: 2px 6px !important;
-            border-radius: 10px !important;
+            height: 44px !important;
+            max-height: 44px !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
             margin: 0 !important;
         }
         .finance-top-brand .dashboard-brand-logo {
             width: 100% !important;
             height: 100% !important;
-            max-height: 56px !important;
+            max-height: 34px !important;
             object-fit: contain !important;
         }
     }
@@ -91,10 +91,10 @@
         .finance-top-brand {
             width: 190px !important;
             max-width: 190px !important;
-            height: 48px !important;
-            max-height: 48px !important;
-            padding: 4px 8px !important;
-            border-radius: 8px !important;
+            height: 38px !important;
+            max-height: 38px !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
             margin: 0 !important;
         }
     }
@@ -141,7 +141,7 @@
 
     /* Section label style */
     .nav-section-label {
-        font-size: 0.63rem;
+        font-size: 0.68rem;
         letter-spacing: 0.08em;
         font-weight: 700;
         text-transform: uppercase;
@@ -219,48 +219,48 @@
         <nav class="flex-grow-1 overflow-y-auto px-2 py-3 d-flex flex-column gap-1" id="financeNav" style="flex: 1 1 0%; min-height: 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent;" aria-label="Finance Navigation">
             <div class="d-flex align-items-center justify-content-between px-2 mb-2 text-secondary text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.06em;">
                 <span>Finance & AP</span>
-                <i class="fa-solid fa-building-columns text-primary" style="font-size:0.75rem;"></i>
+                
             </div>
 
             <a href="/finance/" class="finance-navlink {% if request.path == '/finance/' or request.path == '/finance/dashboard/' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-chart-pie nav-icon text-cyan"></i>Dashboard
+                Dashboard
             </a>
 
             <div class="nav-section-label">Invoices & AP</div>
 
             <a href="/invoices/" class="finance-navlink {% if request.path == '/invoices/' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-file-invoice-dollar nav-icon text-info"></i>All Invoices
+                All Invoices
             </a>
             <a href="/invoices/exceptions/" class="finance-navlink {% if request.path == '/invoices/exceptions/' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-triangle-exclamation nav-icon text-warning"></i>Match Exceptions
+                Match Exceptions
             </a>
             <a href="/invoices/ready/" class="finance-navlink {% if request.path == '/invoices/ready/' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-money-check-dollar nav-icon text-success"></i>Ready for Payment
+                Ready for Payment
             </a>
 
             <div class="nav-section-label">Budget Control</div>
 
             <a href="/budgets/" class="finance-navlink {% if request.path == '/budgets/' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-vault nav-icon text-primary"></i>Budget Overview
+                Budget Overview
             </a>
             <a href="/budgets/exceptions/" class="finance-navlink {% if request.path == '/budgets/exceptions/' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-scale-unbalanced nav-icon text-danger"></i>Budget Exceptions
+                Budget Exceptions
             </a>
             <a href="/requisitions/" class="finance-navlink {% if '/requisitions/' in request.path %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-file-signature nav-icon text-warning"></i>PR Approvals
+                PR Approvals
             </a>
             <a href="/budgets/ledger/" class="finance-navlink {% if request.path == '/budgets/ledger/' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-book-journal-whills nav-icon text-secondary"></i>Spend Ledger
+                Spend Ledger
             </a>
 
             <div class="nav-section-label">Analytics</div>
 
             <a href="/reports/" class="finance-navlink {% if '/reports/' in request.path %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-chart-line nav-icon text-success"></i>Reports & Exports
+                Reports & Exports
             </a>
             <a href="/notifications/" class="finance-navlink d-flex justify-content-between {% if request.path == '/notifications/' %}active-nav-item{% endif %}">
                 <span class="d-flex align-items-center">
-                    <i class="fa-solid fa-bell nav-icon text-warning"></i>Notifications
+                    Notifications
                 </span>
                 {% if unread_notifications_count and unread_notifications_count > 0 %}
                 <span class="badge bg-danger rounded-pill" style="font-size:0.65rem;">{{ unread_notifications_count }}</span>
@@ -270,7 +270,7 @@
             <div class="nav-section-label">Settings</div>
 
             <a href="/invoices/settings/tolerances/" class="finance-navlink {% if request.path == '/invoices/settings/tolerances/' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-gear nav-icon text-secondary"></i>System Settings
+                System Settings
             </a>
         </nav>
     </aside>

@@ -11,7 +11,7 @@
         <!-- Brand & Mobile Toggle -->
         <div class="d-flex align-items-center flex-nowrap approver-brand-wrapper">
             <a href="/approver/" class="dashboard-brand-badge approver-top-brand" aria-label="ProcureSphere 360 Home">
-                <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
+                <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
             </a>
             {% include 'partials/sidebar_toggle_button.html' with sidebar_id='approverSidebar' %}
         </div>
@@ -87,16 +87,16 @@
         .approver-top-brand {
             width: 100% !important;
             max-width: 100% !important;
-            height: 62px !important;
-            max-height: 62px !important;
-            padding: 2px 6px !important;
-            border-radius: 10px !important;
+            height: 44px !important;
+            max-height: 44px !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
             margin: 0 !important;
         }
         .approver-top-brand .dashboard-brand-logo {
             width: 100% !important;
             height: 100% !important;
-            max-height: 56px !important;
+            max-height: 34px !important;
             object-fit: contain !important;
         }
     }
@@ -108,10 +108,10 @@
         .approver-top-brand {
             width: 190px !important;
             max-width: 190px !important;
-            height: 48px !important;
-            max-height: 48px !important;
-            padding: 4px 8px !important;
-            border-radius: 8px !important;
+            height: 38px !important;
+            max-height: 38px !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
             margin: 0 !important;
         }
     }
@@ -159,7 +159,7 @@
 
     /* Section label style */
     .nav-section-label {
-        font-size: 0.63rem;
+        font-size: 0.68rem;
         letter-spacing: 0.08em;
         font-weight: 700;
         text-transform: uppercase;
@@ -248,7 +248,7 @@
         <nav class="flex-grow-1 overflow-y-auto px-2 py-3 d-flex flex-column gap-1" id="approverNav" style="flex: 1 1 0%; min-height: 0;" aria-label="Approver Navigation">
             <div class="d-flex align-items-center justify-content-between px-2 mb-2 text-secondary text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.06em;">
                 <span>Approver Workspace</span>
-                <i class="fa-solid fa-shield-halved text-cyan" style="font-size:0.75rem;"></i>
+                
             </div>
 
             <!-- Approver & Workflow Section -->
@@ -256,13 +256,13 @@
 
             <a href="/approver/"
                class="vendor-navlink approver-navlink {% if request.path == '/approver/' or request.path == '/approver/dashboard/' or request.path == '/' or active_nav == 'dashboard' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-gauge-high nav-icon text-cyan"></i><span>Department Dashboard</span>
+                <span>Department Dashboard</span>
             </a>
 
             <a href="/approvals/inbox/"
                class="vendor-navlink approver-navlink d-flex align-items-center justify-content-between {% if '/approvals/' in request.path and request.GET.tab != 'history' or active_nav == 'pending_approvals' %}active-nav-item{% endif %}">
                 <div class="d-flex align-items-center min-width-0">
-                    <i class="fa-solid fa-square-check nav-icon text-warning"></i><span class="text-truncate">Pending Approvals</span>
+                    <span class="text-truncate">Pending Approvals</span>
                 </div>
                 {% if metrics and metrics.pending_count > 0 %}
                 <span class="badge bg-warning text-dark rounded-pill fw-bold flex-shrink-0" style="font-size: 0.68rem;">{{ metrics.pending_count }}</span>
@@ -273,12 +273,12 @@
 
             <a href="/requisitions/"
                class="vendor-navlink approver-navlink {% if '/requisitions/' in request.path or active_nav == 'dept_prs' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-file-lines nav-icon text-info"></i><span>Department PRs</span>
+                <span>Department PRs</span>
             </a>
 
             <a href="/approvals/inbox/?tab=history"
                class="vendor-navlink approver-navlink {% if request.GET.tab == 'history' or active_nav == 'my_approvals' %}active-nav-item{% endif %}">
-                <i class="fa-solid fa-clock-rotate-left nav-icon text-secondary"></i><span>My Approvals</span>
+                <span>My Approvals</span>
             </a>
         </nav>
     </aside>

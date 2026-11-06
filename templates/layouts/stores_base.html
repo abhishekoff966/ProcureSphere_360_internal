@@ -9,7 +9,7 @@
     <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
         <div class="d-flex align-items-center flex-nowrap stores-brand-wrapper">
             <a href="/stores/" class="dashboard-brand-badge stores-top-brand" aria-label="ProcureSphere 360 Home">
-                <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
+                <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
             </a>
             {% include 'partials/sidebar_toggle_button.html' with sidebar_id='storesSidebar' %}
         </div>
@@ -68,16 +68,16 @@
         .stores-top-brand {
             width: 100% !important;
             max-width: 100% !important;
-            height: 62px !important;
-            max-height: 62px !important;
-            padding: 2px 6px !important;
-            border-radius: 10px !important;
+            height: 44px !important;
+            max-height: 44px !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
             margin: 0 !important;
         }
         .stores-top-brand .dashboard-brand-logo {
             width: 100% !important;
             height: 100% !important;
-            max-height: 56px !important;
+            max-height: 34px !important;
             object-fit: contain !important;
         }
         aside.stores-desk-nav,
@@ -115,10 +115,10 @@
         .stores-top-brand {
             width: 190px !important;
             max-width: 190px !important;
-            height: 48px !important;
-            max-height: 48px !important;
-            padding: 4px 8px !important;
-            border-radius: 8px !important;
+            height: 38px !important;
+            max-height: 38px !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
             margin: 0 !important;
         }
     }
@@ -127,7 +127,7 @@
 
     /* Section label style */
     .nav-section-label {
-        font-size: 0.63rem;
+        font-size: 0.68rem;
         letter-spacing: 0.08em;
         font-weight: 700;
         text-transform: uppercase;
@@ -201,42 +201,42 @@
         <div class="px-2 py-3 flex-grow-1 overflow-y-auto" id="storesNav" style="flex: 1 1 0%; min-height: 0;">
             <div class="d-flex align-items-center justify-content-between px-2 mb-2 text-secondary text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.06em;">
                 <span>Warehouse Navigation</span>
-                <i class="fa-solid fa-dolly text-cyan" style="font-size:0.75rem;"></i>
+                
             </div>
 
             <nav class="d-flex flex-column gap-1">
                 <a href="/stores/" class="unified-navlink {% if request.path == '/stores/' or request.path == '/stores/dashboard/' or request.path == '/receipts/dashboard/' or request.path == '/' or request.path == '/dashboard/' %}active-nav-item{% endif %}">
-                    <i class="fa-solid fa-gauge-high nav-icon text-cyan"></i><span>Receiving Desk</span>
+                    <span>Receiving Desk</span>
                 </a>
 
                 <div class="nav-section-label">Receiving &amp; Intake</div>
                 <a href="{% url 'orders_list' %}" class="unified-navlink {% if '/purchase-orders/' in request.path and not 'tab=deliveries' in request.get_full_path and not '/create/' in request.path or '/orders/' in request.path and not 'tab=deliveries' in request.get_full_path and not '/create/' in request.path %}active-nav-item{% endif %}">
-                    <i class="fa-solid fa-cart-flatbed nav-icon text-info"></i><span>Receive PO Goods</span>
+                    <span>Receive PO Goods</span>
                 </a>
                 <a href="{% url 'orders_list' %}?tab=deliveries" class="unified-navlink {% if 'tab=deliveries' in request.get_full_path %}active-nav-item{% endif %}">
-                    <i class="fa-solid fa-truck-ramp-box nav-icon text-warning"></i><span>PO Deliveries</span>
+                    <span>PO Deliveries</span>
                 </a>
                 <a href="{% url 'receipts_list' %}" class="unified-navlink {% if request.path == '/receipts/' or '/receipts/' in request.path and not '/inspections/' in request.path and not '/handoffs/' in request.path and not '/rejections/' in request.path and not '/returns/' in request.path and not 'delivery-performance' in request.path and not '/dashboard/' in request.path and not '/create/' in request.path and not '/inspect/' in request.path and not '/handoff/' in request.path %}active-nav-item{% endif %}">
-                    <i class="fa-solid fa-boxes-stacked nav-icon text-success"></i><span>Goods Receipts (GRN)</span>
+                    <span>Goods Receipts (GRN)</span>
                 </a>
 
                 <div class="nav-section-label">Quality &amp; Inventory Gates</div>
                 <a href="{% url 'receipts_inspection_queue' %}" class="unified-navlink {% if '/receipts/inspections/' in request.path or '/inspect/' in request.path %}active-nav-item{% endif %}">
-                    <i class="fa-solid fa-microscope nav-icon text-warning"></i><span>Inspection Gate</span>
+                    <span>Inspection Gate</span>
                 </a>
                 <a href="{% url 'receipts_rejections_queue' %}" class="unified-navlink {% if '/receipts/rejections/' in request.path or '/receipts/returns/' in request.path %}active-nav-item{% endif %}">
-                    <i class="fa-solid fa-arrow-rotate-left nav-icon text-danger"></i><span>Rejections & Returns</span>
+                    <span>Rejections & Returns</span>
                 </a>
                 <a href="{% url 'receipts_stock_handoff_queue' %}" class="unified-navlink {% if '/receipts/stock-handoff/' in request.path or '/receipts/handoffs/' in request.path or '/handoff/' in request.path %}active-nav-item{% endif %}">
-                    <i class="fa-solid fa-warehouse nav-icon text-cyan"></i><span>Warehouse Handoff</span>
+                    <span>Warehouse Handoff</span>
                 </a>
 
                 <div class="nav-section-label">Reports &amp; Traceability</div>
                 <a href="{% url 'receipts_delivery_performance_report' %}" class="unified-navlink {% if 'delivery-performance' in request.path %}active-nav-item{% endif %}">
-                    <i class="fa-solid fa-chart-line nav-icon text-success"></i><span>Delivery & Rejection</span>
+                    <span>Delivery & Rejection</span>
                 </a>
                 <a href="/reports/hub/" class="unified-navlink {% if '/reports/' in request.path and not 'delivery-performance' in request.path %}active-nav-item{% endif %}">
-                    <i class="fa-solid fa-folder-open nav-icon text-secondary"></i><span>Reports Hub</span>
+                    <span>Reports Hub</span>
                 </a>
             </nav>
         </div>

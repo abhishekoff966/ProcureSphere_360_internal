@@ -15,6 +15,99 @@
 <link href="/static/css/style.css?v=ps_checkbox_focus_v1" rel="stylesheet">
 
 <style>
+  /* ========================================================================= */
+  /* Vendor Navbar Profile Avatar & Dropdown (Matching Reference UI)           */
+  /* ========================================================================= */
+  .vendor-profile-avatar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+  }
+  .vendor-profile-avatar-btn::after {
+    display: none !important;
+  }
+  .vendor-profile-avatar-btn:focus,
+  .vendor-profile-avatar-btn:active {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  .vendor-avatar-ring {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background-color: #1e2634;
+    border: 2px solid #2563eb;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .vendor-profile-avatar-btn:hover .vendor-avatar-ring,
+  .vendor-profile-avatar-btn[aria-expanded="true"] .vendor-avatar-ring {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.35);
+  }
+  .vendor-avatar-ring i {
+    font-size: 1.6rem;
+    color: #06b6d4 !important;
+    line-height: 1;
+  }
+
+  /* Dark navy profile dropdown menu */
+  .vendor-profile-dropdown {
+    background-color: #1b2332 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.35) !important;
+    min-width: 240px !important;
+    max-width: 320px !important;
+    padding: 14px 18px 12px 18px !important;
+    margin-top: 8px !important;
+  }
+  .vendor-dropdown-header {
+    padding: 0 !important;
+    margin-bottom: 6px !important;
+    list-style: none;
+  }
+  .vendor-email-text {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #ffffff !important;
+    word-break: break-all;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+  }
+  .vendor-dropdown-divider {
+    border: 0 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    margin: 8px 0 10px 0 !important;
+    opacity: 1 !important;
+  }
+  .vendor-dropdown-signout {
+    display: inline-flex;
+    align-items: center;
+    color: #ef4444 !important;
+    font-size: 0.92rem;
+    font-weight: 500;
+    text-decoration: none;
+    padding: 4px 0 !important;
+    background: transparent !important;
+    transition: color 0.15s ease, opacity 0.15s ease;
+  }
+  .vendor-dropdown-signout i {
+    color: #ef4444 !important;
+    font-size: 0.95rem;
+  }
+  .vendor-dropdown-signout:hover,
+  .vendor-dropdown-signout:focus {
+    color: #f87171 !important;
+  }
+
   :root {
     --body-bg: #f8fafc !important;
     --body-fg: #1e293b !important;
@@ -146,15 +239,17 @@
 
   /* Signature Super Admin Sidebar Styling */
   .sa-sidebar {
-    width: 268px !important;
-    min-width: 268px !important;
-    height: 100vh !important;
+    width: 260px !important;
+    min-width: 260px !important;
+    height: calc(100vh - 58px) !important;
     position: sticky !important;
-    top: 0 !important;
+    top: 58px !important;
     background: #121824 !important;
     color: #ffffff !important;
-    z-index: 1030;
+    z-index: 1000;
     align-self: flex-start !important;
+    display: flex;
+    flex-direction: column;
   }
 
   .sa-nav-label {
@@ -182,17 +277,17 @@
 
   .sa-nav-link.active,
   #saSidebar .sa-nav-link.active {
-    background: #ffc107 !important;
-    color: #1a1a1a !important;
+    background: #0d6efd !important;
+    color: #ffffff !important;
     font-weight: 700 !important;
-    box-shadow: none !important;
+    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.35) !important;
   }
 
   .sa-nav-link.active i,
   .sa-nav-link.active span,
   #saSidebar .sa-nav-link.active i,
   #saSidebar .sa-nav-link.active span {
-    color: #1a1a1a !important;
+    color: #ffffff !important;
   }
 
   .sa-avatar {
@@ -292,31 +387,91 @@
 {% block content_title %}{% endblock %}
 
 {% block content %}
-<div class="d-flex min-vh-100 bg-light w-100">
+<div class="d-flex flex-column min-vh-100 bg-light w-100">
 
-    <!-- LEFT SIDEBAR MATCHING IMAGE 1 -->
-    <aside id="saSidebar" class="sa-sidebar bg-dark text-white d-flex flex-column flex-shrink-0">
-        <!-- Logo Header -->
-        <div class="px-3 py-3 border-bottom border-secondary border-opacity-25 d-flex align-items-center justify-content-between">
-            <a href="/admin/" class="d-flex align-items-center text-white text-decoration-none">
-                <i class="fa-solid fa-shield-halved text-warning fa-lg me-2"></i>
-                <div>
-                    <div class="fw-bold lh-1 text-white" style="font-size: 0.95rem;">ProcureSphere <span class="fw-light">360</span></div>
-                    {% if is_global_superadmin and not scoped_org %}
-                    <span class="badge bg-danger rounded-pill fw-bold mt-1" style="font-size: 0.62rem; letter-spacing: 0.04em;">SUPER ADMIN</span>
-                    {% else %}
-                    <span class="badge bg-info text-dark rounded-pill fw-bold mt-1" style="font-size: 0.62rem; letter-spacing: 0.04em;">ORG ADMIN</span>
-                    {% endif %}
+    <!-- TOP BAR MATCHING REQUESTER SYSTEM -->
+    <header class="navbar navbar-dark bg-dark shadow-sm py-2 border-bottom border-secondary border-opacity-25 sticky-top" style="z-index: 1030;">
+        <div class="container-fluid px-2 px-sm-3 px-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
+            <div class="d-flex align-items-center gap-2">
+                <a href="/superadmin/" class="dashboard-brand-badge me-2 me-lg-3" aria-label="ProcureSphere 360 Home">
+                    <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
+                </a>
+                <a href="/superadmin/" class="btn btn-sm btn-outline-warning text-white rounded-pill fw-semibold px-3" title="Open Frontend Portal View">
+                    <i class="fa-solid fa-desktop me-1"></i> Frontend Portal View
+                </a>
+            </div>
+            <div class="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0 ms-auto">
+                <!-- Organization / Company Information (Matching Vendor Entity Pill) -->
+                {% with org=scoped_org|default:request.user.effective_organization|default:request.user.organization %}
+                <div class="d-none d-md-flex align-items-center bg-dark bg-opacity-75 border border-secondary border-opacity-50 rounded-pill px-3 py-1 text-white">
+                    <i class="fa-solid fa-building text-cyan me-2 fs-5"></i>
+                    <div class="text-start lh-sm">
+                        <span class="fw-semibold small d-block mb-1">
+                            {{ org.name|default:"Hewlett Packard Enterprise"|truncatechars:35 }}
+                        </span>
+                        <span class="text-white-50 d-block" style="font-size: 0.7rem; line-height: 1;">
+                            {{ org.code|default:"HPE-GLOBAL" }} &bull; Active
+                        </span>
+                    </div>
+                    <span class="badge ms-2 rounded-pill bg-success" style="font-size: 0.65rem;">Active</span>
                 </div>
-            </a>
+                {% endwith %}
+
+                <!-- Notifications Icon -->
+                <a href="/notifications/" class="btn btn-outline-secondary btn-sm position-relative text-white border-0 d-flex align-items-center justify-content-center p-0" style="width: 36px; height: 36px;" title="Notifications">
+                    <i class="fa-solid fa-bell fs-5"></i>
+                    {% if unread_notifications_count and unread_notifications_count > 0 %}
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+                        {{ unread_notifications_count }}
+                    </span>
+                    {% elif metrics.unread_notifications and metrics.unread_notifications > 0 %}
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+                        {{ metrics.unread_notifications }}
+                    </span>
+                    {% endif %}
+                </a>
+
+                <!-- User Profile Dropdown -->
+                {% if request.user.is_authenticated or user.is_authenticated %}
+                <div class="dropdown position-relative">
+                    <button class="btn p-0 border-0 bg-transparent rounded-circle vendor-profile-avatar-btn" type="button" id="adminIndexProfileDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="{{ request.user.email|default:user.email }}">
+                        <span class="vendor-avatar-ring">
+                            <i class="fa-solid fa-circle-user text-cyan"></i>
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg vendor-profile-dropdown" aria-labelledby="adminIndexProfileDropdown">
+                        <li class="vendor-dropdown-header">
+                            <div class="vendor-email-text">{{ request.user.email|default:user.email }}</div>
+                        </li>
+                        <li><hr class="vendor-dropdown-divider"></li>
+                        <li>
+                            <a class="vendor-dropdown-signout" href="/admin/logout/">
+                                <i class="fa-solid fa-arrow-right-from-bracket me-2 text-danger"></i>
+                                <span>Sign Out</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
         </div>
+    </header>
+
+    <div class="d-flex align-items-start w-100 flex-grow-1" style="min-height: calc(100vh - 58px);">
+        <!-- LEFT SIDEBAR -->
+        <aside id="saSidebar" class="sa-sidebar bg-dark text-white d-flex flex-column flex-shrink-0">
+            <!-- Desktop Sidebar Header (Matching Requester Desk pattern) -->
+            <div class="d-flex align-items-center justify-content-between px-3 pt-3 pb-2 text-secondary text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.06em;">
+                <span>{% if is_global_superadmin and not scoped_org %}Super Admin Desk{% else %}Admin Control Center{% endif %}</span>
+                
+            </div>
 
         <!-- Navigation Links -->
         <div class="flex-grow-1 overflow-y-auto px-2 py-3">
             <ul class="nav nav-pills flex-column gap-1" id="menu">
                 <li class="nav-item">
                     <a href="/superadmin/" class="nav-link sa-nav-link rounded-3 py-2 px-3 active">
-                        <i class="fa-solid fa-gauge-high me-2"></i><span>Dashboard</span>
+                        <span>Dashboard</span>
                     </a>
                 </li>
 
@@ -327,7 +482,7 @@
                 <li class="sa-nav-label">Organization Management</li>
                 <li class="nav-item">
                     <a href="/superadmin/organizations/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                        <i class="fa-solid fa-sitemap me-2"></i><span>Organizations</span>
+                        <span>Organizations</span>
                     </a>
                 </li>
 
@@ -338,51 +493,51 @@
                 <li class="sa-nav-label">Organization &amp; Masters</li>
                 <li class="nav-item">
                     <a href="/superadmin/organizations/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                        <i class="fa-solid fa-sitemap me-2"></i><span>Departments &amp; Cost Centers</span>
+                        <span>Departments &amp; Cost Centers</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="/superadmin/users/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                        <i class="fa-solid fa-users-gear me-2"></i><span>Manage Users &amp; Roles</span>
+                        <span>Manage Users &amp; Roles</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="/vendors/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                        <i class="fa-solid fa-building-user me-2"></i><span>Vendor Management</span>
+                        <span>Vendor Management</span>
                     </a>
                 </li>
 
                 <li class="sa-nav-label">Policies &amp; Rules</li>
                 <li class="nav-item">
                     <a href="/superadmin/policies/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                        <i class="fa-solid fa-code-branch me-2"></i><span>Approval Policies</span>
+                        <span>Approval Policies</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="/superadmin/budgets/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                        <i class="fa-solid fa-sack-dollar me-2"></i><span>Budget Configuration</span>
+                        <span>Budget Configuration</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="/invoices/settings/tolerances/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                        <i class="fa-solid fa-sliders me-2"></i><span>Business Rules</span>
+                        <span>Business Rules</span>
                     </a>
                 </li>
 
                 <li class="sa-nav-label">Oversight &amp; Audit</li>
                 <li class="nav-item">
                     <a href="/notifications/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                        <i class="fa-solid fa-bell me-2"></i><span>Notifications &amp; Alerts</span>
+                        <span>Notifications &amp; Alerts</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="/reports/hub/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                        <i class="fa-solid fa-chart-line me-2"></i><span>Reports &amp; Analytics</span>
+                        <span>Reports &amp; Analytics</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="/superadmin/audit/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                        <i class="fa-solid fa-clock-rotate-left me-2"></i><span>Audit Logs</span>
+                        <span>Audit Logs</span>
                     </a>
                 </li>
                 {% endif %}
@@ -415,35 +570,7 @@
     </aside>
 
     <!-- MAIN DASHBOARD CONTENT AREA -->
-    <div class="flex-grow-1 d-flex flex-column min-vh-100 overflow-hidden">
-
-        <!-- TOP BAR MATCHING IMAGE 1 -->
-        <header class="sticky-top bg-white border-bottom px-4 py-2 d-flex align-items-center justify-content-between gap-2" style="z-index: 1020;">
-            <div>
-                <a href="/superadmin/" class="btn btn-sm btn-outline-warning text-dark rounded-pill fw-semibold px-3" title="Open Frontend Portal View">
-                    <i class="fa-solid fa-desktop me-1"></i> Frontend Portal View
-                </a>
-            </div>
-            <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto">
-                <span class="sa-avatar bg-primary text-white shadow-sm">
-                    <i class="fa-solid fa-user-shield"></i>
-                </span>
-                <div class="d-none d-md-block text-start" style="max-width: 240px;">
-                    <div class="fw-bold text-dark small text-truncate">
-                        {{ request.user.email|default:"superadmin@procuresphere.com" }}
-                    </div>
-                    {% if is_global_superadmin and not scoped_org %}
-                    <div class="badge bg-danger rounded-pill" style="font-size: 0.65rem;">Super Admin</div>
-                    {% else %}
-                    <div class="badge bg-info text-dark rounded-pill" style="font-size: 0.65rem;">Org Admin</div>
-                    {% endif %}
-                </div>
-                <a href="/admin/logout/" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-semibold d-flex align-items-center gap-1">
-                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                    <span class="d-none d-sm-inline">Sign out</span>
-                </a>
-            </div>
-        </header>
+    <div class="flex-grow-1 d-flex flex-column overflow-hidden" style="min-width: 0;">
 
         <!-- DASHBOARD BODY CONTAINER -->
         <main class="flex-grow-1 p-3 p-md-4">
@@ -764,6 +891,7 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
                 </div>
             </div>
 
@@ -887,6 +1015,7 @@
 
         </main>
     </div>
+</div>
 </div>
 
 <!-- Bootstrap 5 JS & HTMX for Frontend Interactivity -->

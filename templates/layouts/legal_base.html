@@ -9,7 +9,7 @@
     <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
         <div class="d-flex align-items-center flex-nowrap legal-brand-wrapper">
             <a href="/legal/" class="dashboard-brand-badge legal-top-brand" aria-label="ProcureSphere 360 Home">
-                <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
+                <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
             </a>
             {% include 'partials/sidebar_toggle_button.html' with sidebar_id='legalSidebar' %}
         </div>
@@ -63,16 +63,16 @@
         .legal-top-brand {
             width: 100% !important;
             max-width: 100% !important;
-            height: 62px !important;
-            max-height: 62px !important;
-            padding: 2px 6px !important;
-            border-radius: 10px !important;
+            height: 44px !important;
+            max-height: 44px !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
             margin: 0 !important;
         }
         .legal-top-brand .dashboard-brand-logo {
             width: 100% !important;
             height: 100% !important;
-            max-height: 56px !important;
+            max-height: 34px !important;
             object-fit: contain !important;
         }
         .legal-sidebar-desktop {
@@ -110,10 +110,10 @@
         .legal-top-brand {
             width: 190px !important;
             max-width: 190px !important;
-            height: 48px !important;
-            max-height: 48px !important;
-            padding: 4px 8px !important;
-            border-radius: 8px !important;
+            height: 38px !important;
+            max-height: 38px !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
             margin: 0 !important;
         }
     }
@@ -122,7 +122,7 @@
 
     /* Section label style */
     .nav-section-label {
-        font-size: 0.63rem;
+        font-size: 0.68rem;
         letter-spacing: 0.08em;
         font-weight: 700;
         text-transform: uppercase;
@@ -203,37 +203,37 @@
 
                 <nav class="d-flex flex-column gap-1" id="legalNav">
                     <a href="/legal/" class="unified-navlink {% if request.path == '/legal/' or request.path == '/legal/dashboard/' or request.path == '/contracts/dashboard/' or request.path == '/' %}active-nav-item{% endif %}">
-                        <i class="fa-solid fa-gauge-high nav-icon text-cyan"></i>Dashboard
+                        Dashboard
                     </a>
 
                     <div class="nav-section-label">LEGAL &amp; CONTRACTS</div>
                     <a href="/contracts/" class="unified-navlink {% if '/contracts/' in request.path and not '/dashboard/' in request.path and not '/create/' in request.path %}active-nav-item{% endif %}">
-                        <i class="fa-solid fa-file-contract nav-icon" style="color:#f97316;"></i>Contract Register
+                        Contract Register
                     </a>
                     <a href="/contracts/create/" class="unified-navlink {% if '/contracts/create/' in request.path %}active-nav-item{% endif %}">
-                        <i class="fa-solid fa-file-signature nav-icon text-warning"></i>New Contract Draft
+                        New Contract Draft
                     </a>
                     <a href="/vendors/onboarding/" class="unified-navlink {% if '/vendors/onboarding/' in request.path %}active-nav-item{% endif %}">
-                        <i class="fa-solid fa-id-card nav-icon text-info"></i>Vendor KYC Review
+                        Vendor KYC Review
                     </a>
 
                     <div class="nav-section-label">APPROVALS &amp; GOVERNANCE</div>
                     <a href="/approvals/inbox/" class="unified-navlink {% if '/approvals/' in request.path %}active-nav-item{% endif %}">
-                        <i class="fa-solid fa-square-check nav-icon text-warning"></i>Approvals Inbox
+                        Approvals Inbox
                     </a>
                     <a href="/sourcing-events/" class="unified-navlink {% if '/sourcing' in request.path %}active-nav-item{% endif %}">
-                        <i class="fa-solid fa-gavel nav-icon text-warning"></i>Sourcing Events
+                        Sourcing Events
                     </a>
                     <a href="/vendors/" class="unified-navlink {% if request.path == '/vendors/' %}active-nav-item{% endif %}">
-                        <i class="fa-solid fa-building-user nav-icon text-success"></i>Vendor Directory
+                        Vendor Directory
                     </a>
 
                     <div class="nav-section-label">COMPLIANCE &amp; TRACEABILITY</div>
                     <a href="/reports/hub/" class="unified-navlink {% if '/reports/' in request.path %}active-nav-item{% endif %}">
-                        <i class="fa-solid fa-chart-line nav-icon text-secondary"></i>Reports Hub
+                        Reports Hub
                     </a>
                     <a href="/audit/logs/" class="unified-navlink {% if '/audit/logs/' in request.path %}active-nav-item{% endif %}">
-                        <i class="fa-solid fa-shield-halved nav-icon text-danger"></i>Audit Trail Log
+                        Audit Trail Log
                     </a>
                 </nav>
             </div>

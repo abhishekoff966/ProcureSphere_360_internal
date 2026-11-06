@@ -592,10 +592,8 @@ APP_LOGIN_URL = env("APP_LOGIN_URL", default="http://localhost:8000/login/")
 
 
 # KYC document types (VendorDocument.document_type codes) that must be present AND verified
-
 # before a vendor can be activated. Empty = at least one verified document is required.
-
-VENDOR_MANDATORY_KYC_DOC_TYPES = env.list("VENDOR_MANDATORY_KYC_DOC_TYPES", default=["INC_CERT", "TAX_CLEARANCE", "BANK_LETTER"])
+VENDOR_MANDATORY_KYC_DOC_TYPES = env.list("VENDOR_MANDATORY_KYC_DOC_TYPES", default=[])
 
 
 

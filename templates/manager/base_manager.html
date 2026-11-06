@@ -10,7 +10,7 @@
         <!-- Brand & Mobile Drawer Toggle -->
         <div class="d-flex align-items-center flex-nowrap manager-brand-wrapper">
             <a href="/manager/" class="dashboard-brand-badge manager-top-brand" aria-label="ProcureSphere 360 Home">
-                <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
+                <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
             </a>
             {% include 'partials/sidebar_toggle_button.html' with sidebar_id='managerSidebar' %}
         </div>
@@ -72,16 +72,16 @@
         .manager-top-brand {
             width: 100% !important;
             max-width: 100% !important;
-            height: 62px !important;
-            max-height: 62px !important;
-            padding: 2px 6px !important;
-            border-radius: 10px !important;
+            height: 44px !important;
+            max-height: 44px !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
             margin: 0 !important;
         }
         .manager-top-brand .dashboard-brand-logo {
             width: 100% !important;
             height: 100% !important;
-            max-height: 56px !important;
+            max-height: 34px !important;
             object-fit: contain !important;
         }
     }
@@ -90,10 +90,10 @@
         .manager-top-brand {
             width: 190px !important;
             max-width: 190px !important;
-            height: 48px !important;
-            max-height: 48px !important;
-            padding: 4px 8px !important;
-            border-radius: 8px !important;
+            height: 38px !important;
+            max-height: 38px !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
             margin: 0 !important;
         }
     }
@@ -137,7 +137,7 @@
 
     /* Section label style */
     .nav-section-label {
-        font-size: 0.63rem;
+        font-size: 0.68rem;
         letter-spacing: 0.08em;
         font-weight: 700;
         text-transform: uppercase;
@@ -253,13 +253,12 @@
         <nav class="sidebar-nav-container flex-grow-1 overflow-y-auto px-2 py-3 d-flex flex-column gap-1" id="managerNav" style="flex: 1 1 0%; min-height: 0;" aria-label="Procurement Manager Navigation">
             <div class="d-flex align-items-center justify-content-between px-2 mb-2 text-secondary text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.06em;">
                 <span>Manager Desk</span>
-                <i class="fa-solid fa-shield-halved text-cyan" style="font-size:0.75rem;"></i>
+                
             </div>
 
             <!-- DASHBOARD SECTION -->
             <div class="nav-section-label">Dashboard</div>
             <a href="/manager/" class="manager-nav-link {% if request.path == '/manager/' or request.path == '/' %}active{% endif %}">
-                <i class="fa-solid fa-gauge-high nav-icon text-cyan"></i>
                 <span>Executive Dashboard</span>
             </a>
 
@@ -267,7 +266,6 @@
             <div class="nav-section-label">Procurement</div>
             <a href="/approvals/inbox/" class="manager-nav-link d-flex align-items-center justify-content-between {% if '/approvals/' in request.path %}active{% endif %}">
                 <div class="d-flex align-items-center min-width-0">
-                    <i class="fa-solid fa-square-check nav-icon text-warning"></i>
                     <span class="text-truncate">Pending Approvals</span>
                 </div>
                 {% if pending_approvals_count and pending_approvals_count > 0 %}
@@ -275,56 +273,47 @@
                 {% endif %}
             </a>
             <a href="/manager/pipeline/" class="manager-nav-link {% if '/manager/pipeline/' in request.path %}active{% endif %}">
-                <i class="fa-solid fa-filter-circle-dollar nav-icon text-cyan"></i>
                 <span>Procurement Pipeline</span>
             </a>
             <a href="/manager/pr-aging/" class="manager-nav-link {% if '/manager/pr-aging/' in request.path %}active{% endif %}">
-                <i class="fa-solid fa-clock-rotate-left nav-icon text-warning"></i>
                 <span>PR Aging &amp; Bottlenecks</span>
             </a>
             <a href="/manager/sourcing/" class="manager-nav-link {% if '/manager/sourcing/' in request.path or '/sourcing-events/' in request.path or '/sourcing/bid-portal/' in request.path or request.path == '/sourcing/' %}active{% endif %}">
-                <i class="fa-solid fa-gavel nav-icon text-warning"></i>
                 <span>Sourcing Events</span>
             </a>
             <a href="/manager/awards/" class="manager-nav-link {% if '/manager/awards/' in request.path or '/sourcing/evaluation' in request.path %}active{% endif %}">
-                <i class="fa-solid fa-award nav-icon text-warning"></i>
                 <span>Award Approvals</span>
             </a>
 
             <!-- ORDERS SECTION -->
             <div class="nav-section-label">Orders</div>
             <a href="/manager/purchase-orders/" class="manager-nav-link {% if '/manager/purchase-orders/' in request.path %}active{% endif %}">
-                <i class="fa-solid fa-cart-shopping nav-icon text-cyan"></i>
                 <span>Purchase Orders</span>
             </a>
 
             <!-- SUPPLIERS SECTION -->
             <div class="nav-section-label">Suppliers</div>
             <a href="/manager/vendor-risk/" class="manager-nav-link {% if '/manager/vendor-risk/' in request.path %}active{% endif %}">
-                <i class="fa-solid fa-shield-halved nav-icon text-danger"></i>
+                
                 <span>Vendor Risk</span>
             </a>
             <a href="/manager/vendor-risk/suspension/" class="manager-nav-link {% if '/manager/vendor-risk/suspension/' in request.path %}active{% endif %}">
-                <i class="fa-solid fa-scale-balanced nav-icon text-danger"></i>
                 <span>Vendor Suspension</span>
             </a>
 
             <a href="/manager/performance/" class="manager-nav-link {% if '/manager/performance/' in request.path %}active{% endif %}">
-                <i class="fa-solid fa-chart-line nav-icon text-success"></i>
                 <span>Supplier Performance</span>
             </a>
 
             <!-- ANALYTICS SECTION -->
             <div class="nav-section-label">Analytics</div>
             <a href="/manager/spend/" class="manager-nav-link {% if '/manager/spend/' in request.path %}active{% endif %}">
-                <i class="fa-solid fa-chart-pie nav-icon text-success"></i>
                 <span>Spend Analysis</span>
             </a>
 
             <!-- WORKFLOW SECTION -->
             <div class="nav-section-label">Workflow</div>
             <a href="/manager/notifications/" class="manager-nav-link {% if '/manager/notifications/' in request.path %}active{% endif %}">
-                <i class="fa-solid fa-bell nav-icon text-warning"></i>
                 <span>Notifications &amp; Alerts</span>
             </a>
 
