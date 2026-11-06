@@ -920,6 +920,9 @@ aside.bg-dark nav a:hover,
     text-decoration: none !important;
 }
 
+.sidebar-menu-item.active,
+.sidebar-menu-item[aria-current="page"],
+.sidebar-menu-item.active-nav-item,
 .unified-navlink.active,
 .unified-navlink.active-nav-item,
 aside.bg-dark nav a.active-nav-item,
@@ -931,11 +934,45 @@ aside.bg-dark nav a.active,
 .manager-nav-link.active,
 .approver-nav-link.active,
 .auditor-nav-link.active {
-    background: #0D6EFD !important;
+    background: linear-gradient(135deg, #1677FF 0%, #0866E8 100%) !important;
     color: #FFFFFF !important;
-    font-weight: 700 !important;
-    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.35) !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 10px rgba(22, 119, 255, 0.22) !important;
     text-decoration: none !important;
+}
+
+.sidebar-menu-item.active .menu-label,
+.sidebar-menu-item[aria-current="page"] .menu-label,
+.unified-navlink.active span,
+.unified-navlink.active-nav-item span,
+.sidebar-link.active span,
+.sa-nav-link.active span,
+.manager-nav-link.active span,
+.approver-nav-link.active span,
+.auditor-nav-link.active span {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+}
+
+.sidebar-menu-item.active .menu-icon,
+.sidebar-menu-item[aria-current="page"] .menu-icon,
+.unified-navlink.active i,
+.unified-navlink.active-nav-item i,
+.sidebar-link.active i,
+.sa-nav-link.active i,
+.manager-nav-link.active i,
+.approver-nav-link.active i,
+.auditor-nav-link.active i,
+.unified-navlink.active i[class*="text-"],
+.unified-navlink.active-nav-item i[class*="text-"],
+.sa-nav-link.active i[class*="text-"],
+.manager-nav-link.active i[class*="text-"],
+.approver-nav-link.active i[class*="text-"],
+.auditor-nav-link.active i[class*="text-"] {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
 }
 
 .unified-navlink .nav-icon,
@@ -1150,7 +1187,7 @@ aside.bg-dark a:focus {
     text-decoration: none !important;
 }
 
-/* Active nav item - Solid Royal Blue Pill identical to Vendor Reference */
+/* Active nav item - Premium Blue Gradient with White Text & White Icon */
 .vendor-navlink.active-nav-item,
 .vendor-navlink.active,
 .unified-navlink.active-nav-item,
@@ -1161,11 +1198,31 @@ aside.bg-dark a.nav-link.active,
 aside.bg-dark a.nav-link.active-nav-item,
 aside.bg-dark a.active,
 aside.bg-dark a.active-nav-item {
-    background: #0D6EFD !important;
+    background: linear-gradient(135deg, #1677FF 0%, #0866E8 100%) !important;
     color: #FFFFFF !important;
-    font-weight: 700 !important;
-    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.35) !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 10px rgba(22, 119, 255, 0.22) !important;
     text-decoration: none !important;
+}
+
+.vendor-navlink.active-nav-item span,
+.vendor-navlink.active span,
+.unified-navlink.active-nav-item span,
+.unified-navlink.active span {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+}
+
+.vendor-navlink.active-nav-item i,
+.vendor-navlink.active i,
+.unified-navlink.active-nav-item i,
+.unified-navlink.active i,
+.vendor-navlink.active-nav-item i[class*="text-"],
+.unified-navlink.active-nav-item i[class*="text-"] {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
 }
 
 /* Icon within nav links */

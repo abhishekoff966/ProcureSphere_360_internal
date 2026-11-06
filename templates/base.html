@@ -30,10 +30,191 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         /* ========================================================================= */
-        /* VENDOR DASHBOARD REFERENCE SIDEBAR DESIGN STANDARD                        */
-        /* Enforces exact vendor sidebar styles globally for all roles               */
+        /* GLOBAL LIGHT BLUE ENTERPRISE NAVBAR & SIDEBAR THEME                       */
+        /* Enforced across ALL dashboards and role-based portals globally            */
         /* ========================================================================= */
+        
+        /* 1. TOP NAVBAR DESIGN EVERYWHERE */
+        nav.navbar,
+        .enterprise-topbar,
+        .sa-topbar,
+        .proc-exec-topbar,
+        header nav.navbar {
+            background: linear-gradient(110deg, #EAF2FF 0%, #DCE9FF 50%, #C9DCFF 100%) !important;
+            border-bottom: 1px solid #B8CCED !important;
+            box-shadow: 0 4px 12px rgba(30, 64, 120, 0.12) !important;
+            color: #1B2A4A !important;
+            min-height: 84px !important;
+            padding: 7px 16px !important;
+            z-index: 1030 !important;
+        }
+
+        /* 2. LOGO SIZING & TRANSPARENCY EVERYWHERE */
+        .dashboard-brand-badge,
+        .sa-top-brand,
+        .approver-top-brand,
+        .finance-top-brand,
+        .legal-top-brand,
+        .requester-top-brand,
+        .stores-top-brand,
+        .vendor-top-brand,
+        .auditor-top-brand,
+        .manager-top-brand,
+        .proc-exec-top-brand,
+        a.dashboard-brand-badge,
+        nav a.navbar-brand {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            text-decoration: none !important;
+            width: 210px !important;
+            max-width: 210px !important;
+            height: 70px !important;
+            max-height: 70px !important;
+            flex-shrink: 0 !important;
+        }
+
+        .dashboard-brand-logo,
+        .sa-brand-logo,
+        .approver-brand-logo,
+        img.dashboard-brand-logo {
+            width: 210px !important;
+            max-width: 210px !important;
+            height: 70px !important;
+            max-height: 70px !important;
+            object-fit: contain !important;
+            display: block !important;
+            filter: drop-shadow(0 1px 2px rgba(30, 64, 120, 0.08)) !important;
+            background: transparent !important;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-brand-badge,
+            a.dashboard-brand-badge,
+            nav a.navbar-brand {
+                width: 170px !important;
+                max-width: 170px !important;
+                height: 56px !important;
+            }
+            .dashboard-brand-logo,
+            img.dashboard-brand-logo {
+                width: 170px !important;
+                max-width: 170px !important;
+                height: 56px !important;
+            }
+        }
+
+        /* Brand wrapper sizing for 210px logo + 38px toggle button */
+        .proc-exec-brand-wrapper,
+        .auditor-brand-wrapper,
+        .approver-brand-wrapper,
+        .finance-brand-wrapper,
+        .legal-brand-wrapper,
+        .requester-brand-wrapper,
+        .stores-brand-wrapper,
+        .sa-brand-wrapper,
+        .vendor-brand-wrapper,
+        .manager-brand-wrapper {
+            width: auto !important;
+            min-width: 260px !important;
+            max-width: none !important;
+            display: flex !important;
+            align-items: center !important;
+            flex-shrink: 0 !important;
+            gap: 0 !important;
+        }
+
+        /* 3. NAVBAR ACTION CONTROLS & ICONS */
+        .sidebar-toggle-btn {
+            width: 38px !important;
+            height: 38px !important;
+            min-width: 38px !important;
+            background: rgba(27, 42, 74, 0.06) !important;
+            border: 1px solid rgba(27, 42, 74, 0.15) !important;
+            color: #1B2A4A !important;
+            border-radius: 9px !important;
+            margin-left: 14px !important;
+            margin-right: 0 !important;
+            transition: all 0.2s ease !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+            flex-shrink: 0 !important;
+        }
+        .sidebar-toggle-btn:hover {
+            background: rgba(27, 42, 74, 0.12) !important;
+            border-color: rgba(27, 42, 74, 0.25) !important;
+            color: #0F172A !important;
+            box-shadow: 0 2px 6px rgba(30, 64, 120, 0.10) !important;
+        }
+        .sidebar-toggle-btn svg {
+            stroke: #1B2A4A !important;
+        }
+        .sidebar-toggle-btn:hover svg {
+            stroke: #1677FF !important;
+        }
+
+        /* Navbar action buttons: Bell, Profile, etc. */
+        nav.navbar .btn-outline-secondary,
+        nav.navbar .sa-nav-action-btn,
+        nav.navbar .sa-profile-btn,
+        nav.navbar a[href*="notification"],
+        nav.navbar .dropdown > button {
+            width: 38px !important;
+            height: 38px !important;
+            min-width: 38px !important;
+            background: rgba(27, 42, 74, 0.06) !important;
+            border: 1px solid rgba(27, 42, 74, 0.15) !important;
+            color: #1B2A4A !important;
+            border-radius: 9px !important;
+            transition: all 0.2s ease !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+        }
+        nav.navbar .btn-outline-secondary:hover,
+        nav.navbar .sa-nav-action-btn:hover,
+        nav.navbar .sa-profile-btn:hover,
+        nav.navbar a[href*="notification"]:hover,
+        nav.navbar .dropdown > button:hover {
+            background: rgba(27, 42, 74, 0.12) !important;
+            border-color: rgba(27, 42, 74, 0.25) !important;
+            color: #0F172A !important;
+            transform: translateY(-1px);
+        }
+        nav.navbar i.fa-bell,
+        nav.navbar i.fa-circle-user,
+        nav.navbar i.fa-bars {
+            color: #1B2A4A !important;
+        }
+
+        /* Navbar profile dropdown */
+        nav.navbar .dropdown-menu {
+            background: #ffffff !important;
+            border: 1px solid #B8CCED !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 25px rgba(30, 64, 120, 0.12) !important;
+        }
+        nav.navbar .dropdown-menu .fw-semibold,
+        nav.navbar .dropdown-menu a:not(.text-danger) {
+            color: #1B2A4A !important;
+        }
+        nav.navbar .dropdown-menu .text-white-50 {
+            color: #64748B !important;
+        }
+
+        /* 4. SIDEBAR DESIGN EVERYWHERE */
         @media (min-width: 992px) {
+            aside.offcanvas-lg,
+            aside.bg-dark,
+            aside.enterprise-sidebar,
+            aside[id$="Sidebar"],
             .vendor-sidebar-desktop,
             .unified-sidebar-desktop,
             .approver-sidebar-desktop,
@@ -43,284 +224,497 @@
             .legal-sidebar-desktop,
             .manager-sidebar-desktop,
             .auditor-sidebar,
-            aside.bg-dark:not(.approver-sidebar) {
+            .sa-sidebar-desktop,
+            .proc-exec-sidebar,
+            .proc-exec-sidebar-desktop {
                 width: 260px !important;
                 min-width: 260px !important;
+                max-width: 260px !important;
                 flex-shrink: 0 !important;
                 position: sticky !important;
                 top: 84px !important;
                 height: calc(100vh - 84px) !important;
-                overflow-y: auto !important;
-                scrollbar-width: thin;
-                scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
-                z-index: 1000;
-                align-self: flex-start;
+                max-height: calc(100vh - 84px) !important;
+                overflow: hidden !important;
+                overflow-x: hidden !important;
+                box-sizing: border-box !important;
+                background: linear-gradient(180deg, #EAF2FF 0%, #DCE9FF 55%, #D2E2FF 100%) !important;
+                border-right: 1px solid #B8CCED !important;
+                box-shadow: 3px 0 12px rgba(30, 64, 120, 0.10) !important;
+                color: #1B2A4A !important;
+                z-index: 1000 !important;
+                align-self: flex-start !important;
+                transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                            min-width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                            max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                            opacity 0.22s ease,
+                            border-color 0.28s ease !important;
             }
-            .vendor-sidebar-desktop::-webkit-scrollbar,
-            .unified-sidebar-desktop::-webkit-scrollbar,
-            aside.bg-dark::-webkit-scrollbar {
-                width: 4px;
+
+            /* Inner Sidebar Content stays strictly at 260px width */
+            aside.offcanvas-lg > *,
+            aside.bg-dark > *,
+            aside.enterprise-sidebar > *,
+            aside[id$="Sidebar"] > *,
+            .vendor-sidebar-desktop > *,
+            .unified-sidebar-desktop > *,
+            .approver-sidebar-desktop > *,
+            .requester-sidebar-desktop > *,
+            .stores-desk-nav > *,
+            .finance-sidebar-desktop > *,
+            .legal-sidebar-desktop > *,
+            .manager-sidebar-desktop > *,
+            .auditor-sidebar > *,
+            .sa-sidebar-desktop > *,
+            .proc-exec-sidebar > *,
+            .proc-exec-sidebar-desktop > *,
+            aside.offcanvas-lg nav,
+            aside.bg-dark nav,
+            aside[id$="Sidebar"] nav,
+            .sidebar-nav-container,
+            .sa-nav-scroll {
+                width: 260px !important;
+                min-width: 260px !important;
+                max-width: 260px !important;
+                flex-shrink: 0 !important;
+                box-sizing: border-box !important;
+                overflow-x: hidden !important;
+                transition: opacity 0.2s ease !important;
             }
-            .vendor-sidebar-desktop::-webkit-scrollbar-thumb,
-            .unified-sidebar-desktop::-webkit-scrollbar-thumb,
-            aside.bg-dark::-webkit-scrollbar-thumb {
-                background: rgba(255, 255, 255, 0.15);
-                border-radius: 4px;
+
+            /* Main Content Container matching 84px header */
+            main.flex-grow-1,
+            .main-content,
+            .stores-main-content,
+            .auditor-main-content {
+                min-height: calc(100vh - 84px) !important;
+                transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                            max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                            flex 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                flex: 1 1 auto !important;
+                min-width: 0 !important;
+            }
+
+            /* Desktop Collapsed State */
+            body.sidebar-collapsed aside.offcanvas-lg,
+            body.sidebar-collapsed aside.bg-dark,
+            body.sidebar-collapsed aside.enterprise-sidebar,
+            body.sidebar-collapsed aside[id$="Sidebar"],
+            body.sidebar-collapsed aside#saSidebar,
+            body.sidebar-collapsed aside#approverSidebar,
+            body.sidebar-collapsed aside#financeSidebar,
+            body.sidebar-collapsed aside#legalSidebar,
+            body.sidebar-collapsed aside#requesterSidebar,
+            body.sidebar-collapsed aside#storesSidebar,
+            body.sidebar-collapsed aside#vendorSidebar,
+            body.sidebar-collapsed aside#auditorSidebar,
+            body.sidebar-collapsed aside#managerSidebar,
+            body.sidebar-collapsed aside#procExecSidebar,
+            body.sidebar-collapsed .vendor-sidebar-desktop,
+            body.sidebar-collapsed .unified-sidebar-desktop,
+            body.sidebar-collapsed .approver-sidebar-desktop,
+            body.sidebar-collapsed .requester-sidebar-desktop,
+            body.sidebar-collapsed .stores-desk-nav,
+            body.sidebar-collapsed .finance-sidebar-desktop,
+            body.sidebar-collapsed .legal-sidebar-desktop,
+            body.sidebar-collapsed .manager-sidebar-desktop,
+            body.sidebar-collapsed .auditor-sidebar,
+            body.sidebar-collapsed .sa-sidebar-desktop,
+            body.sidebar-collapsed .proc-exec-sidebar,
+            body.sidebar-collapsed .proc-exec-sidebar-desktop {
+                width: 0 !important;
+                min-width: 0 !important;
+                max-width: 0 !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                border-right-width: 0 !important;
+                border-right-color: transparent !important;
+                opacity: 0 !important;
+                overflow: hidden !important;
+                pointer-events: none !important;
+            }
+
+            body.sidebar-collapsed aside > * {
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+
+            body.sidebar-collapsed main,
+            body.sidebar-collapsed .flex-grow-1,
+            body.sidebar-collapsed .stores-main-content,
+            body.sidebar-collapsed .auditor-main-content {
+                width: 100% !important;
+                max-width: 100% !important;
+                flex: 1 1 100% !important;
             }
         }
 
-        /* Section label style - exact Vendor Dashboard reference */
-        .nav-section-label {
-            font-size: 0.63rem !important;
-            letter-spacing: 0.08em !important;
-            font-weight: 700 !important;
-            text-transform: uppercase !important;
-            color: rgba(255, 255, 255, 0.38) !important;
-            padding: 0.6rem 0.75rem 0.2rem !important;
-            margin-top: 0.25rem !important;
-            line-height: 1.2 !important;
-        }
-
-        /* Top-level nav link - EXACT same styling as Vendor Dashboard */
+        /* 5. SIDEBAR MENU LABELS & TYPOGRAPHY */
         .vendor-navlink,
         .unified-navlink,
-        aside.bg-dark nav a,
-        aside.bg-dark .sidebar-nav-container a,
-        aside.bg-dark a.nav-link {
+        .sa-nav-link,
+        aside nav a,
+        aside .sidebar-nav-container a,
+        aside a.nav-link {
             display: flex !important;
             align-items: center !important;
-            padding: 0.45rem 0.75rem !important;
+            padding: 0.5rem 0.75rem !important;
             border-radius: 8px !important;
             font-size: 0.875rem !important;
             font-weight: 500 !important;
-            color: rgba(255, 255, 255, 0.75) !important;
+            color: #1B2A4A !important;
             text-decoration: none !important;
-            transition: background 0.15s, color 0.15s !important;
+            transition: all 0.15s ease !important;
             margin-bottom: 3px !important;
+            white-space: nowrap !important;
+            background: transparent !important;
+        }
+        .vendor-navlink span,
+        .unified-navlink span,
+        .sa-nav-link span,
+        aside nav a span,
+        aside nav a div,
+        aside .sidebar-nav-container a span,
+        aside a.nav-link span {
+            color: #1B2A4A !important;
+            font-weight: 500 !important;
+            transition: color 0.15s ease !important;
         }
 
         .vendor-navlink:hover,
         .vendor-navlink:focus,
         .unified-navlink:hover,
         .unified-navlink:focus,
-        aside.bg-dark nav a:hover,
-        aside.bg-dark nav a:focus,
-        aside.bg-dark .sidebar-nav-container a:hover,
-        aside.bg-dark .sidebar-nav-container a:focus,
-        aside.bg-dark a.nav-link:hover,
-        aside.bg-dark a.nav-link:focus {
-            background: rgba(255, 255, 255, 0.08) !important;
-            color: #FFFFFF !important;
+        .sa-nav-link:hover,
+        .sa-nav-link:focus,
+        aside nav a:hover,
+        aside nav a:focus,
+        aside .sidebar-nav-container a:hover,
+        aside .sidebar-nav-container a:focus,
+        aside a.nav-link:hover,
+        aside a.nav-link:focus {
+            background: rgba(22, 119, 255, 0.08) !important;
+            color: #0F172A !important;
             text-decoration: none !important;
         }
+        .vendor-navlink:hover span,
+        .unified-navlink:hover span,
+        .sa-nav-link:hover span,
+        aside nav a:hover span,
+        aside .sidebar-nav-container a:hover span,
+        aside a.nav-link:hover span {
+            color: #0F172A !important;
+        }
 
-        /* Active nav item - Solid Royal Blue Pill identical to Vendor Reference */
+        /* ========================================================================= */
+        /* 6. GLOBAL ACTIVE SIDEBAR MENU ITEM - WHITE TEXT + WHITE ICON (ALL ROLES)  */
+        /* ========================================================================= */
+        .sidebar-menu-item.active,
+        .sidebar-menu-item[aria-current="page"],
+        .sidebar-menu-item.active-nav-item,
         .vendor-navlink.active-nav-item,
         .vendor-navlink.active,
+        .vendor-navlink[aria-current="page"],
+        .proc-navlink.active-nav-item,
+        .proc-navlink.active,
+        .proc-navlink[aria-current="page"],
+        .approver-navlink.active-nav-item,
+        .approver-navlink.active,
+        .approver-navlink[aria-current="page"],
+        .finance-navlink.active-nav-item,
+        .finance-navlink.active,
+        .finance-navlink[aria-current="page"],
         .unified-navlink.active-nav-item,
         .unified-navlink.active,
-        aside.bg-dark nav a.active-nav-item,
-        aside.bg-dark nav a.active,
-        aside.bg-dark .sidebar-nav-container a.active,
-        aside.bg-dark a.nav-link.active,
-        aside.bg-dark a.nav-link.active-nav-item {
-            background: #0D6EFD !important;
+        .unified-navlink[aria-current="page"],
+        .req-navlink.active-nav-item,
+        .req-navlink.active,
+        .req-navlink[aria-current="page"],
+        .manager-nav-link.active,
+        .manager-nav-link.active-nav-item,
+        .manager-nav-link[aria-current="page"],
+        .auditor-navlink.active,
+        .auditor-navlink.active-nav-item,
+        .auditor-navlink[aria-current="page"],
+        .sa-nav-link.active,
+        .sa-nav-link.active-nav-item,
+        .sa-nav-link[aria-current="page"],
+        aside nav a.active-nav-item,
+        aside nav a.active,
+        aside nav a[aria-current="page"],
+        aside .sidebar-nav-container a.active,
+        aside .sidebar-nav-container a.active-nav-item,
+        aside a.nav-link.active,
+        aside a.nav-link.active-nav-item,
+        aside a.active,
+        aside a.active-nav-item,
+        aside a[aria-current="page"],
+        [id$="Sidebar"] a.active,
+        [id$="Sidebar"] a.active-nav-item,
+        [id$="Sidebar"] a[aria-current="page"],
+        [id$="Nav"] a.active,
+        [id$="Nav"] a.active-nav-item,
+        [id$="Nav"] a[aria-current="page"] {
+            background: linear-gradient(135deg, #1677FF 0%, #0866E8 100%) !important;
             color: #FFFFFF !important;
-            font-weight: 700 !important;
-            box-shadow: 0 2px 8px rgba(13, 110, 253, 0.35) !important;
+            -webkit-text-fill-color: #FFFFFF !important;
+            border-radius: 10px !important;
+            box-shadow: 0 4px 10px rgba(22, 119, 255, 0.22) !important;
+            font-weight: 600 !important;
             text-decoration: none !important;
         }
 
-        /* Icon within nav links */
-        .vendor-navlink .nav-icon,
-        .unified-navlink .nav-icon,
-        .vendor-navlink i,
-        .unified-navlink i,
-        aside.bg-dark nav a i,
-        aside.bg-dark .sidebar-nav-container a i,
-        aside.bg-dark a.nav-link i {
-            width: 20px !important;
-            text-align: center !important;
-            margin-right: 0.65rem !important;
-            flex-shrink: 0 !important;
+        /* Active Text: Pure White #FFFFFF */
+        .sidebar-menu-item.active .menu-label,
+        .sidebar-menu-item[aria-current="page"] .menu-label,
+        .sidebar-menu-item.active-nav-item .menu-label,
+        .vendor-navlink.active span,
+        .vendor-navlink.active-nav-item span,
+        .proc-navlink.active span,
+        .proc-navlink.active-nav-item span,
+        .approver-navlink.active span,
+        .approver-navlink.active-nav-item span,
+        .finance-navlink.active span,
+        .finance-navlink.active-nav-item span,
+        .unified-navlink.active span,
+        .unified-navlink.active-nav-item span,
+        .req-navlink.active span,
+        .req-navlink.active-nav-item span,
+        .manager-nav-link.active span,
+        .manager-nav-link.active-nav-item span,
+        .sa-nav-link.active span,
+        .sa-nav-link.active-nav-item span,
+        aside nav a.active span,
+        aside nav a.active-nav-item span,
+        aside .sidebar-nav-container a.active span,
+        aside .sidebar-nav-container a.active-nav-item span,
+        aside a.nav-link.active span,
+        aside a.nav-link.active-nav-item span,
+        aside a.active span,
+        aside a.active-nav-item span,
+        aside a.active .menu-label,
+        aside a.active-nav-item .menu-label,
+        aside a.active .nav-text,
+        aside a.active-nav-item .nav-text,
+        [id$="Sidebar"] a.active span,
+        [id$="Sidebar"] a.active-nav-item span,
+        [id$="Sidebar"] a.active .menu-label,
+        [id$="Sidebar"] a.active-nav-item .menu-label,
+        [id$="Nav"] a.active span,
+        [id$="Nav"] a.active-nav-item span {
+            color: #FFFFFF !important;
+            -webkit-text-fill-color: #FFFFFF !important;
+            font-weight: 600 !important;
         }
 
-        /* Brand Header Box in Sidebar */
-        .sidebar-brand-box {
-            padding: 0.85rem 1rem !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        /* Active Icons: Pure White #FFFFFF (Beating .text-cyan, .text-info, .text-warning, .text-success, .text-danger, .text-primary, .text-secondary, inline styles) */
+        .sidebar-menu-item.active .menu-icon,
+        .sidebar-menu-item[aria-current="page"] .menu-icon,
+        .sidebar-menu-item.active-nav-item .menu-icon,
+        .vendor-navlink.active i,
+        .vendor-navlink.active-nav-item i,
+        .proc-navlink.active i,
+        .proc-navlink.active-nav-item i,
+        .approver-navlink.active i,
+        .approver-navlink.active-nav-item i,
+        .finance-navlink.active i,
+        .finance-navlink.active-nav-item i,
+        .unified-navlink.active i,
+        .unified-navlink.active-nav-item i,
+        .req-navlink.active i,
+        .req-navlink.active-nav-item i,
+        .manager-nav-link.active i,
+        .manager-nav-link.active-nav-item i,
+        .sa-nav-link.active i,
+        .sa-nav-link.active-nav-item i,
+        aside nav a.active i,
+        aside nav a.active-nav-item i,
+        aside .sidebar-nav-container a.active i,
+        aside .sidebar-nav-container a.active-nav-item i,
+        aside a.nav-link.active i,
+        aside a.nav-link.active-nav-item i,
+        aside a.active i,
+        aside a.active-nav-item i,
+        [id$="Sidebar"] a.active i,
+        [id$="Sidebar"] a.active-nav-item i,
+        [id$="Nav"] a.active i,
+        [id$="Nav"] a.active-nav-item i,
+        aside a.active i[class*="text-"],
+        aside a.active-nav-item i[class*="text-"],
+        aside a.active i[style],
+        aside a.active-nav-item i[style],
+        [id$="Sidebar"] a.active i[class*="text-"],
+        [id$="Sidebar"] a.active-nav-item i[class*="text-"],
+        [id$="Sidebar"] a.active i[style],
+        [id$="Sidebar"] a.active-nav-item i[style],
+        [id$="Nav"] a.active i[class*="text-"],
+        [id$="Nav"] a.active-nav-item i[class*="text-"],
+        [id$="Nav"] a.active i[style],
+        [id$="Nav"] a.active-nav-item i[style],
+        .sa-nav-link.active i[class*="text-"],
+        .sa-nav-link.active-nav-item i[class*="text-"],
+        .vendor-navlink.active i[class*="text-"],
+        .vendor-navlink.active-nav-item i[class*="text-"],
+        .proc-navlink.active i[class*="text-"],
+        .proc-navlink.active-nav-item i[class*="text-"],
+        .approver-navlink.active i[class*="text-"],
+        .approver-navlink.active-nav-item i[class*="text-"],
+        .finance-navlink.active i[class*="text-"],
+        .finance-navlink.active-nav-item i[class*="text-"],
+        .unified-navlink.active i[class*="text-"],
+        .unified-navlink.active-nav-item i[class*="text-"],
+        .req-navlink.active i[class*="text-"],
+        .req-navlink.active-nav-item i[class*="text-"],
+        .manager-nav-link.active i[class*="text-"],
+        .manager-nav-link.active-nav-item i[class*="text-"],
+        .sidebar-menu-item.active i[class*="text-"],
+        .sidebar-menu-item[aria-current="page"] i[class*="text-"],
+        .sidebar-menu-item.active-nav-item i[class*="text-"] {
+            color: #FFFFFF !important;
+            -webkit-text-fill-color: #FFFFFF !important;
         }
 
-        /* Footer and Brand links isolation */
-        aside.bg-dark .sidebar-brand-box a,
-        aside.bg-dark .sidebar-brand-box a:hover {
-            display: inline-flex !important;
-            background: transparent !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-            margin-bottom: 0 !important;
+        /* Active SVG Icons: White */
+        .sidebar-menu-item.active svg,
+        .sidebar-menu-item[aria-current="page"] svg,
+        .sidebar-menu-item.active-nav-item svg,
+        .sa-nav-link.active svg,
+        .sa-nav-link.active-nav-item svg,
+        .vendor-navlink.active svg,
+        .vendor-navlink.active-nav-item svg,
+        .proc-navlink.active svg,
+        .proc-navlink.active-nav-item svg,
+        .unified-navlink.active svg,
+        .unified-navlink.active-nav-item svg,
+        aside nav a.active svg,
+        aside nav a.active-nav-item svg,
+        aside a.active svg,
+        aside a.active-nav-item svg,
+        [id$="Sidebar"] a.active svg,
+        [id$="Sidebar"] a.active-nav-item svg,
+        [id$="Nav"] a.active svg,
+        [id$="Nav"] a.active-nav-item svg {
+            color: #FFFFFF !important;
+            stroke: #FFFFFF !important;
         }
 
-        aside.bg-dark:not(.approver-sidebar) .sidebar-footer a,
-        aside.bg-dark:not(.approver-sidebar) a.sidebar-signout-btn,
-        aside.bg-dark:not(.approver-sidebar) .sidebar-footer a:hover,
-        aside.bg-dark:not(.approver-sidebar) a.sidebar-signout-btn:hover {
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            width: auto !important;
-            padding: 0.25rem 0.6rem !important;
-            border-radius: 50rem !important;
-            margin-bottom: 0 !important;
-            box-shadow: none !important;
+        aside a.active svg path,
+        aside a.active-nav-item svg path,
+        [id$="Sidebar"] a.active svg path,
+        [id$="Sidebar"] a.active-nav-item svg path,
+        [id$="Nav"] a.active svg path,
+        [id$="Nav"] a.active-nav-item svg path,
+        aside a.active svg circle,
+        aside a.active-nav-item svg circle,
+        [id$="Sidebar"] a.active svg circle,
+        [id$="Sidebar"] a.active-nav-item svg circle,
+        aside a.active svg rect,
+        aside a.active-nav-item svg rect,
+        [id$="Sidebar"] a.active svg rect,
+        [id$="Sidebar"] a.active-nav-item svg rect {
+            stroke: #FFFFFF !important;
         }
 
-        /* Sleek 4px scrollbars for all dark sidebars (identical to Vendor Portal) */
-        aside.bg-dark,
-        aside.bg-dark nav,
-        aside.bg-dark .sidebar-nav-container,
-        .unified-sidebar-desktop,
-        .vendor-sidebar-desktop,
-        #procExecSidebar nav,
-        #managerSidebar .sidebar-nav-container,
-        #auditorSidebar .sidebar-nav-container {
+        /* Active Hover State - Retain Pure White */
+        aside a.active:hover,
+        aside a.active-nav-item:hover,
+        [id$="Sidebar"] a.active:hover,
+        [id$="Sidebar"] a.active-nav-item:hover,
+        [id$="Nav"] a.active:hover,
+        [id$="Nav"] a.active-nav-item:hover {
+            background: linear-gradient(135deg, #1677FF 0%, #0866E8 100%) !important;
+            color: #FFFFFF !important;
+            -webkit-text-fill-color: #FFFFFF !important;
+        }
+        aside a.active:hover span,
+        aside a.active-nav-item:hover span,
+        aside a.active:hover i,
+        aside a.active-nav-item:hover i,
+        aside a.active:hover svg,
+        aside a.active-nav-item:hover svg,
+        [id$="Sidebar"] a.active:hover span,
+        [id$="Sidebar"] a.active-nav-item:hover span,
+        [id$="Sidebar"] a.active:hover i,
+        [id$="Sidebar"] a.active-nav-item:hover i,
+        [id$="Nav"] a.active:hover span,
+        [id$="Nav"] a.active-nav-item:hover span,
+        [id$="Nav"] a.active:hover i,
+        [id$="Nav"] a.active-nav-item:hover i {
+            color: #FFFFFF !important;
+            -webkit-text-fill-color: #FFFFFF !important;
+        }
+
+        /* 7. SECTION HEADINGS & LABELS */
+        .nav-section-label,
+        .sa-nav-label,
+        .sidebar-heading,
+        aside .sa-workspace-header,
+        aside div.text-uppercase,
+        aside div[style*="uppercase"] {
+            font-size: 0.65rem !important;
+            letter-spacing: 0.08em !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            color: #64748B !important;
+            padding: 0.65rem 0.75rem 0.25rem !important;
+            margin-top: 0.25rem !important;
+            line-height: 1.2 !important;
+        }
+
+        /* 8. SEPARATORS */
+        .nav-separator,
+        .sa-nav-separator,
+        aside hr {
+            height: 1px !important;
+            background: rgba(184, 204, 237, 0.65) !important;
+            border: none !important;
+            margin: 0.45rem 0.5rem 0.25rem !important;
+        }
+
+        /* 9. SCROLLBARS */
+        aside,
+        aside nav,
+        aside .sidebar-nav-container,
+        .sa-nav-scroll {
             scrollbar-width: thin !important;
-            scrollbar-color: rgba(255, 255, 255, 0.15) transparent !important;
+            scrollbar-color: rgba(27, 42, 74, 0.18) transparent !important;
         }
-
-        aside.bg-dark::-webkit-scrollbar,
-        aside.bg-dark nav::-webkit-scrollbar,
-        aside.bg-dark .sidebar-nav-container::-webkit-scrollbar,
-        .unified-sidebar-desktop::-webkit-scrollbar,
-        .vendor-sidebar-desktop::-webkit-scrollbar,
-        #procExecSidebar nav::-webkit-scrollbar,
-        #managerSidebar .sidebar-nav-container::-webkit-scrollbar,
-        #auditorSidebar .sidebar-nav-container::-webkit-scrollbar {
+        aside::-webkit-scrollbar,
+        aside nav::-webkit-scrollbar,
+        aside .sidebar-nav-container::-webkit-scrollbar {
             width: 4px !important;
             height: 4px !important;
         }
-
-        aside.bg-dark::-webkit-scrollbar-track,
-        aside.bg-dark nav::-webkit-scrollbar-track,
-        aside.bg-dark .sidebar-nav-container::-webkit-scrollbar-track,
-        .unified-sidebar-desktop::-webkit-scrollbar-track,
-        .vendor-sidebar-desktop::-webkit-scrollbar-track,
-        #procExecSidebar nav::-webkit-scrollbar-track,
-        #managerSidebar .sidebar-nav-container::-webkit-scrollbar-track,
-        #auditorSidebar .sidebar-nav-container::-webkit-scrollbar-track {
-            background: transparent !important;
-        }
-
-        aside.bg-dark::-webkit-scrollbar-thumb,
-        aside.bg-dark nav::-webkit-scrollbar-thumb,
-        aside.bg-dark .sidebar-nav-container::-webkit-scrollbar-thumb,
-        .unified-sidebar-desktop::-webkit-scrollbar-thumb,
-        .vendor-sidebar-desktop::-webkit-scrollbar-thumb,
-        #procExecSidebar nav::-webkit-scrollbar-thumb,
-        #managerSidebar .sidebar-nav-container::-webkit-scrollbar-thumb,
-        #auditorSidebar .sidebar-nav-container::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.15) !important;
+        aside::-webkit-scrollbar-thumb,
+        aside nav::-webkit-scrollbar-thumb,
+        aside .sidebar-nav-container::-webkit-scrollbar-thumb {
+            background: rgba(27, 42, 74, 0.18) !important;
             border-radius: 4px !important;
         }
+        aside::-webkit-scrollbar-thumb:hover,
+        aside nav::-webkit-scrollbar-thumb:hover,
+        aside .sidebar-nav-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(27, 42, 74, 0.3) !important;
+        }
 
-        aside.bg-dark::-webkit-scrollbar-thumb:hover,
-        aside.bg-dark nav::-webkit-scrollbar-thumb:hover,
-        aside.bg-dark .sidebar-nav-container::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3) !important;
-        }
-                        /* Seamless Brand Logo with Subtle Ambient Whitish Backlight (Zero Sticker Box) */
-        .dashboard-brand-badge {
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: flex-start !important;
-            background: transparent !important;
-            background-color: transparent !important;
-            border: none !important;
-            border-radius: 0 !important;
-            padding: 0 !important;
-            box-shadow: none !important;
-            text-decoration: none !important;
-            flex-shrink: 0 !important;
-            box-sizing: border-box !important;
-            vertical-align: middle !important;
-            height: 44px !important;
-            max-height: 44px !important;
-            width: auto !important;
-            max-width: 220px !important;
-            transition: opacity 0.2s ease !important;
-        }
-        .dashboard-brand-badge:hover {
-            opacity: 0.88 !important;
-            background: transparent !important;
-            box-shadow: none !important;
-            transform: none !important;
-        }
-        .dashboard-brand-logo {
-            height: 40px !important;
-            max-height: 40px !important;
-            width: auto !important;
-            max-width: 210px !important;
-            object-fit: contain !important;
-            display: block !important;
-            filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.45));
-        }
-        @media (max-width: 768px) {
-            .dashboard-brand-badge {
-                height: 38px !important;
-                max-height: 38px !important;
-                padding: 0 !important;
-            }
-            .dashboard-brand-logo {
-                height: 34px !important;
-                max-height: 34px !important;
-                max-width: 170px !important;
-            }
-        }
-        @media (max-width: 480px) {
-            .dashboard-brand-badge {
-                height: 32px !important;
-                max-height: 32px !important;
-                padding: 0 !important;
-            }
-            .dashboard-brand-logo {
-                height: 28px !important;
-                max-height: 28px !important;
-                max-width: 140px !important;
-            }
-        }
-        /* Proc Exec brand badge matching vendor standard */
-        @media (min-width: 992px) {
-            .proc-exec-brand-wrapper {
-                width: 244px;
-                max-width: 244px;
-                flex-shrink: 0;
-            }
-            .proc-exec-top-brand {
-                width: 100% !important;
-                max-width: 100% !important;
-                height: 44px !important;
-                max-height: 44px !important;
-                padding: 0 !important;
-                border-radius: 0 !important;
-                margin: 0 !important;
-            }
-            .proc-exec-top-brand .dashboard-brand-logo {
-                width: 100% !important;
-                height: 100% !important;
-                max-height: 34px !important;
-                object-fit: contain !important;
-            }
-        }
+        /* 10. MOBILE DRAWER */
         @media (max-width: 991.98px) {
-            .proc-exec-brand-wrapper { width: auto; max-width: none; }
-            .proc-exec-top-brand {
-                width: 190px !important;
-                max-width: 190px !important;
-                height: 38px !important;
-                max-height: 38px !important;
-                padding: 0 !important;
-                border-radius: 0 !important;
-                margin: 0 !important;
+            aside.offcanvas-lg,
+            aside[id$="Sidebar"] {
+                background: linear-gradient(180deg, #EAF2FF 0%, #DCE9FF 55%, #D2E2FF 100%) !important;
+            }
+            aside .sidebar-brand-box {
+                border-bottom: 1px solid #B8CCED !important;
+                background: transparent !important;
+            }
+            aside .sidebar-brand-box .text-white {
+                color: #1B2A4A !important;
+            }
+            aside .sidebar-brand-box .btn-close-white,
+            aside .btn-close-white {
+                filter: none !important;
             }
         }
 
@@ -417,22 +811,20 @@
             color: #f87171 !important;
         }
     </style>
+
 </head>
 <body class="bg-light app-body">
     {% block navbar %}
     {% if user.is_authenticated and user.role_code == 'PROC_EXEC' %}
     <!-- Top Navigation Bar for Procurement Executive (Vendor Dashboard Standard) -->
-    <nav class="navbar navbar-dark bg-dark shadow-sm py-2 border-bottom border-secondary border-opacity-25 sticky-top proc-exec-topbar">
+    <nav class="navbar shadow-sm py-2 sticky-top enterprise-topbar proc-exec-topbar">
         <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
             <div class="d-flex align-items-center flex-nowrap proc-exec-brand-wrapper">
-                <button class="navbar-toggler border-0 me-2 d-lg-none p-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#procExecSidebar" aria-controls="procExecSidebar" aria-label="Toggle navigation">
-                    <i class="fa-solid fa-bars text-white fs-4"></i>
-                </button>
-                <a href="/procurement/" class="dashboard-brand-badge proc-exec-top-brand" aria-label="ProcureSphere 360 Home">
-                    <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
+            <a href="/procurement/" class="dashboard-brand-badge proc-exec-top-brand" aria-label="ProcureSphere 360 Home">
+                    <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
                 </a>
-                <span class="d-none">Procurement Executive</span>
-            </div>
+            {% include 'partials/sidebar_toggle_button.html' with sidebar_id='procExecSidebar' %}
+        </div>
 
             <div class="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
                 <!-- Organization / Department Information (Matching Vendor Entity Pill) -->
@@ -489,7 +881,7 @@
     </nav>
     {% else %}
     <!-- Top Navigation Bar for other roles -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm py-2">
+    <nav class="navbar navbar-expand-lg shadow-sm py-2 enterprise-topbar">
         <div class="container-fluid px-2 px-sm-3 px-lg-4">
             <a href="/" class="dashboard-brand-badge me-2 me-lg-3" aria-label="ProcureSphere 360 Home">
                 <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
@@ -730,7 +1122,134 @@
                 } catch(err) {}
             }
         }, true);
+
+        // =========================================================================
+        // GLOBAL SIDEBAR TOGGLE UX CONTROLLER
+        // =========================================================================
+        function updateSidebarToggleState(isCollapsed) {
+            const toggleBtns = document.querySelectorAll('.sidebar-toggle-btn');
+            toggleBtns.forEach(btn => {
+                const iconCollapse = btn.querySelector('.sidebar-icon-collapse');
+                const iconExpand = btn.querySelector('.sidebar-icon-expand');
+                const label = isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar';
+
+                if (iconCollapse && iconExpand) {
+                    if (isCollapsed) {
+                        iconCollapse.classList.add('d-none');
+                        iconExpand.classList.remove('d-none');
+                    } else {
+                        iconCollapse.classList.remove('d-none');
+                        iconExpand.classList.add('d-none');
+                    }
+                }
+
+                btn.setAttribute('aria-label', label);
+                btn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+                btn.setAttribute('title', label);
+                btn.setAttribute('data-bs-original-title', label);
+
+                if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                    const tooltipInstance = bootstrap.Tooltip.getInstance(btn);
+                    if (tooltipInstance) {
+                        tooltipInstance.hide();
+                        tooltipInstance.setContent({ '.tooltip-inner': label });
+                    }
+                }
+            });
+        }
+
+        function initSidebarToggle() {
+            const toggleBtns = document.querySelectorAll('.sidebar-toggle-btn');
+            if (!toggleBtns.length) return;
+
+            const isDesktop = window.innerWidth >= 992;
+            const savedState = localStorage.getItem('ps_sidebar_collapsed');
+
+            if (isDesktop && savedState === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+                updateSidebarToggleState(true);
+            } else if (isDesktop) {
+                document.body.classList.remove('sidebar-collapsed');
+                updateSidebarToggleState(false);
+            } else {
+                // Mobile default: drawer closed
+                updateSidebarToggleState(true);
+            }
+
+            toggleBtns.forEach(btn => {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                    let tip = bootstrap.Tooltip.getInstance(btn);
+                    if (!tip) {
+                        new bootstrap.Tooltip(btn, {
+                            boundary: 'window',
+                            container: 'body'
+                        });
+                    }
+                }
+
+                if (btn.dataset.toggleBound === 'true') return;
+                btn.dataset.toggleBound = 'true';
+
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = btn.getAttribute('data-sidebar-target');
+                    const isDesktopNow = window.innerWidth >= 992;
+
+                    if (isDesktopNow) {
+                        const nowCollapsed = document.body.classList.toggle('sidebar-collapsed');
+                        try {
+                            localStorage.setItem('ps_sidebar_collapsed', nowCollapsed ? 'true' : 'false');
+                        } catch(err) {}
+                        updateSidebarToggleState(nowCollapsed);
+                    } else {
+                        const sidebarEl = (targetId && document.getElementById(targetId)) || document.querySelector('aside.offcanvas-lg');
+                        if (sidebarEl && typeof bootstrap !== 'undefined') {
+                            const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(sidebarEl);
+                            offcanvas.toggle();
+                        }
+                    }
+                });
+            });
+
+            // Mobile offcanvas listeners to synchronize icon & tooltip
+            const sidebars = document.querySelectorAll('aside.offcanvas-lg, aside[id$="Sidebar"]');
+            sidebars.forEach(sidebar => {
+                if (sidebar.dataset.offcanvasEventsBound === 'true') return;
+                sidebar.dataset.offcanvasEventsBound = 'true';
+
+                sidebar.addEventListener('show.bs.offcanvas', function() {
+                    if (window.innerWidth < 992) {
+                        updateSidebarToggleState(false);
+                    }
+                });
+                sidebar.addEventListener('hidden.bs.offcanvas', function() {
+                    if (window.innerWidth < 992) {
+                        updateSidebarToggleState(true);
+                    }
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', initSidebarToggle);
+        document.body.addEventListener('htmx:afterSettle', initSidebarToggle);
+
+        // Instant visual feedback for clicked sidebar menu item
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('aside nav a, aside .sidebar-nav-container a, [id$="Sidebar"] nav a, [id$="Nav"] a, .sa-nav-link, .vendor-navlink, .unified-navlink, .finance-navlink, .proc-navlink, .req-navlink, .manager-nav-link');
+            if (link && !link.getAttribute('href')?.startsWith('#') && link.getAttribute('href') !== '/logout/') {
+                const nav = link.closest('nav, aside, [id$="Sidebar"]');
+                if (nav) {
+                    nav.querySelectorAll('a.active, a.active-nav-item').forEach(el => {
+                        el.classList.remove('active', 'active-nav-item');
+                        el.removeAttribute('aria-current');
+                    });
+                    link.classList.add('active', 'active-nav-item');
+                    link.setAttribute('aria-current', 'page');
+                }
+            }
+        });
     </script>
+
     {% block extra_js %}{% endblock extra_js %}
 </body>
 </html>

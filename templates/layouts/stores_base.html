@@ -5,20 +5,13 @@
 
 {% block navbar %}
 <!-- Top Navigation for Stores & Receiving (Vendor Design Standard) -->
-<nav class="navbar navbar-dark bg-dark shadow-sm py-2 sticky-top border-bottom border-secondary border-opacity-25 stores-topbar">
+<nav class="navbar shadow-sm py-2 sticky-top enterprise-topbar">
     <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
         <div class="d-flex align-items-center flex-nowrap stores-brand-wrapper">
-            <!-- Mobile / Tablet Hamburger Button -->
-            <button class="navbar-toggler border-0 me-2 d-lg-none p-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#storesSidebar" aria-controls="storesSidebar" aria-label="Toggle navigation">
-                <i class="fa-solid fa-bars text-white fs-4"></i>
-            </button>
             <a href="/stores/" class="dashboard-brand-badge stores-top-brand" aria-label="ProcureSphere 360 Home">
                 <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
             </a>
-            <a href="/stores/" class="dashboard-brand-badge stores-top-brand" aria-label="ProcureSphere 360 Home">
-                <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
-            </a>
-            <span class="d-none">Stores &amp; Receiving</span>
+            {% include 'partials/sidebar_toggle_button.html' with sidebar_id='storesSidebar' %}
         </div>
 
         <div class="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
@@ -68,8 +61,8 @@
 <style>
     @media (min-width: 992px) {
         .stores-brand-wrapper {
-            width: 244px;
-            max-width: 244px;
+            min-width: 260px;
+            max-min-width: 260px;
             flex-shrink: 0;
         }
         .stores-top-brand {
@@ -93,9 +86,9 @@
             min-width: 260px !important;
             flex-shrink: 0 !important;
             position: sticky !important;
-            top: 79px !important;
-            height: calc(100vh - 79px) !important;
-            max-height: calc(100vh - 79px) !important;
+            top: 84px !important;
+            height: calc(100vh - 84px) !important;
+            max-height: calc(100vh - 84px) !important;
             overflow: hidden !important;
             overflow-y: hidden !important;
             display: flex !important;
@@ -161,10 +154,25 @@
     }
     .unified-navlink.active-nav-item,
     .unified-navlink.active {
-        background: #0d6efd !important;
-        color: #fff !important;
-        font-weight: 700;
-        box-shadow: 0 2px 8px rgba(13,110,253,0.35);
+        background: linear-gradient(135deg, #1677FF 0%, #0866E8 100%) !important;
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        font-weight: 600 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 10px rgba(22, 119, 255, 0.22) !important;
+        text-decoration: none !important;
+    }
+    .unified-navlink.active-nav-item span,
+    .unified-navlink.active span {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+    }
+    .unified-navlink.active-nav-item i,
+    .unified-navlink.active i,
+    .unified-navlink.active-nav-item i[class*="text-"],
+    .unified-navlink.active-nav-item i[style] {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
     .unified-navlink .nav-icon {
         width: 20px;
@@ -173,9 +181,9 @@
         flex-shrink: 0;
     }
 </style>
-<div class="stores-layout-container d-flex align-items-start w-100" style="min-height: calc(100vh - 79px); max-width: 100vw;">
+<div class="stores-layout-container d-flex align-items-start w-100" style="min-height: calc(100vh - 84px); max-width: 100vw;">
     <!-- Desktop Sidebar (>= 992px) & Offcanvas on mobile -->
-    <aside class="offcanvas-lg offcanvas-start bg-dark border-end border-secondary border-opacity-25 shadow-sm text-white stores-sidebar stores-desk-nav" tabindex="-1" id="storesSidebar" aria-labelledby="storesSidebarLabel">
+    <aside class="offcanvas-lg offcanvas-start border-end shadow-sm enterprise-sidebar border-end border-secondary border-opacity-25 shadow-sm text-white stores-sidebar stores-desk-nav" tabindex="-1" id="storesSidebar" aria-labelledby="storesSidebarLabel">
         <!-- Mobile Drawer Header (Hidden on Desktop) -->
         <div class="sidebar-brand-box px-3 py-3 border-bottom border-secondary border-opacity-25 flex-shrink-0 d-flex d-lg-none align-items-center justify-content-between">
             <a href="/stores/" class="d-flex align-items-center text-white text-decoration-none" id="storesSidebarLabel">

@@ -5,17 +5,15 @@
 
 {% block navbar %}
 <!-- Top Navigation Bar for Department Approver (Matching Vendor Dashboard Design System) -->
-<nav class="navbar navbar-dark bg-dark shadow-sm py-2 border-bottom border-secondary border-opacity-25 sticky-top" style="background-color: #212529 !important;">
+<nav class="navbar shadow-sm py-2 sticky-top enterprise-topbar">
     <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
         <!-- Brand & Mobile Toggle -->
         <!-- Brand & Mobile Toggle -->
         <div class="d-flex align-items-center flex-nowrap approver-brand-wrapper">
-            <button class="navbar-toggler border-0 me-2 d-lg-none p-1" type="button" data-bs-toggle="offcanvas" data-bs-target="#approverSidebar" aria-controls="approverSidebar" aria-label="Toggle navigation">
-                <i class="fa-solid fa-bars text-white fs-4"></i>
-            </button>
             <a href="/approver/" class="dashboard-brand-badge approver-top-brand" aria-label="ProcureSphere 360 Home">
                 <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
             </a>
+            {% include 'partials/sidebar_toggle_button.html' with sidebar_id='approverSidebar' %}
         </div>
 
         <div class="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
@@ -68,8 +66,8 @@
 {% block layout %}
 <style>
     :root {
-        --approver-header-bg: #212529;
-        --approver-sidebar-bg: #212529;
+        --approver-header-bg: transparent;
+        --approver-sidebar-bg: transparent;
         --approver-main-bg: #F5F7FA;
         --approver-primary-blue: #0D6EFD;
         --approver-secondary-cyan: #00B8D9;
@@ -82,8 +80,8 @@
     /* Brand Badge width and height exact match to side navbar */
     @media (min-width: 992px) {
         .approver-brand-wrapper {
-            width: 244px;
-            max-width: 244px;
+            min-width: 260px;
+            max-min-width: 260px;
             flex-shrink: 0;
         }
         .approver-top-brand {
@@ -131,9 +129,9 @@
             min-width: 260px !important;
             flex-shrink: 0 !important;
             position: sticky !important;
-            top: 79px !important;
-            height: calc(100vh - 79px) !important;
-            max-height: calc(100vh - 79px) !important;
+            top: 84px !important;
+            height: calc(100vh - 84px) !important;
+            max-height: calc(100vh - 84px) !important;
             overflow: hidden !important;
             overflow-y: hidden !important;
             display: flex !important;
@@ -191,11 +189,33 @@
         color: #fff;
     }
     .vendor-navlink.active-nav-item,
-    .approver-navlink.active-nav-item {
-        background: #0d6efd !important;
-        color: #fff !important;
-        font-weight: 700;
-        box-shadow: 0 2px 8px rgba(13,110,253,0.35);
+    .approver-navlink.active-nav-item,
+    .vendor-navlink.active,
+    .approver-navlink.active {
+        background: linear-gradient(135deg, #1677FF 0%, #0866E8 100%) !important;
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        font-weight: 600 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 4px 10px rgba(22, 119, 255, 0.22) !important;
+        text-decoration: none !important;
+    }
+    .vendor-navlink.active-nav-item span,
+    .approver-navlink.active-nav-item span,
+    .vendor-navlink.active span,
+    .approver-navlink.active span {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+    }
+    .vendor-navlink.active-nav-item i,
+    .approver-navlink.active-nav-item i,
+    .vendor-navlink.active i,
+    .approver-navlink.active i,
+    .approver-navlink.active-nav-item i[class*="text-"],
+    .approver-navlink.active-nav-item i[style],
+    .vendor-navlink.active-nav-item i[class*="text-"] {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
     .vendor-navlink .nav-icon,
     .approver-navlink .nav-icon {
@@ -206,9 +226,9 @@
     }
 </style>
 
-<div class="d-flex align-items-start w-100" style="min-height: calc(100vh - 79px); max-width: 100vw; background-color: var(--approver-main-bg);">
+<div class="d-flex align-items-start w-100" style="min-height: calc(100vh - 84px); max-width: 100vw; background-color: var(--approver-main-bg);">
     <!-- Sidebar Navigation -->
-    <aside class="offcanvas-lg offcanvas-start bg-dark border-end border-secondary border-opacity-25 shadow-sm text-white approver-sidebar-desktop" tabindex="-1" id="approverSidebar" aria-labelledby="approverSidebarLabel">
+    <aside class="offcanvas-lg offcanvas-start border-end shadow-sm enterprise-sidebar border-end border-secondary border-opacity-25 shadow-sm text-white approver-sidebar-desktop" tabindex="-1" id="approverSidebar" aria-labelledby="approverSidebarLabel">
         
         <!-- Mobile Drawer Header (Hidden on Desktop) -->
         <div class="sidebar-brand-box px-3 py-3 border-bottom border-secondary border-opacity-25 flex-shrink-0 d-flex d-lg-none align-items-center justify-content-between">
