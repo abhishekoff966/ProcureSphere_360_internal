@@ -4,75 +4,7 @@
 {% block title %}{% block sa_title %}Admin Control Center{% endblock %} — ProcureSphere 360{% endblock %}
 
 {% block navbar %}
-<!-- Top Navigation Bar for Organization Admin (Premium Light Blue Enterprise Redesign) -->
-<nav class="navbar shadow-sm py-2 sticky-top sa-topbar">
-    <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
-        <div class="d-flex align-items-center flex-nowrap sa-brand-wrapper">
-            <a href="/superadmin/" class="sa-top-brand" aria-label="ProcureSphere 360 Home">
-                <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
-            </a>
-            {% include 'partials/sidebar_toggle_button.html' with sidebar_id='saSidebar' %}
-        </div>
-
-        <div class="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
-            <!-- Organization / Company Information (Matching Vendor Entity Pill) -->
-            {% with org=scoped_org|default:user.effective_organization|default:user.organization %}
-            <div class="d-none d-md-flex align-items-center bg-dark bg-opacity-75 border border-secondary border-opacity-50 rounded-pill px-3 py-1 text-white">
-                <i class="fa-solid fa-building text-cyan me-2 fs-5"></i>
-                <div class="text-start lh-sm">
-                    <span class="fw-semibold small d-block mb-1">
-                        {{ org.name|default:"Hewlett Packard Enterprise"|truncatechars:35 }}
-                    </span>
-                    <span class="text-white-50 d-block" style="font-size: 0.7rem; line-height: 1;">
-                        {{ org.code|default:"HPE-GLOBAL" }} &bull; Active
-                    </span>
-                </div>
-                <span class="badge ms-2 rounded-pill bg-success" style="font-size: 0.65rem;">Active</span>
-            </div>
-            {% endwith %}
-
-            <!-- Notifications Icon -->
-            <a href="/notifications/" class="btn sa-nav-action-btn position-relative d-flex align-items-center justify-content-center p-0" title="Notifications">
-                <i class="fa-solid fa-bell fs-5"></i>
-                {% if unread_notifications_count and unread_notifications_count > 0 %}
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
-                    {{ unread_notifications_count }}
-                </span>
-                {% endif %}
-            </a>
-
-            <!-- User Profile Dropdown -->
-            {% if user.is_authenticated %}
-            <div class="dropdown">
-                <button class="btn p-0 border-0 d-flex align-items-center justify-content-center rounded-circle sa-profile-btn"
-                        type="button"
-                        id="saProfileDropdown"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="false"
-                        title="Account Menu"
-                        style="width: 38px; height: 38px;">
-                    <i class="fa-solid fa-circle-user fs-4"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-lg py-2 mt-2 sa-profile-menu"
-                    aria-labelledby="saProfileDropdown"
-                    style="min-width: 220px; background: #ffffff; border: 1px solid #D5E3F8; border-radius: 12px; box-shadow: 0 10px 25px rgba(27, 42, 74, 0.1);">
-                    <li class="px-3 py-2 border-bottom" style="border-color: #E2E8F0 !important;">
-                        <div class="fw-semibold small text-truncate" style="color: #1B2A4A;" title="{{ user.email }}">{{ user.email }}</div>
-                        <div style="font-size: 0.72rem; color: #64748B;">
-                            {% if user.is_superuser and not user.effective_organization %}Super Admin{% else %}Organization Admin{% endif %}
-                        </div>
-                    </li>
-                    <li>
-                        <a class="dropdown-item text-danger d-flex align-items-center py-2 px-3 small" href="/logout/" style="transition: background 0.15s ease;">
-                            <i class="fa-solid fa-arrow-right-from-bracket me-2" style="width: 16px;"></i> Sign Out
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-</nav>
+{% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' profile_dropdown_id='saProfileDropdown' %}
 {% endblock navbar %}
 
 {% block layout %}
@@ -84,8 +16,8 @@
     /* Top Navbar */
     .sa-topbar {
         background: linear-gradient(110deg, #EAF2FF 0%, #DCE9FF 50%, #C9DCFF 100%) !important;
-        border-bottom: 1px solid #D5E3F8 !important;
-        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04) !important;
+        border-bottom: 1px solid #AFC7EB !important;
+        box-shadow: 0 4px 14px rgba(30, 64, 120, 0.16) !important;
     }
 
     /* Brand Logo & Wrapper */
@@ -185,19 +117,20 @@
             min-width: 260px !important;
             max-width: 260px !important;
             flex-shrink: 0 !important;
-            position: sticky !important;
-            top: 84px !important;
-            height: calc(100vh - 84px) !important;
-            max-height: calc(100vh - 84px) !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: 0 !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
             overflow: hidden !important;
             overflow-y: hidden !important;
             display: flex !important;
             flex-direction: column !important;
-            z-index: 1000;
-            align-self: flex-start;
-            background: linear-gradient(180deg, #EAF2FF 0%, #DCE9FF 55%, #D2E2FF 100%) !important;
-            border-right: 1px solid #D5E3F8 !important;
-            box-shadow: 2px 0 12px rgba(15, 23, 42, 0.03) !important;
+            z-index: 1040;
+            background: #DFEAFF !important;
+            border-right: 1px solid #B4C8E8 !important;
+            box-shadow: 3px 0 10px rgba(30, 64, 120, 0.08) !important;
         }
 
         .sa-sidebar-desktop nav,
@@ -222,61 +155,87 @@
 
     @media (max-width: 991.98px) {
         aside#saSidebar {
-            background: linear-gradient(180deg, #EAF2FF 0%, #DCE9FF 55%, #D2E2FF 100%) !important;
+            background: #DFEAFF !important;
+            border-right: 1px solid #B4C8E8 !important;
+            box-shadow: 3px 0 10px rgba(30, 64, 120, 0.08) !important;
         }
         #saSidebar .sidebar-brand-box {
-            border-bottom: 1px solid #D5E3F8 !important;
+            border-bottom: 1px solid #AFC7EB !important;
         }
     }
 
     /* Section Headings */
     .sa-workspace-header {
-        font-size: 0.68rem;
-        letter-spacing: 0.07em;
-        font-weight: 700;
-        text-transform: uppercase;
-        color: #64748B !important;
-        padding: 0.25rem 0.75rem 0.4rem;
+        display: flex !important;
+        align-items: center !important;
+        font-size: 11.5px !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.8px !important;
+        color: #163A70 !important;
+        background: #D4E5FF !important;
+        border-left: 3px solid #1677FF !important;
+        border-radius: 6px !important;
+        padding: 0.35rem 0.65rem !important;
+        margin-top: 12px !important;
+        margin-bottom: 5px !important;
+        line-height: 1.2 !important;
+        user-select: none !important;
+        cursor: default !important;
+        box-shadow: 0 1px 2px rgba(22, 58, 112, 0.05) !important;
     }
     .sa-nav-label {
-        font-size: 0.65rem;
-        letter-spacing: 0.08em;
-        font-weight: 700;
-        text-transform: uppercase;
-        color: #64748B !important;
-        padding: 0.65rem 0.75rem 0.25rem;
-        margin-top: 0.25rem;
+        display: flex !important;
+        align-items: center !important;
+        font-size: 11.5px !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.8px !important;
+        color: #163A70 !important;
+        background: #D4E5FF !important;
+        border-left: 3px solid #1677FF !important;
+        border-radius: 6px !important;
+        padding: 0.35rem 0.65rem !important;
+        margin-top: 12px !important;
+        margin-bottom: 5px !important;
+        line-height: 1.2 !important;
+        user-select: none !important;
+        cursor: default !important;
+        box-shadow: 0 1px 2px rgba(22, 58, 112, 0.05) !important;
     }
 
     /* Subtle Separators between Groups */
     .sa-nav-separator {
-        height: 1px;
-        background: rgba(200, 220, 250, 0.65);
-        margin: 0.45rem 0.5rem 0.25rem;
+        height: 1px !important;
+        background: #C5D8F5 !important;
+        border: none !important;
+        margin: 0.55rem 0.4rem 0.3rem !important;
     }
 
     /* Menu Navigation Links */
     .sa-nav-link {
-        display: flex;
-        align-items: center;
-        padding: 0.5rem 0.75rem;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: #1B2A4A !important;
-        text-decoration: none;
-        transition: all 0.15s ease;
-        margin-bottom: 3px;
+        display: flex !important;
+        align-items: center !important;
+        min-height: 38px !important;
+        padding: 0.5rem 0.75rem !important;
+        border-radius: 9px !important;
+        font-size: 13.5px !important;
+        font-weight: 500 !important;
+        color: #1E293B !important;
+        text-decoration: none !important;
+        transition: all 0.15s ease !important;
+        margin-bottom: 3px !important;
         white-space: nowrap !important;
     }
     .sa-nav-link span {
-        color: #1B2A4A !important;
-        font-weight: 500;
-        transition: color 0.15s ease;
+        color: #1E293B !important;
+        font-weight: 500 !important;
+        transition: color 0.15s ease !important;
     }
     .sa-nav-link:hover {
         background: rgba(22, 119, 255, 0.08) !important;
         color: #0F172A !important;
+        border-radius: 9px !important;
     }
     .sa-nav-link:hover span {
         color: #0F172A !important;
@@ -351,19 +310,14 @@
 <div class="d-flex align-items-start w-100" style="min-height: calc(100vh - 84px); max-width: 100vw;">
     <!-- Sidebar Navigation -->
     <aside class="offcanvas-lg offcanvas-start border-end shadow-sm sa-sidebar-desktop" tabindex="-1" id="saSidebar" aria-labelledby="saSidebarLabel">
-        <!-- 1. Mobile Drawer Header (Hidden on Desktop) -->
-        <div class="sidebar-brand-box px-3 py-3 border-bottom flex-shrink-0 d-flex d-lg-none align-items-center justify-content-between" style="border-color: #D5E3F8 !important;">
-            <a href="/superadmin/" class="d-flex align-items-center text-decoration-none" id="saSidebarLabel">
-                <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}" alt="ProcureSphere 360" style="height: 36px; width: auto; object-fit: contain;">
-            </a>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#saSidebar" aria-label="Close menu"></button>
-        </div>
+        <!-- 1. Unified Sidebar Header: [ LOGO ] [ TOGGLE ] -->
+        {% include 'partials/sidebar_header.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' %}
 
         <!-- 2. Scrollable Navigation -->
         <nav class="flex-grow-1 overflow-y-auto px-2 py-3 d-flex flex-column gap-1 sa-nav-scroll" id="menu" style="flex: 1 1 0%; min-height: 0;" aria-label="Admin Navigation">
-            <div class="d-flex align-items-center justify-content-between sa-workspace-header">
+            <div class="workspace-heading sa-workspace-header">
+                <i class="fa-solid fa-user-shield me-2"></i>
                 <span>Admin Workspace</span>
-                <i class="fa-solid fa-shield-check" style="font-size:0.75rem; color: #1677FF;"></i>
             </div>
 
             <a href="/admin/dashboard/" class="sa-nav-link {% if request.path == '/admin/dashboard/' or request.path == '/superadmin/' or request.path == '/' %}active{% endif %}">

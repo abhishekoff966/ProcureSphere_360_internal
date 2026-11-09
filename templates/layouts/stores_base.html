@@ -4,97 +4,31 @@
 {% block title %}{% block stores_title %}Stores &amp; Receiving Workspace{% endblock %} — ProcureSphere 360{% endblock %}
 
 {% block navbar %}
-<!-- Top Navigation for Stores & Receiving (Vendor Design Standard) -->
-<nav class="navbar shadow-sm py-2 sticky-top enterprise-topbar">
-    <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
-        <div class="d-flex align-items-center flex-nowrap stores-brand-wrapper">
-            <a href="/stores/" class="dashboard-brand-badge stores-top-brand" aria-label="ProcureSphere 360 Home">
-                <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
-            </a>
-            {% include 'partials/sidebar_toggle_button.html' with sidebar_id='storesSidebar' %}
-        </div>
-
-        <div class="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
-            <!-- Notifications Icon -->
-            <a href="/notifications/" class="btn btn-outline-secondary btn-sm position-relative text-white border-0 d-flex align-items-center justify-content-center p-0" style="width: 36px; height: 36px;" title="Notifications">
-                <i class="fa-solid fa-bell fs-5"></i>
-                {% if unread_notifications_count and unread_notifications_count > 0 %}
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
-                    {{ unread_notifications_count }}
-                </span>
-                {% endif %}
-            </a>
-
-            <!-- User Profile Dropdown (Vendor Style) -->
-            {% if user.is_authenticated %}
-            <div class="dropdown">
-                <button class="btn btn-link text-decoration-none p-0 border-0 d-flex align-items-center justify-content-center rounded-circle"
-                        type="button"
-                        id="storesProfileDropdown"
-                        data-bs-toggle="dropdown"
-                        aria-expanded="false"
-                        title="Account Menu"
-                        style="width: 38px; height: 38px; background: rgba(255, 255, 255, 0.08); transition: all 0.2s ease;">
-                    <i class="fa-solid fa-circle-user text-cyan fs-4"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-lg py-2 mt-2"
-                    aria-labelledby="storesProfileDropdown"
-                    style="min-width: 220px; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px;">
-                    <li class="px-3 py-2 border-bottom border-secondary border-opacity-25">
-                        <div class="fw-semibold text-white small text-truncate" title="{{ user.email }}">{{ user.email }}</div>
-                        <div class="text-white-50" style="font-size: 0.72rem;">Warehouse Specialist</div>
-                    </li>
-                    <li>
-                        <a class="dropdown-item text-danger d-flex align-items-center py-2 px-3 small" href="/logout/" style="transition: background 0.15s ease;">
-                            <i class="fa-solid fa-arrow-right-from-bracket me-2" style="width: 16px;"></i> Sign Out
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-</nav>
+{% include 'partials/global_navbar.html' with sidebar_id='storesSidebar' dashboard_url='/stores/' profile_dropdown_id='storesProfileDropdown' %}
 {% endblock navbar %}
 
 {% block layout %}
 <style>
     @media (min-width: 992px) {
-        .stores-brand-wrapper {
-            min-width: 260px;
-            max-min-width: 260px;
-            flex-shrink: 0;
-        }
-        .stores-top-brand {
-            width: 100% !important;
-            max-width: 100% !important;
-            height: 44px !important;
-            max-height: 44px !important;
-            padding: 0 !important;
-            border-radius: 0 !important;
-            margin: 0 !important;
-        }
-        .stores-top-brand .dashboard-brand-logo {
-            width: 100% !important;
-            height: 100% !important;
-            max-height: 34px !important;
-            object-fit: contain !important;
-        }
         aside.stores-desk-nav,
         .stores-desk-nav {
             width: 260px !important;
             min-width: 260px !important;
             flex-shrink: 0 !important;
-            position: sticky !important;
-            top: 84px !important;
-            height: calc(100vh - 84px) !important;
-            max-height: calc(100vh - 84px) !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: 0 !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
             overflow: hidden !important;
             overflow-y: hidden !important;
             display: flex !important;
             flex-direction: column !important;
-            z-index: 1000;
-            align-self: flex-start;
+            z-index: 1040;
+            background: #DFEAFF !important;
+            border-right: 1px solid #B4C8E8 !important;
+            box-shadow: 3px 0 10px rgba(30, 64, 120, 0.08) !important;
         }
         .stores-desk-nav nav#storesNav,
         .stores-desk-nav nav {
@@ -127,30 +61,40 @@
 
     /* Section label style */
     .nav-section-label {
-        font-size: 0.68rem;
-        letter-spacing: 0.08em;
-        font-weight: 700;
-        text-transform: uppercase;
-        color: rgba(255,255,255,0.4);
-        padding: 0.6rem 0.75rem 0.2rem;
-        margin-top: 0.25rem;
+        display: flex !important;
+        align-items: center !important;
+        font-size: 11.5px !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.8px !important;
+        color: #163A70 !important;
+        background: #D4E5FF !important;
+        border-left: 3px solid #1677FF !important;
+        border-radius: 6px !important;
+        padding: 0.35rem 0.65rem !important;
+        margin-top: 12px !important;
+        margin-bottom: 5px !important;
+        user-select: none !important;
+        cursor: default !important;
+        box-shadow: 0 1px 2px rgba(22, 58, 112, 0.05) !important;
     }
 
-    /* unified-navlink matches vendor-navlink standard */
+    /* unified-navlink */
     .unified-navlink {
-        display: flex;
-        align-items: center;
-        padding: 0.45rem 0.75rem;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: rgba(255,255,255,0.75);
-        text-decoration: none;
-        transition: background 0.15s, color 0.15s;
+        display: flex !important;
+        align-items: center !important;
+        min-height: 38px !important;
+        padding: 0.5rem 0.75rem !important;
+        border-radius: 9px !important;
+        font-size: 13.5px !important;
+        font-weight: 500 !important;
+        color: #1E293B !important;
+        text-decoration: none !important;
+        transition: all 0.15s ease !important;
     }
     .unified-navlink:hover, .unified-navlink:focus {
-        background: rgba(255,255,255,0.08);
-        color: #fff;
+        background: rgba(22, 119, 255, 0.08) !important;
+        color: #0F172A !important;
     }
     .unified-navlink.active-nav-item,
     .unified-navlink.active {
@@ -184,31 +128,23 @@
 <div class="stores-layout-container d-flex align-items-start w-100" style="min-height: calc(100vh - 84px); max-width: 100vw;">
     <!-- Desktop Sidebar (>= 992px) & Offcanvas on mobile -->
     <aside class="offcanvas-lg offcanvas-start border-end shadow-sm enterprise-sidebar border-end border-secondary border-opacity-25 shadow-sm text-white stores-sidebar stores-desk-nav" tabindex="-1" id="storesSidebar" aria-labelledby="storesSidebarLabel">
-        <!-- Mobile Drawer Header (Hidden on Desktop) -->
-        <div class="sidebar-brand-box px-3 py-3 border-bottom border-secondary border-opacity-25 flex-shrink-0 d-flex d-lg-none align-items-center justify-content-between">
-            <a href="/stores/" class="d-flex align-items-center text-white text-decoration-none" id="storesSidebarLabel">
-                <div class="brand-icon-box me-2 flex-shrink-0" style="width: 32px; height: 32px; background: rgba(0, 184, 217, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fa-solid fa-boxes-packing text-cyan"></i>
-                </div>
-                <div class="overflow-hidden">
-                    <div class="fs-6 fw-bold tracking-tight text-white d-block text-truncate">ProcureSphere <span class="text-cyan">360</span></div>
-                    <span class="badge bg-secondary bg-opacity-50 text-light px-2 py-0.5 rounded-pill" style="font-size: 0.62rem; letter-spacing: 0.04em;">STORES &amp; RECEIVING</span>
-                </div>
-            </a>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#storesSidebar" aria-label="Close menu"></button>
-        </div>
+        <!-- Sidebar Brand Header (Logo + Toggle Button) -->
+        {% include 'partials/sidebar_header.html' with sidebar_id='storesSidebar' dashboard_url='/stores/' %}
 
         <div class="px-2 py-3 flex-grow-1 overflow-y-auto" id="storesNav" style="flex: 1 1 0%; min-height: 0;">
-            <div class="d-flex align-items-center justify-content-between px-2 mb-2 text-secondary text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.06em;">
-                <span>Warehouse Navigation</span>
-                
+            <!-- 1. Workspace Heading -->
+            <div class="workspace-heading sa-workspace-header">
+                <i class="fa-solid fa-warehouse me-2"></i>
+                <span>WAREHOUSE NAVIGATION</span>
             </div>
 
             <nav class="d-flex flex-column gap-1">
+                <!-- 2. Standalone Dashboard -->
                 <a href="/stores/" class="unified-navlink {% if request.path == '/stores/' or request.path == '/stores/dashboard/' or request.path == '/receipts/dashboard/' or request.path == '/' or request.path == '/dashboard/' %}active-nav-item{% endif %}">
-                    <span>Receiving Desk</span>
+                    <span>Dashboard</span>
                 </a>
 
+                <!-- 3. Receiving & Intake Section -->
                 <div class="nav-section-label">Receiving &amp; Intake</div>
                 <a href="{% url 'orders_list' %}" class="unified-navlink {% if '/purchase-orders/' in request.path and not 'tab=deliveries' in request.get_full_path and not '/create/' in request.path or '/orders/' in request.path and not 'tab=deliveries' in request.get_full_path and not '/create/' in request.path %}active-nav-item{% endif %}">
                     <span>Receive PO Goods</span>

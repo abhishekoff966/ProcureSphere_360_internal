@@ -4,68 +4,7 @@
 {% block title %}{% block vendor_title %}Vendor Portal{% endblock %} — ProcureSphere 360{% endblock %}
 
 {% block navbar %}
-<!-- Top Navigation Bar for Vendor Portal -->
-<nav class="navbar shadow-sm py-2 sticky-top enterprise-topbar">
-    <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
-        <div class="d-flex align-items-center flex-nowrap vendor-brand-wrapper">
-            <a href="/vendor/" class="dashboard-brand-badge vendor-top-brand" aria-label="ProcureSphere 360 Home">
-                <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
-            </a>
-            {% include 'partials/sidebar_toggle_button.html' with sidebar_id='vendorSidebar' %}
-        </div>
-
-        <div class="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
-            <!-- Vendor Entity Information Pill (Cisco Systems Inc - Active) -->
-            {% with v=vendor|default:request.vendor|default:user.vendor %}
-            <div class="d-none d-md-flex align-items-center bg-dark bg-opacity-75 border border-secondary border-opacity-50 rounded-pill px-3 py-1 text-white">
-                <i class="fa-solid fa-building text-cyan me-2 fs-5"></i>
-                <div class="text-start lh-sm">
-                    <span class="fw-semibold small d-block mb-1">
-                        {% if v.legal_name %}{{ v.legal_name|truncatechars:35 }}{% elif v.trade_name %}{{ v.trade_name|truncatechars:35 }}{% else %}Cisco Systems Inc{% endif %}
-                    </span>
-                    <span class="text-white-50 d-block" style="font-size: 0.7rem; line-height: 1;">
-                        {% if v.vendor_number %}{{ v.vendor_number }}{% else %}VND-2026-00001{% endif %} &bull; {% if v.tax_identification_number %}{{ v.tax_identification_number }}{% else %}TAX-CISCO-991{% endif %}
-                    </span>
-                </div>
-                <span class="badge ms-2 rounded-pill bg-success" style="font-size: 0.65rem;">Active</span>
-            </div>
-            {% endwith %}
-
-            <!-- Notifications Icon -->
-            <a href="/vendor/notifications/" class="btn btn-outline-secondary btn-sm position-relative text-white border-0 d-flex align-items-center justify-content-center p-0" style="width: 36px; height: 36px;" title="Notifications">
-                <i class="fa-solid fa-bell fs-5"></i>
-                {% if metrics.unread_notifications and metrics.unread_notifications > 0 %}
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
-                    {{ metrics.unread_notifications }}
-                </span>
-                {% endif %}
-            </a>
-
-            <!-- User Profile Dropdown -->
-            {% if user.is_authenticated %}
-            <div class="dropdown position-relative">
-                <button class="btn p-0 border-0 bg-transparent rounded-circle vendor-profile-avatar-btn" type="button" id="vendorProfileDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="{{ user.email }}">
-                    <span class="vendor-avatar-ring">
-                        <i class="fa-solid fa-circle-user text-cyan"></i>
-                    </span>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-lg vendor-profile-dropdown" aria-labelledby="vendorProfileDropdown">
-                    <li class="vendor-dropdown-header">
-                        <div class="vendor-email-text">{{ user.email }}</div>
-                    </li>
-                    <li><hr class="vendor-dropdown-divider"></li>
-                    <li>
-                        <a class="vendor-dropdown-signout" href="/logout/">
-                            <i class="fa-solid fa-arrow-right-from-bracket me-2 text-danger"></i>
-                            <span>Sign Out</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-</nav>
+{% include 'partials/global_navbar.html' with sidebar_id='vendorSidebar' dashboard_url='/vendor/' profile_dropdown_id='vendorProfileDropdown' notification_url='/vendor/notifications/' %}
 {% endblock navbar %}
 
 {% block layout %}
@@ -168,26 +107,6 @@
 
     /* Brand Badge width and height exact match to side navbar */
     @media (min-width: 992px) {
-        .vendor-brand-wrapper {
-            min-width: 260px;
-            max-min-width: 260px;
-            flex-shrink: 0;
-        }
-        .vendor-top-brand {
-            width: 100% !important;
-            max-width: 100% !important;
-            height: 44px !important;
-            max-height: 44px !important;
-            padding: 0 !important;
-            border-radius: 0 !important;
-            margin: 0 !important;
-        }
-        .vendor-top-brand .dashboard-brand-logo {
-            width: 100% !important;
-            height: 100% !important;
-            max-height: 34px !important;
-            object-fit: contain !important;
-        }
     }
     @media (max-width: 991.98px) {
         .vendor-brand-wrapper {
@@ -217,16 +136,20 @@
             width: 260px !important;
             min-width: 260px !important;
             flex-shrink: 0 !important;
-            position: sticky !important;
-            top: 84px !important;
-            height: calc(100vh - 84px) !important;
-            max-height: calc(100vh - 84px) !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: 0 !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
             overflow: hidden !important;
             overflow-y: hidden !important;
             display: flex !important;
             flex-direction: column !important;
-            z-index: 1000;
-            align-self: flex-start;
+            z-index: 1040;
+            background: #DFEAFF !important;
+            border-right: 1px solid #B4C8E8 !important;
+            box-shadow: 3px 0 10px rgba(30, 64, 120, 0.08) !important;
         }
         .vendor-sidebar-desktop nav#vendorNav,
         .vendor-sidebar-desktop nav {
@@ -247,13 +170,22 @@
 
     /* Section label style */
     .nav-section-label {
-        font-size: 0.68rem;
-        letter-spacing: 0.08em;
-        font-weight: 700;
-        text-transform: uppercase;
-        color: rgba(255,255,255,0.4);
-        padding: 0.6rem 0.75rem 0.2rem;
-        margin-top: 0.25rem;
+        display: flex !important;
+        align-items: center !important;
+        font-size: 11.5px !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.8px !important;
+        color: #163A70 !important;
+        background: #D4E5FF !important;
+        border-left: 3px solid #1677FF !important;
+        border-radius: 6px !important;
+        padding: 0.35rem 0.65rem !important;
+        margin-top: 12px !important;
+        margin-bottom: 5px !important;
+        user-select: none !important;
+        cursor: default !important;
+        box-shadow: 0 1px 2px rgba(22, 58, 112, 0.05) !important;
     }
 
     /* Subitem indented link */
@@ -291,20 +223,21 @@
 
     /* Top-level nav link */
     .vendor-navlink {
-        display: flex;
-        align-items: center;
-        padding: 0.45rem 0.75rem;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: rgba(255,255,255,0.75);
-        text-decoration: none;
-        transition: background 0.15s, color 0.15s;
+        display: flex !important;
+        align-items: center !important;
+        min-height: 38px !important;
+        padding: 0.5rem 0.75rem !important;
+        border-radius: 9px !important;
+        font-size: 13.5px !important;
+        font-weight: 500 !important;
+        color: #1E293B !important;
+        text-decoration: none !important;
+        transition: all 0.15s ease !important;
     }
     .vendor-navlink:hover,
     .vendor-navlink:focus {
-        background: rgba(255,255,255,0.08);
-        color: #fff;
+        background: rgba(22, 119, 255, 0.08) !important;
+        color: #0F172A !important;
     }
     .vendor-navlink.active-nav-item,
     .vendor-navlink.active {
@@ -339,37 +272,29 @@
     <!-- Sidebar Navigation -->
     <aside class="offcanvas-lg offcanvas-start border-end shadow-sm enterprise-sidebar border-end border-secondary border-opacity-25 shadow-sm text-white vendor-sidebar-desktop" tabindex="-1" id="vendorSidebar" aria-labelledby="vendorSidebarLabel">
         
-        <!-- 1. Mobile Drawer Header (Hidden on Desktop to prevent duplicate brand header) -->
-        <div class="sidebar-brand-box px-3 py-3 border-bottom border-secondary border-opacity-25 flex-shrink-0 d-flex d-lg-none align-items-center justify-content-between">
-            <a href="/vendor/" class="d-flex align-items-center text-white text-decoration-none" id="vendorSidebarLabel">
-                <div class="brand-icon-box me-2 flex-shrink-0" style="width: 32px; height: 32px; background: rgba(0, 176, 185, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fa-solid fa-handshake text-cyan"></i>
-                </div>
-                <div class="overflow-hidden">
-                    <div class="fs-6 fw-bold tracking-tight text-white d-block text-truncate">ProcureSphere <span class="text-cyan">360</span></div>
-                    <span class="badge bg-secondary bg-opacity-50 text-light px-2 py-0.5 rounded-pill" style="font-size: 0.62rem; letter-spacing: 0.04em;">VENDOR PORTAL</span>
-                </div>
-            </a>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#vendorSidebar" aria-label="Close menu"></button>
-        </div>
+        <!-- Sidebar Brand Header (Logo + Toggle Button) -->
+        {% include 'partials/sidebar_header.html' with sidebar_id='vendorSidebar' dashboard_url='/vendor/' %}
 
         <!-- 2. Scrollable Navigation (flex: 1, min-height: 0, overflow-y: auto) -->
         <nav class="flex-grow-1 overflow-y-auto px-2 py-3 d-flex flex-column gap-1" id="vendorNav" style="flex: 1 1 0%; min-height: 0; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent;" aria-label="Vendor Navigation">
-            <div class="d-flex align-items-center justify-content-between px-2 mb-2 text-secondary text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.06em;">
-                <span>Vendor Portal</span>
-                
+            <!-- 1. Workspace Heading -->
+            <div class="workspace-heading sa-workspace-header">
+                <i class="fa-solid fa-store me-2"></i>
+                <span>VENDOR PORTAL</span>
             </div>
 
+            <!-- 2. Standalone Dashboard -->
             <a href="/vendor/"
                class="vendor-navlink {% if active_nav == 'dashboard' %}active-nav-item{% endif %}">
-                Dashboard
+                <span>Dashboard</span>
             </a>
 
             <a href="/vendor/profile/"
                class="vendor-navlink {% if active_nav == 'profile' %}active-nav-item{% endif %}">
-                Company Profile
+                <span>Company Profile</span>
             </a>
 
+            <!-- 3. Sourcing & Bids Section -->
             <div class="nav-section-label">Sourcing &amp; Bids</div>
 
             <a href="/vendor/sourcing/"

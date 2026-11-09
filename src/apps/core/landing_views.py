@@ -207,7 +207,8 @@ STAGE_SLUG_MAP = {
 
 ABOUT_SECTION_MAP = {
     'platform-introduction': 'about-overview',
-    'mission-purpose': 'mission-purpose',
+    'mission-vision': 'mission-vision',
+    'mission-purpose': 'mission-vision',
     'financial-control': 'financial-control',
     'connected-pillars': 'connected-pillars',
     'enterprise-capabilities': 'enterprise-capabilities',
@@ -227,7 +228,7 @@ def about(request, section_slug=None):
         'overview_title': 'Platform Introduction',
         'overview_subtitle': 'A New Era of Enterprise Procurement: Elevating procurement from a tactical back-office headache to a strategic, transparent advantage.',
         'overview_summary': 'ProcureSphere 360 is an enterprise-grade Source-to-Pay and AP automation ERP engineered to replace disconnected email exchanges, loose spreadsheets, and retrospective financial controls with a synchronized, database-backed operating picture.',
-        'mission_title': 'Platform Mission & Purpose',
+        'mission_title': 'Platform Mission & Vision',
         'mission_subtitle': 'Eliminating Disconnected Procurement and Operational Blind Spots Across the Enterprise',
         'mission_cards': [
             {
@@ -243,7 +244,7 @@ def about(request, section_slug=None):
                 'color': '#2456D6',
             },
             {
-                'tag': 'THE IMPACT',
+                'tag': 'THE VISION',
                 'title': 'Absolute Financial Assurance',
                 'desc': 'By verifying cost center allocations and reserving available funds at the requisition stage, enterprise leaders gain 100% spend visibility before money is ever legally committed.',
                 'color': '#10b981',
