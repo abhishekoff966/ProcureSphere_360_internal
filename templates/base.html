@@ -159,6 +159,12 @@
             stroke: #1677FF !important;
         }
 
+        @keyframes psDialogShake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
         /* Navbar action buttons: Bell, Profile, etc. */
         nav.navbar .btn-outline-secondary,
         nav.navbar .sa-nav-action-btn,
@@ -813,7 +819,7 @@
     </style>
 
 </head>
-<body class="bg-light app-body">
+<body class="bg-light app-body" {% if user.is_authenticated %}data-user-authenticated="true" data-user-role="{{ user.role_code }}"{% endif %}>
     {% block navbar %}
     {% if user.is_authenticated and user.role_code == 'PROC_EXEC' %}
     <!-- Top Navigation Bar for Procurement Executive (Vendor Dashboard Standard) -->
@@ -1045,20 +1051,27 @@
     </div>
 
     {% if user.is_authenticated %}
-    <!-- Back Navigation Sign Out Confirmation Modal -->
+    <!-- Back Navigation Sign Out Confirmation Modal with Auto-Dismiss Timer -->
     <div class="modal fade" id="signout-confirm-modal" tabindex="-1" aria-labelledby="signoutConfirmModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered modal-sm" style="max-width: 380px;">
-            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-                <div class="modal-body p-4 text-center">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden position-relative">
+                <!-- Auto-dismiss Countdown Progress Bar -->
+                <div class="progress position-absolute top-0 start-0 end-0" style="height: 3px; border-radius: 0; background: rgba(0,0,0,0.05); z-index: 10;">
+                    <div id="signout-progress-bar" class="progress-bar bg-danger" style="width: 100%; transition: width 0.1s linear;"></div>
+                </div>
+                <div class="modal-body p-4 text-center pt-4">
                     <div class="mb-3 mx-auto d-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle" style="width: 56px; height: 56px;">
                         <i class="fa-solid fa-arrow-right-from-bracket fs-4"></i>
                     </div>
                     <h5 class="fw-bold text-dark mb-2" id="signoutConfirmModalLabel">Sign Out Confirmation</h5>
-                    <p class="text-secondary small mb-4">You are currently signed into ProcureSphere 360. Do you want to sign out of your session, or stay on your dashboard?</p>
+                    <p class="text-secondary small mb-3">You are currently signed into ProcureSphere 360. Do you want to sign out of your session, or stay on your dashboard?</p>
                     <div class="d-flex flex-column gap-2">
                         <button type="button" class="btn btn-outline-secondary rounded-pill py-2 fw-semibold" id="stay-signed-in-btn" data-bs-dismiss="modal">Stay on Dashboard</button>
-                        <a href="/logout/" class="btn btn-danger rounded-pill py-2 fw-bold text-white text-decoration-none">Sign Out</a>
+                        <a href="/logout/" class="btn btn-danger rounded-pill py-2 fw-bold text-white text-decoration-none" id="signout-confirm-action-btn">Sign Out</a>
                     </div>
+                    <span id="signout-modal-timer" class="text-muted small mt-3 d-block" style="font-size: 11.5px;">
+                        <i class="fa-regular fa-clock me-1"></i>Closing automatically in <strong id="signout-countdown-sec">6</strong>s
+                    </span>
                 </div>
             </div>
         </div>
@@ -1068,7 +1081,7 @@
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom Application JS -->
-    <script src="/static/js/app.js?v=ps_dialog_v3"></script>
+    <script src="/static/js/app.js?v=ps_nav_v8"></script>
     <script>
         // Setup HTMX CSRF Token globally
         document.body.addEventListener('htmx:configRequest', (event) => {
@@ -1091,23 +1104,6 @@
                 }
             }
         });
-
-        {% if user.is_authenticated %}
-        // Browser Back Navigation Signout Confirmation
-        (function() {
-            if (window.history && window.history.pushState) {
-                window.history.pushState({ ps_portal: true }, document.title, window.location.href);
-                window.addEventListener('popstate', function(e) {
-                    var modalEl = document.getElementById('signout-confirm-modal');
-                    if (modalEl && typeof bootstrap !== 'undefined') {
-                        var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-                        modal.show();
-                        window.history.pushState({ ps_portal: true }, document.title, window.location.href);
-                    }
-                });
-            }
-        })();
-        {% endif %}
 
         // Track logout clicks to cleanly bypass intro video on landing page
         document.addEventListener('click', function(e) {

@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,13 +20,17 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap"
+        rel="stylesheet">
 
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
 
     <style>
-        *, *::before, *::after {
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box;
         }
 
@@ -56,6 +61,7 @@
             pointer-events: none;
             z-index: 1;
         }
+
         body::after {
             content: '';
             position: fixed;
@@ -92,6 +98,7 @@
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             letter-spacing: 0.01em;
         }
+
         .lm-exit-pill:hover {
             background: #f8fafc;
             border-color: #94a3b8;
@@ -119,8 +126,15 @@
         }
 
         @keyframes lmSlide {
-            from { opacity: 0; transform: scale(0.98) translateY(16px); }
-            to   { opacity: 1; transform: scale(1) translateY(0); }
+            from {
+                opacity: 0;
+                transform: scale(0.98) translateY(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
         }
 
         /* ── LEFT PANEL (BRAND EXPERIENCE - ~48% WIDTH) ──────── */
@@ -169,6 +183,7 @@
             border: 1px solid rgba(190, 218, 255, 0.9);
             box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
         }
+
         .lm-badge-dot {
             width: 7px;
             height: 7px;
@@ -188,6 +203,7 @@
             margin: 0 0 16px 0;
             letter-spacing: -0.015em;
         }
+
         .lm-headline-blue {
             display: block;
             color: #2563eb;
@@ -212,6 +228,7 @@
             gap: 10px;
             margin-bottom: 16px;
         }
+
         .lm-trust-tag {
             display: inline-flex;
             align-items: center;
@@ -225,6 +242,7 @@
             color: #334155;
             backdrop-filter: blur(4px);
         }
+
         .lm-trust-tag i {
             color: #2563eb;
             font-size: 11px;
@@ -242,6 +260,7 @@
             overflow: hidden;
             position: relative;
         }
+
         .lm-img {
             width: 108%;
             max-width: 680px;
@@ -268,9 +287,11 @@
             scrollbar-width: thin;
             scrollbar-color: rgba(203, 213, 225, 0.6) transparent;
         }
+
         .lm-right::-webkit-scrollbar {
             width: 5px;
         }
+
         .lm-right::-webkit-scrollbar-thumb {
             background: rgba(203, 213, 225, 0.6);
             border-radius: 4px;
@@ -291,6 +312,7 @@
             justify-content: center;
             margin-bottom: 12px;
         }
+
         .lm-logo-emblem {
             height: 76px;
             width: 76px;
@@ -299,6 +321,7 @@
             filter: drop-shadow(0 6px 18px rgba(37, 99, 235, 0.22));
             transition: transform 0.2s ease;
         }
+
         .lm-logo-wordmark {
             height: 30px;
             width: auto;
@@ -338,16 +361,19 @@
             margin-bottom: 14px;
             line-height: 1.4;
         }
+
         .login-alert-banner.alert-danger {
             background: #fef2f2;
             border: 1px solid #fecaca;
             color: #b91c1c;
         }
+
         .login-alert-banner.alert-info {
             background: #eff6ff;
             border: 1px solid #bfdbfe;
             color: #1d4ed8;
         }
+
         .login-alert-banner.alert-success {
             background: #f0fdf4;
             border: 1px solid #bbf7d0;
@@ -360,22 +386,26 @@
             flex-direction: column;
             gap: 12px;
         }
+
         .lm-field {
             display: flex;
             flex-direction: column;
             gap: 5px;
         }
+
         .lm-label {
             font-size: 13px;
             font-weight: 600;
             color: #1e293b;
             font-family: 'Inter', sans-serif;
         }
+
         .lm-input-wrap {
             position: relative;
             display: flex;
             align-items: center;
         }
+
         .lm-icon {
             position: absolute;
             left: 14px;
@@ -398,10 +428,12 @@
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
         }
+
         .lm-input:focus {
             border-color: #2563eb;
             box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
         }
+
         .lm-input::placeholder {
             color: #94a3b8;
             font-size: 14px;
@@ -420,7 +452,10 @@
             align-items: center;
             transition: color 0.15s;
         }
-        .lm-eye:hover { color: #475569; }
+
+        .lm-eye:hover {
+            color: #475569;
+        }
 
         /* Remember + Forgot row */
         .lm-row {
@@ -431,6 +466,7 @@
             margin-top: 2px;
             margin-bottom: 2px;
         }
+
         .lm-remember {
             display: flex;
             align-items: center;
@@ -441,12 +477,14 @@
             font-size: 13px;
             font-weight: 500;
         }
+
         .lm-remember input[type="checkbox"] {
             accent-color: #2563eb;
             cursor: pointer;
             width: 15px;
             height: 15px;
         }
+
         .lm-forgot {
             font-size: 13px;
             color: #2563eb;
@@ -455,6 +493,7 @@
             white-space: nowrap;
             transition: color 0.15s;
         }
+
         .lm-forgot:hover {
             color: #1d4ed8;
             text-decoration: underline;
@@ -481,11 +520,13 @@
             box-shadow: 0 4px 14px rgba(37, 99, 235, 0.32);
             margin-top: 4px;
         }
+
         .lm-submit:hover {
             background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
             transform: translateY(-1px);
             box-shadow: 0 6px 20px rgba(37, 99, 235, 0.42);
         }
+
         .lm-submit:active {
             transform: translateY(0);
         }
@@ -499,6 +540,7 @@
             border-radius: 12px;
             box-shadow: 0 1px 3px rgba(245, 158, 11, 0.05);
         }
+
         .dev-quick-login-label {
             font-size: 11px;
             font-weight: 600;
@@ -509,6 +551,7 @@
             gap: 6px;
             flex-wrap: wrap;
         }
+
         .dev-quick-login-label code {
             background: #fef3c7;
             padding: 2px 6px;
@@ -519,11 +562,13 @@
             font-family: 'DM Mono', monospace;
             font-weight: 700;
         }
+
         .dev-quick-login-buttons {
             display: flex;
             flex-wrap: wrap;
             gap: 5px;
         }
+
         .dev-ql-btn {
             padding: 4px 8px;
             font-size: 11px;
@@ -536,17 +581,20 @@
             transition: all 0.15s;
             font-family: inherit;
         }
+
         .dev-ql-btn:hover {
             background: #eff6ff;
             border-color: #2563eb;
             color: #2563eb;
             transform: translateY(-1px);
         }
+
         .dev-ql-btn--vendor {
             border-color: #a5f3fc;
             color: #0e7490;
             background: #f0fdfa;
         }
+
         .dev-ql-btn--vendor:hover {
             background: #ccfbf1;
             border-color: #0d9488;
@@ -560,12 +608,15 @@
                 max-width: 1150px;
                 height: 86vh;
             }
+
             .lm-left {
                 padding: 34px 34px 0 34px;
             }
+
             .lm-headline {
                 font-size: 32px;
             }
+
             .lm-right {
                 padding: 30px 40px;
             }
@@ -577,6 +628,7 @@
                 min-height: 100vh;
                 height: auto;
             }
+
             .login-content-wrapper {
                 flex-direction: column;
                 height: auto;
@@ -586,26 +638,31 @@
                 border-radius: 20px;
                 margin: 40px auto 20px;
             }
+
             .lm-left {
                 display: none;
             }
+
             .lm-right {
                 width: 100%;
                 flex: 1 1 100%;
                 padding: 36px 24px;
             }
+
             .lm-form-wrap {
                 max-width: 100%;
             }
         }
     </style>
 </head>
+
 <body>
 
     <!-- Exit pill — top-right of viewport -->
     <a href="/" id="login-exit-btn" class="lm-exit-pill" aria-label="Exit to Home">
         Exit
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
@@ -630,18 +687,15 @@
 
             <!-- Subtext -->
             <p class="lm-sub">
-                Connecting every requisition, vendor negotiation, and payment into one seamless, automated source-to-pay workflow.
+                Connecting every requisition, vendor negotiation, and payment into one seamless, automated source-to-pay
+                workflow.
             </p>
 
 
             <!-- Person image pinned to bottom of left panel -->
             <div class="lm-img-wrap">
-                <img
-                    id="login-char-img"
-                    src="{% static 'landing/login-states/normal.webp' %}"
-                    alt="Enterprise procurement workspace"
-                    class="lm-img"
-                />
+                <img id="login-char-img" src="{% static 'landing/login-states/normal.webp' %}"
+                    alt="Enterprise procurement workspace" class="lm-img" />
             </div>
         </div>
 
@@ -651,35 +705,34 @@
 
                 <!-- Prominent High-Visibility Brand Logo -->
                 <div class="lm-logo-wrapper">
-                    <img
-                        src="{% static 'landing/images/procuresphere_360_emblem.png' %}"
-                        alt="ProcureSphere 360 Emblem"
-                        class="lm-logo-emblem"
-                    />
-                    <img
-                        src="{% static 'landing/images/procuresphere_360_wordmark.png' %}"
-                        alt="ProcureSphere 360"
-                        class="lm-logo-wordmark"
-                    />
+                    <img src="{% static 'landing/images/procuresphere_360_emblem.png' %}" alt="ProcureSphere 360 Emblem"
+                        class="lm-logo-emblem" />
+                    <img src="{% static 'landing/images/procuresphere_360_wordmark.png' %}" alt="ProcureSphere 360"
+                        class="lm-logo-wordmark" />
                 </div>
                 <h1 class="lm-heading">Welcome Back</h1>
                 <p class="lm-tagline">Sign in to your enterprise procurement portal</p>
 
                 <!-- Django Messages / Alert -->
                 {% if messages %}
-                    {% for message in messages %}
-                        <div class="login-alert-banner {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'info' %}alert-info{% else %}alert-success{% endif %}">
-                            <div style="display: flex; align-items: center; gap: 9px;">
-                                <i class="fa-solid {% if message.tags == 'error' %}fa-circle-exclamation{% elif message.tags == 'info' %}fa-circle-info{% else %}fa-circle-check{% endif %}"></i>
-                                <span>{{ message }}</span>
-                            </div>
-                            <button type="button" onclick="this.closest('.login-alert-banner').remove()" style="background: none; border: none; font-size: 16px; cursor: pointer; color: inherit; padding: 0 4px; line-height: 1; opacity: 0.7;" aria-label="Close alert">&times;</button>
-                        </div>
-                    {% endfor %}
+                {% for message in messages %}
+                <div
+                    class="login-alert-banner {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'info' %}alert-info{% else %}alert-success{% endif %}">
+                    <div style="display: flex; align-items: center; gap: 9px;">
+                        <i
+                            class="fa-solid {% if message.tags == 'error' %}fa-circle-exclamation{% elif message.tags == 'info' %}fa-circle-info{% else %}fa-circle-check{% endif %}"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                    <button type="button" onclick="this.closest('.login-alert-banner').remove()"
+                        style="background: none; border: none; font-size: 16px; cursor: pointer; color: inherit; padding: 0 4px; line-height: 1; opacity: 0.7;"
+                        aria-label="Close alert">&times;</button>
+                </div>
+                {% endfor %}
                 {% endif %}
 
                 <!-- Form -->
-                <form id="loginForm" class="lm-form" method="POST" action="/login/{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}">
+                <form id="loginForm" class="lm-form" method="POST"
+                    action="/login/{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}">
                     {% csrf_token %}
 
                     <!-- Email -->
@@ -687,21 +740,14 @@
                         <label for="email" class="lm-label">Email</label>
                         <div class="lm-input-wrap">
                             <span class="lm-icon">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                                    <circle cx="12" cy="7" r="4"/>
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                    <circle cx="12" cy="7" r="4" />
                                 </svg>
                             </span>
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                class="lm-input"
-                                value="{{ email|default:'' }}"
-                                placeholder="name@company.com"
-                                autocomplete="email"
-                                required
-                            />
+                            <input type="email" id="email" name="email" class="lm-input" value="{{ email|default:'' }}"
+                                placeholder="name@company.com" autocomplete="email" required />
                         </div>
                     </div>
 
@@ -710,24 +756,21 @@
                         <label for="password" class="lm-label">Password</label>
                         <div class="lm-input-wrap">
                             <span class="lm-icon">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                                 </svg>
                             </span>
-                            <input
-                                type="password"
-                                id="password"
-                                name="password"
-                                class="lm-input"
-                                placeholder="••••••••••••"
-                                autocomplete="current-password"
-                                required
-                            />
-                            <button type="button" id="toggle-password" class="lm-eye" aria-label="Toggle password visibility">
-                                <svg id="pw-eye-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                    <circle cx="12" cy="12" r="3"/>
+                            <input type="password" id="password" name="password" class="lm-input"
+                                placeholder="••••••••••••" autocomplete="current-password" required />
+                            <button type="button" id="toggle-password" class="lm-eye"
+                                aria-label="Toggle password visibility">
+                                <svg id="pw-eye-svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                    <circle cx="12" cy="12" r="3" />
                                 </svg>
                             </button>
                         </div>
@@ -745,7 +788,8 @@
                     <!-- Submit Button -->
                     <button type="submit" id="login-submit-btn" class="lm-submit">
                         <span>Sign In</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                             <polyline points="12 5 19 12 12 19"></polyline>
                         </svg>
@@ -755,20 +799,31 @@
                 <!-- Dev Quick-Login Section -->
                 <div class="dev-quick-login-section">
                     <p class="dev-quick-login-label">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b" stroke="none">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                        </svg>
                         Dev Logins &nbsp;·&nbsp; Password: <code>Password123!</code>
                     </p>
                     <div class="dev-quick-login-buttons">
                         <button type="button" class="dev-ql-btn" onclick="quickLogin('admin@hpe.com')">Admin</button>
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('requester@hpe.com')">Requester</button>
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('approver@hpe.com')">Dept Approver</button>
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('procexec@hpe.com')">Proc Exec</button>
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('procmgr@hpe.com')">Proc Mgr</button>
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('receiver@hpe.com')">Stores Receiver</button>
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('finance@hpe.com')">Finance AP</button>
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('legal@hpe.com')">Legal Mgr</button>
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('auditor@hpe.com')">Auditor</button>
-                        <button type="button" class="dev-ql-btn dev-ql-btn--vendor" onclick="quickLogin('vendoruser@cisco.com')">Vendor User</button>
+                        <button type="button" class="dev-ql-btn"
+                            onclick="quickLogin('requester@hpe.com')">Requester</button>
+                        <button type="button" class="dev-ql-btn" onclick="quickLogin('approver@hpe.com')">Dept
+                            Approver</button>
+                        <button type="button" class="dev-ql-btn" onclick="quickLogin('procexec@hpe.com')">Proc
+                            Exec</button>
+                        <button type="button" class="dev-ql-btn" onclick="quickLogin('procmgr@hpe.com')">Proc
+                            Mgr</button>
+                        <button type="button" class="dev-ql-btn" onclick="quickLogin('receiver@hpe.com')">Stores
+                            Receiver</button>
+                        <button type="button" class="dev-ql-btn" onclick="quickLogin('finance@hpe.com')">Finance
+                            AP</button>
+                        <button type="button" class="dev-ql-btn" onclick="quickLogin('legal@hpe.com')">Legal
+                            Mgr</button>
+                        <button type="button" class="dev-ql-btn"
+                            onclick="quickLogin('auditor@hpe.com')">Auditor</button>
+                        <button type="button" class="dev-ql-btn dev-ql-btn--vendor"
+                            onclick="quickLogin('vendoruser@cisco.com')">Vendor User</button>
                     </div>
                 </div>
 
@@ -803,6 +858,11 @@
 
         // Quick Login helper
         function quickLogin(email) {
+            try {
+                sessionStorage.removeItem('ps_nav_stack');
+                sessionStorage.removeItem('ps_nav_index');
+                sessionStorage.setItem('ps_just_logged_in', 'true');
+            } catch (e) { }
             const emailField = document.getElementById('email');
             const pwField = document.getElementById('password');
             if (emailField) emailField.value = email;
@@ -811,6 +871,17 @@
         }
         window.quickLogin = quickLogin;
         window.modalQuickLogin = quickLogin;
+
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.addEventListener('submit', function () {
+                try {
+                    sessionStorage.removeItem('ps_nav_stack');
+                    sessionStorage.removeItem('ps_nav_index');
+                    sessionStorage.setItem('ps_just_logged_in', 'true');
+                } catch (e) { }
+            });
+        }
 
         // Exit button sets flags to prevent intro video on return to home
         const exitBtn = document.getElementById('login-exit-btn');
@@ -821,7 +892,7 @@
                     sessionStorage.setItem('ps360_logged_out', 'true');
                     sessionStorage.setItem('ps360_from_login', 'true');
                     document.cookie = "ps360_just_logged_out=1; path=/; max-age=60; SameSite=Lax";
-                } catch(e) {}
+                } catch (e) { }
             });
         }
 
@@ -835,4 +906,5 @@
         });
     </script>
 </body>
+
 </html>
