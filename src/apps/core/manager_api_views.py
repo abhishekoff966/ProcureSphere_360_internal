@@ -1936,7 +1936,16 @@ class ManagerVendorWatchlistAPIView(APIView):
                 }
             )
 
-        return Response({"results": results, "vendors": results, "count": len(results)}, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "results": results,
+                "vendors": results,
+                "count": len(results),
+                "next": None,
+                "previous": None,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class ManagerApprovalsAPIView(APIView):
@@ -2199,6 +2208,13 @@ class ManagerApprovalsAPIView(APIView):
         paginator = Paginator(items, page_size)
         page_obj = paginator.get_page(page)
 
+        next_url = None
+        prev_url = None
+        if page_obj.has_next():
+            next_url = request.build_absolute_uri(f"?page={page + 1}")
+        if page_obj.has_previous():
+            prev_url = request.build_absolute_uri(f"?page={page - 1}")
+
         return Response({
             'summary': {
                 'total_pending_count': total_pending_count,
@@ -2210,6 +2226,8 @@ class ManagerApprovalsAPIView(APIView):
             },
             'results': list(page_obj.object_list),
             'count': paginator.count,
+            'next': next_url,
+            'previous': prev_url,
             'page': page,
             'page_size': page_size,
             'total_pages': paginator.num_pages,

@@ -731,6 +731,15 @@ def terminate_contract_service(*, contract: Contract, user: User, reason: str) -
         raise ValidationError("Termination reason is required.")
     if contract.status == Contract.STATUS_TERMINATED:
         raise ValidationError("Contract is already terminated.")
+    if contract.status not in (
+        Contract.STATUS_ACTIVE,
+        Contract.STATUS_RENEWAL_DUE,
+        Contract.STATUS_RENEWED,
+    ):
+        raise ValidationError(
+            f"Cannot terminate contract in status '{contract.status}'. "
+            "Only active or renewal-due contracts can be terminated."
+        )
 
     previous_status = contract.status
     contract.status = Contract.STATUS_TERMINATED

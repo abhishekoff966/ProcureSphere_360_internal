@@ -77,7 +77,7 @@ class BudgetViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, CanManageBudget]
     queryset = Budget.objects.select_related("cost_center", "fiscal_period").order_by("-created_at")
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["cost_center__code", "cost_center__name", "fiscal_period__period_code"]
+    search_fields = ["cost_center__code", "cost_center__name", "fiscal_period__name"]
 
     def get_queryset(self):
         qs = self.queryset if self.queryset is not None else Budget.objects.select_related("cost_center", "fiscal_period").order_by("-created_at")

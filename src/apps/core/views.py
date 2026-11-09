@@ -1,4 +1,4 @@
-﻿from decimal import Decimal
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib import messages
@@ -638,6 +638,19 @@ def home_view(request):  # noqa: C901
 def _is_api_request(request):
     accept = request.headers.get("Accept", "").lower()
     return request.path.startswith("/api/") or "application/json" in accept or "json" in accept
+
+
+def custom_api_404_view(request, *args, **kwargs):
+    return JsonResponse(
+        {
+            "error": {
+                "code": "NOT_FOUND",
+                "message": "The requested API endpoint was not found.",
+                "details": {"path": request.path},
+            }
+        },
+        status=404,
+    )
 
 
 def custom_404_view(request, exception=None):

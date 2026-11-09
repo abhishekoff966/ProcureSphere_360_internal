@@ -112,6 +112,13 @@ class DepartmentViewSet(viewsets.ModelViewSet):
             )
         instance.delete()
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        org_param = self.request.query_params.get("organization") or self.request.query_params.get("organization_id")
+        if org_param:
+            qs = qs.filter(organization_id=org_param)
+        return qs
+
 
 class CostCenterViewSet(viewsets.ModelViewSet):
     queryset = CostCenter.objects.all().order_by("name")
@@ -129,9 +136,14 @@ class CostCenterViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        qs = CostCenter.objects.all()
+        qs = super().get_queryset()
         if not user or not user.is_authenticated:
             return qs.none()
+
+        department_param = self.request.query_params.get("department") or self.request.query_params.get("department_id")
+        if department_param:
+            qs = qs.filter(department_id=department_param)
+
         if user.is_superuser or getattr(user, "role_code", None) in [
             Role.SUPER_ADMIN,
             Role.FINANCE_AP,
