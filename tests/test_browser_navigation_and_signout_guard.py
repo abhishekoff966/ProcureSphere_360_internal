@@ -72,3 +72,50 @@ class TestBrowserNavigationAndSignoutGuard:
         assert "ps-nav-arrows" not in rendered
         assert "psNavBackBtn" not in rendered
         assert "psNavForwardBtn" not in rendered
+
+    def test_vendor_dashboard_and_subpages_guard_structure(self, client):
+        """Vendor dashboard and subpages contain signout modal in layout without in-page arrow boxes."""
+        from apps.vendors.models import Vendor, VendorCategory
+
+        role, _ = Role.objects.get_or_create(code=Role.VENDOR_USER, defaults={"name": "Vendor Portal User"})
+        cat, _ = VendorCategory.objects.get_or_create(code="IT_SERVICES", defaults={"name": "IT Services"})
+        vendor, _ = Vendor.objects.get_or_create(
+            vendor_number="VND-NAV-TEST-01",
+            defaults={"legal_name": "Nav Test Vendor Inc", "category": cat, "email": "navtest@vendor.com"},
+        )
+        user = User.objects.create_user(
+            email="nav_vendor_guard_test@procuresphere.com",
+            password="Password123!",
+            role=role,
+        )
+        user.vendor = vendor
+        user.save()
+        client.force_login(user)
+
+        # Check vendor root dashboard and vendor subpages
+        for subpath in ["/vendor/", "/vendor/profile/", "/vendor/sourcing/", "/vendor/bids/"]:
+            response = client.get(subpath)
+            assert response.status_code == 200
+            content = response.content.decode("utf-8")
+            assert "ps-nav-arrows" not in content
+            assert "psNavBackBtn" not in content
+            assert "psNavForwardBtn" not in content
+            assert 'id="signout-confirm-modal"' in content
+
+    def test_app_js_contains_subpage_safe_navigation_guard(self):
+        """Static app.js has strict subpage bypass, section hash tracking, and sessionStorage subpage tracking."""
+        with open("static/js/app.js", "r", encoding="utf-8") as f:
+            app_js = f.read()
+
+        # Strict root detection
+        assert "isDashboardRoot" in app_js
+        assert "'/vendor'" in app_js
+        assert "'/vendor/dashboard'" in app_js
+
+        # Subpage safety checks
+        assert "ps_visited_subpage" in app_js
+        assert "cameFromSubpage" in app_js
+        assert "isSectionHash" in app_js
+        assert "if (!currentlyOnRoot) {" in app_js
+        assert "showSignoutModal()" in app_js
+        assert "armDashboardGuard()" in app_js
