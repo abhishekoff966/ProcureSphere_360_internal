@@ -64,26 +64,29 @@
                 {% endif %}
             </div>
 
-            {% if transitions %}
-                <form method="post" action="{% url 'vendor_status_change' vendor.id %}" class="small">
-                    {% csrf_token %}
-                    <label class="form-label fw-semibold" for="gov-status">Governance action</label>
-                    <select name="status" id="gov-status" class="form-select form-select-sm mb-2" required>
-                        {% for t in transitions %}<option value="{{ t.status }}">{{ t.label }}</option>{% endfor %}
-                    </select>
-                    <label class="form-label fw-semibold" for="gov-notes">Reason (recorded in audit trail)</label>
-                    <textarea name="notes" id="gov-notes" rows="2" class="form-control form-control-sm mb-2" required></textarea>
-                    {% if exposure.summary.open_bids or exposure.summary.open_pos or exposure.summary.pending_awards %}
-                        <div class="alert alert-warning py-2 small mb-2">
-                            This vendor has open sourcing/PO transactions. They are not cancelled automatically; a suspended vendor is blocked from new invitations, bids, awards and POs.
-                        </div>
-                    {% endif %}
-                    <button type="submit" class="btn btn-sm btn-dark">Apply</button>
-                </form>
-            {% elif caps.can_operate %}
-                <p class="small text-muted mb-0">No governance transitions are available to your role from {{ vendor.get_status_display }}.</p>
-            {% else %}
-                <p class="small text-muted mb-0">Read-only access.</p>
+            {% if user.role_code != 'PROC_EXEC' or section == 'governance' %}
+                {% if transitions %}
+                    <form method="post" action="{% url 'vendor_status_change' vendor.id %}" class="small">
+                        {% csrf_token %}
+                        <input type="hidden" name="section" value="{{ section|default:'governance' }}">
+                        <label class="form-label fw-semibold" for="gov-status">Governance action</label>
+                        <select name="status" id="gov-status" class="form-select form-select-sm mb-2" required>
+                            {% for t in transitions %}<option value="{{ t.status }}">{{ t.label }}</option>{% endfor %}
+                        </select>
+                        <label class="form-label fw-semibold" for="gov-notes">Reason (recorded in audit trail)</label>
+                        <textarea name="notes" id="gov-notes" rows="2" class="form-control form-control-sm mb-2" required></textarea>
+                        {% if exposure.summary.open_bids or exposure.summary.open_pos or exposure.summary.pending_awards %}
+                            <div class="alert alert-warning py-2 small mb-2">
+                                This vendor has open sourcing/PO transactions. They are not cancelled automatically; a suspended vendor is blocked from new invitations, bids, awards and POs.
+                            </div>
+                        {% endif %}
+                        <button type="submit" class="btn btn-sm btn-dark">Apply</button>
+                    </form>
+                {% elif caps.can_operate %}
+                    <p class="small text-muted mb-0">No governance transitions are available to your role from {{ vendor.get_status_display }}.</p>
+                {% else %}
+                    <p class="small text-muted mb-0">Read-only access.</p>
+                {% endif %}
             {% endif %}
         </div>
     </div>

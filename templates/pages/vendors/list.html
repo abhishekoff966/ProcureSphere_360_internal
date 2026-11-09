@@ -310,7 +310,7 @@
 
                     <td>
 
-                        <a href="{% url 'vendor_detail' vendor.id %}" class="fw-semibold text-decoration-none text-dark">{{ vendor.legal_name }}</a>
+                        <a href="{% if mode == 'governance' %}{% url 'vendor_detail_status' vendor.id %}?section=governance{% else %}{% url 'vendor_detail' vendor.id %}?section={{ mode|default:'master' }}{% endif %}" class="fw-semibold text-decoration-none text-dark">{{ vendor.legal_name }}</a>
 
                         {% if vendor.trade_name %}<div class="small text-muted">{{ vendor.trade_name }}</div>{% endif %}
 
@@ -386,13 +386,16 @@
 
                     <td class="text-end pe-3 text-nowrap">
 
-                        <a href="{% url 'vendor_detail' vendor.id %}" class="btn btn-sm btn-outline-secondary" title="View"><i class="fa-solid fa-eye"></i><span class="visually-hidden">View</span></a>
+                        {% if mode == 'governance' %}
+                        <a href="{% url 'vendor_detail_status' vendor.id %}?section=governance" class="btn btn-sm btn-outline-primary" title="Governance Action & Status"><i class="fa-solid fa-scale-balanced"></i><span class="visually-hidden">Governance</span></a>
+                        {% endif %}
+                        <a href="{% url 'vendor_detail' vendor.id %}?section={{ mode|default:'master' }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="fa-solid fa-eye"></i><span class="visually-hidden">View</span></a>
 
-                        <a href="{% url 'vendor_detail_risk' vendor.id %}" class="btn btn-sm btn-outline-danger" title="Risk"><i class="fa-solid fa-triangle-exclamation"></i><span class="visually-hidden">Risk</span></a>
+                        <a href="{% url 'vendor_detail_risk' vendor.id %}?section={{ mode|default:'master' }}" class="btn btn-sm btn-outline-danger" title="Risk"><i class="fa-solid fa-triangle-exclamation"></i><span class="visually-hidden">Risk</span></a>
 
-                        <a href="{% url 'vendor_detail_performance' vendor.id %}" class="btn btn-sm btn-outline-success" title="Performance"><i class="fa-solid fa-award"></i><span class="visually-hidden">Performance</span></a>
+                        <a href="{% url 'vendor_detail_performance' vendor.id %}?section={{ mode|default:'master' }}" class="btn btn-sm btn-outline-success" title="Performance"><i class="fa-solid fa-award"></i><span class="visually-hidden">Performance</span></a>
 
-                        <a href="{% url 'vendor_detail_history' vendor.id %}" class="btn btn-sm btn-outline-dark" title="History"><i class="fa-solid fa-clock-rotate-left"></i><span class="visually-hidden">History</span></a>
+                        <a href="{% url 'vendor_detail_history' vendor.id %}?section={{ mode|default:'master' }}" class="btn btn-sm btn-outline-dark" title="History"><i class="fa-solid fa-clock-rotate-left"></i><span class="visually-hidden">History</span></a>
 
                     </td>
 
@@ -474,7 +477,7 @@
 
                 <div class="mb-2">
 
-                    <a href="{% url 'vendor_detail' vendor.id %}" class="fw-bold fs-6 text-dark text-decoration-none text-break d-block mb-0">
+                    <a href="{% if mode == 'governance' %}{% url 'vendor_detail_status' vendor.id %}?section=governance{% else %}{% url 'vendor_detail' vendor.id %}?section={{ mode|default:'master' }}{% endif %}" class="fw-bold fs-6 text-dark text-decoration-none text-break d-block mb-0">
 
                         {{ vendor.legal_name }}
 
@@ -560,25 +563,30 @@
 
                 <div class="d-flex align-items-center gap-1.5 justify-content-between pt-1 border-top">
 
-                    <a href="{% url 'vendor_detail' vendor.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold flex-grow-1 text-center">
+                    {% if mode == 'governance' %}
+                    <a href="{% url 'vendor_detail_status' vendor.id %}?section=governance" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-semibold text-center me-1">
+                        <i class="fa-solid fa-scale-balanced me-1"></i> Governance
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'vendor_detail' vendor.id %}?section={{ mode|default:'master' }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold flex-grow-1 text-center">
 
                         <i class="fa-solid fa-eye me-1"></i> View Details
 
                     </a>
 
-                    <a href="{% url 'vendor_detail_risk' vendor.id %}" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1.5" title="Risk Assessment">
+                    <a href="{% url 'vendor_detail_risk' vendor.id %}?section={{ mode|default:'master' }}" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1.5" title="Risk Assessment">
 
                         <i class="fa-solid fa-triangle-exclamation"></i>
 
                     </a>
 
-                    <a href="{% url 'vendor_detail_performance' vendor.id %}" class="btn btn-sm btn-outline-success rounded-pill px-2.5 py-1.5" title="Performance Scorecard">
+                    <a href="{% url 'vendor_detail_performance' vendor.id %}?section={{ mode|default:'master' }}" class="btn btn-sm btn-outline-success rounded-pill px-2.5 py-1.5" title="Performance Scorecard">
 
                         <i class="fa-solid fa-award"></i>
 
                     </a>
 
-                    <a href="{% url 'vendor_detail_history' vendor.id %}" class="btn btn-sm btn-outline-dark rounded-pill px-2.5 py-1.5" title="Audit History">
+                    <a href="{% url 'vendor_detail_history' vendor.id %}?section={{ mode|default:'master' }}" class="btn btn-sm btn-outline-dark rounded-pill px-2.5 py-1.5" title="Audit History">
 
                         <i class="fa-solid fa-clock-rotate-left"></i>
 
