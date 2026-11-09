@@ -26,7 +26,8 @@ class RequestIDMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        raw_request_id = request.headers.get("X-Request-ID")
+        request_id = raw_request_id.strip() if raw_request_id and raw_request_id.strip() else str(uuid.uuid4())
         request.request_id = request_id
         _request_context.request_id = request_id
 

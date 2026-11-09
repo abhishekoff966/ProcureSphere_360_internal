@@ -83,7 +83,7 @@ def detect_entity_type(identifier: str) -> str:
         return "RECEIPT"
     elif id_upper.startswith("CON-") or id_upper.startswith("CTR-"):
         return "CONTRACT"
-    elif id_upper.startswith("VEND-") or id_upper.startswith("TIN-") or id_upper.startswith("TAX-"):
+    elif id_upper.startswith("VEND-") or id_upper.startswith("VND-") or id_upper.startswith("TIN-") or id_upper.startswith("TAX-"):
         return "VENDOR"
     return "UNKNOWN"
 
