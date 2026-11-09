@@ -376,6 +376,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 sessionStorage.removeItem('ps_nav_stack');
                 sessionStorage.removeItem('ps_nav_index');
                 sessionStorage.removeItem('ps_just_logged_in');
+                sessionStorage.removeItem('ps_visited_subpage');
+                sessionStorage.removeItem('ps_last_subpage_path');
             } catch (err) {}
             const targetUrl = logoutLink.getAttribute('href') || '/logout/';
             fetch(targetUrl, {
@@ -405,13 +407,14 @@ document.addEventListener('DOMContentLoaded', function () {
     // =========================================================================
     // Enterprise Portal Navigation & Sign-Out Guard Controller
     // Traps native browser Back arrow at ANY dashboard root to prevent accidental sign-out
+    // Ensures subpages, query tabs, and in-page anchors navigate naturally without premature popups
     // =========================================================================
     (function initPortalNavigationController() {
         // Canonical dashboard roots across all enterprise roles
         function isDashboardRoot(pathname) {
             if (!pathname) pathname = window.location.pathname;
-            const clean = pathname.replace(/\/+$/, '');
-            const roots = [
+            const clean = pathname.replace(/\/+$/, '') || '/';
+            const exactRoots = [
                 '/dashboard',
                 '/requester',
                 '/requester/dashboard',
@@ -435,8 +438,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 '/vendor/dashboard',
                 '/admin'
             ];
-            return roots.includes(clean);
+            return exactRoots.includes(clean);
         }
+
+        const curPath = window.location.pathname;
+        const onRoot = isDashboardRoot(curPath);
+
+        // Track subpage visit state in sessionStorage
+        try {
+            if (!onRoot) {
+                sessionStorage.setItem('ps_visited_subpage', 'true');
+                sessionStorage.setItem('ps_last_subpage_path', curPath);
+            }
+        } catch (e) {}
 
         let signoutTimerInterval = null;
 
@@ -448,6 +462,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         function showSignoutModal() {
+            // Strict Guard: Under NO circumstance show the modal if not on a canonical dashboard root
+            if (!isDashboardRoot(window.location.pathname)) {
+                return;
+            }
+
             const modalEl = document.getElementById('signout-confirm-modal');
             if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
                 const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
@@ -507,19 +526,19 @@ document.addEventListener('DOMContentLoaded', function () {
         // Arm the history barrier whenever on a dashboard root
         function armDashboardGuard() {
             if (!window.history || !window.history.pushState) return;
-            const curPath = window.location.pathname;
-            if (!isDashboardRoot(curPath)) return;
+            const currentPath = window.location.pathname;
+            if (!isDashboardRoot(currentPath)) return;
 
             // Only push barrier if not already at guard state
             if (!window.history.state || !window.history.state.isPsGuard) {
                 try {
                     window.history.replaceState(
-                        { ps_portal: true, isPsBase: true, rootPath: curPath },
+                        { ps_portal: true, isPsBase: true, rootPath: currentPath },
                         document.title,
                         window.location.href
                     );
                     window.history.pushState(
-                        { ps_portal: true, isPsGuard: true, rootPath: curPath },
+                        { ps_portal: true, isPsGuard: true, rootPath: currentPath },
                         document.title,
                         window.location.href
                     );
@@ -528,11 +547,15 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         // Arm immediately on dashboard root page load
-        armDashboardGuard();
+        if (onRoot) {
+            armDashboardGuard();
+        }
 
         // Re-arm when shown via browser navigation (including bfcache restore)
         window.addEventListener('pageshow', function () {
-            armDashboardGuard();
+            if (isDashboardRoot(window.location.pathname)) {
+                armDashboardGuard();
+            }
         });
 
         // Tab state tracking for in-page tabs
@@ -553,11 +576,29 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
+        // In-page section anchor links listener (e.g. #tax-info, #bank-info in vendor profile)
+        document.addEventListener('click', function (e) {
+            const anchor = e.target.closest('a[href^="#"]');
+            if (anchor) {
+                const href = anchor.getAttribute('href');
+                if (href && href.length > 1 && !anchor.hasAttribute('data-bs-toggle') && !anchor.hasAttribute('data-bs-dismiss')) {
+                    tabHistory.push(href);
+                    try {
+                        window.history.pushState(
+                            { ps_portal: true, isSectionHash: true, hashTarget: href },
+                            document.title,
+                            window.location.pathname + window.location.search + href
+                        );
+                    } catch (err) {}
+                }
+            }
+        });
+
         // Native Browser Back Button Interceptor
         if (window.history && window.history.pushState) {
             window.addEventListener('popstate', function (e) {
-                const curPath = window.location.pathname;
-                const onRoot = isDashboardRoot(curPath);
+                const currentPath = window.location.pathname;
+                const currentlyOnRoot = isDashboardRoot(currentPath);
 
                 // Case 1: Active in-page tab back navigation
                 if (e.state && e.state.isTab && e.state.tabTarget) {
@@ -568,8 +609,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
+                // Case 2: In-page section anchor navigation (e.g. #tax-info, #bank-info)
+                if (e.state && e.state.isSectionHash && e.state.hashTarget) {
+                    const el = document.querySelector(e.state.hashTarget);
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                    return;
+                }
+
                 // If user backed out of tabs to the default tab
-                if (tabHistory.length > 0 && (!e.state || !e.state.isTab)) {
+                if (tabHistory.length > 0 && (!e.state || (!e.state.isTab && !e.state.isSectionHash))) {
                     tabHistory = [];
                     const firstTab = document.querySelector('.nav-tabs .nav-link, .nav-pills .nav-link');
                     if (firstTab && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
@@ -578,12 +628,37 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
-                // Case 2: At Dashboard Root — user pressed browser Back button to exit
-                if (onRoot) {
-                    // Re-push barrier state immediately so browser stays locked on dashboard
+                // Case 3: On Subpages (e.g. /vendor/profile/, /vendor/sourcing/, /vendor/bids/, etc.)
+                // Normal browser navigation smoothly steps back between subpages, query tabs, or sections.
+                // The signout modal NEVER appears under ANY circumstance on subpages!
+                if (!currentlyOnRoot) {
+                    return;
+                }
+
+                // Case 4: Arrived at / on Dashboard Root
+                // Check if user came back from a subpage:
+                let cameFromSubpage = false;
+                try {
+                    if (sessionStorage.getItem('ps_visited_subpage') === 'true') {
+                        cameFromSubpage = true;
+                        sessionStorage.removeItem('ps_visited_subpage');
+                    }
+                } catch (err) {}
+
+                // If user just backed into the root from a subpage, or landed on isPsGuard:
+                // DO NOT show modal! Re-arm the guard and allow them to peacefully view their dashboard!
+                if (cameFromSubpage || (e.state && e.state.isPsGuard)) {
+                    armDashboardGuard();
+                    return;
+                }
+
+                // Case 5: User is AT the Dashboard Root barrier attempting to exit backwards
+                // (e.state.isPsBase is true, or popped past guard barrier)
+                if (e.state && e.state.isPsBase) {
+                    // Re-push barrier state immediately so browser stays locked on dashboard root
                     try {
                         window.history.pushState(
-                            { ps_portal: true, isPsGuard: true, rootPath: curPath },
+                            { ps_portal: true, isPsGuard: true, rootPath: currentPath },
                             document.title,
                             window.location.href
                         );
@@ -593,10 +668,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     showSignoutModal();
                     return;
                 }
-
-                // Case 3: On subpages (e.g. /organization/departments/)
-                // Normal browser navigation smoothly steps back to previous page.
-                // The modal NEVER appears on subpages.
             });
         }
     })();
