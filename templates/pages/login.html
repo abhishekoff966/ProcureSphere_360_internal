@@ -141,26 +141,13 @@
         .lm-left {
             flex: 0 0 48%;
             width: 48%;
-            background: linear-gradient(155deg, #f0f6ff 0%, #e2edfc 42%, #d5e5fa 78%, #c5daf7 100%);
+            background: linear-gradient(155deg, #dbeafe 0%, #d0e3fc 42%, #c2daf9 78%, #b3d1f7 100%) !important;
             display: flex;
             flex-direction: column;
             padding: 36px 36px 0 36px;
             position: relative;
             overflow: hidden;
-            border-right: 1px solid rgba(210, 225, 245, 0.7);
-        }
-
-        /* Decorative ambient glow inside left panel */
-        .lm-left::before {
-            content: '';
-            position: absolute;
-            top: -100px;
-            left: -100px;
-            width: 320px;
-            height: 320px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 70%);
-            pointer-events: none;
+            border-right: 1px solid rgba(190, 215, 245, 0.85);
         }
 
         /* Badge */
@@ -169,9 +156,9 @@
             align-items: center;
             gap: 8px;
             padding: 6px 16px;
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(8px);
-            color: #2563eb;
+            color: #1d4ed8;
             border-radius: 9999px;
             font-size: 11px;
             font-weight: 700;
@@ -182,6 +169,8 @@
             width: fit-content;
             border: 1px solid rgba(190, 218, 255, 0.9);
             box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+            position: relative;
+            z-index: 2;
         }
 
         .lm-badge-dot {
@@ -197,29 +186,33 @@
         .lm-headline {
             font-family: 'Playfair Display', Georgia, serif;
             font-size: 32px;
-            font-weight: 700;
-            line-height: 1.2;
-            color: #0b1528;
+            font-weight: 800;
+            line-height: 1.25;
+            color: #0b1528 !important;
             margin: 0 0 12px 0;
             letter-spacing: -0.015em;
+            position: relative;
+            z-index: 2;
         }
 
         .lm-headline-blue {
             display: block;
-            color: #2563eb;
+            color: #1d4ed8 !important;
             font-family: 'Playfair Display', Georgia, serif;
             font-style: normal;
+            font-weight: 800;
         }
 
         /* Subtext */
         .lm-sub {
             font-size: 14px;
             line-height: 1.6;
-            color: #475569;
+            color: #334155;
             margin: 0 0 18px 0;
             max-width: 460px;
             font-family: 'DM Sans', 'Inter', sans-serif;
-        }
+            position: relative;
+            z-index: 2;
         }
 
         /* Trust Points Pill Tray */

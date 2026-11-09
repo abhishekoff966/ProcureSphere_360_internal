@@ -72,6 +72,28 @@
       background-color: #f6f8fb;
     }
 
+    /* Visible Enterprise Scrollbar for the Website */
+    html {
+      scrollbar-width: thin !important;
+      scrollbar-color: #2456D6 #f1f5f9 !important;
+    }
+    ::-webkit-scrollbar {
+      width: 10px !important;
+      height: 10px !important;
+      display: block !important;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9 !important;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2456D6 !important;
+      border-radius: 6px !important;
+      border: 2px solid #f1f5f9 !important;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #1b47cb !important;
+    }
+
     /* Prevent mobile overlay menu from ever flashing on desktop or when closed */
     .overlay-menu-container:not(.is-open) {
       display: none !important;
