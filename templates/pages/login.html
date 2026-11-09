@@ -531,76 +531,6 @@
             transform: translateY(0);
         }
 
-        /* ── DEV QUICK-LOGIN TRAY ────────────────────────────── */
-        .dev-quick-login-section {
-            margin-top: 14px;
-            padding: 10px 12px;
-            background: #fffdf5;
-            border: 1px solid #fde68a;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(245, 158, 11, 0.05);
-        }
-
-        .dev-quick-login-label {
-            font-size: 11px;
-            font-weight: 600;
-            color: #92400e;
-            margin: 0 0 7px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-
-        .dev-quick-login-label code {
-            background: #fef3c7;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-            color: #b45309;
-            border: 1px solid #fde68a;
-            font-family: 'DM Mono', monospace;
-            font-weight: 700;
-        }
-
-        .dev-quick-login-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-
-        .dev-ql-btn {
-            padding: 4px 8px;
-            font-size: 11px;
-            font-weight: 600;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            background: #ffffff;
-            color: #334155;
-            cursor: pointer;
-            transition: all 0.15s;
-            font-family: inherit;
-        }
-
-        .dev-ql-btn:hover {
-            background: #eff6ff;
-            border-color: #2563eb;
-            color: #2563eb;
-            transform: translateY(-1px);
-        }
-
-        .dev-ql-btn--vendor {
-            border-color: #a5f3fc;
-            color: #0e7490;
-            background: #f0fdfa;
-        }
-
-        .dev-ql-btn--vendor:hover {
-            background: #ccfbf1;
-            border-color: #0d9488;
-            color: #0f766e;
-        }
-
         /* ── RESPONSIVE ADAPTATIONS ──────────────────────────── */
         @media (max-width: 1200px) {
             .login-content-wrapper {
@@ -796,37 +726,6 @@
                     </button>
                 </form>
 
-                <!-- Dev Quick-Login Section -->
-                <div class="dev-quick-login-section">
-                    <p class="dev-quick-login-label">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b" stroke="none">
-                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                        </svg>
-                        Dev Logins &nbsp;·&nbsp; Password: <code>Password123!</code>
-                    </p>
-                    <div class="dev-quick-login-buttons">
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('admin@hpe.com')">Admin</button>
-                        <button type="button" class="dev-ql-btn"
-                            onclick="quickLogin('requester@hpe.com')">Requester</button>
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('approver@hpe.com')">Dept
-                            Approver</button>
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('procexec@hpe.com')">Proc
-                            Exec</button>
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('procmgr@hpe.com')">Proc
-                            Mgr</button>
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('receiver@hpe.com')">Stores
-                            Receiver</button>
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('finance@hpe.com')">Finance
-                            AP</button>
-                        <button type="button" class="dev-ql-btn" onclick="quickLogin('legal@hpe.com')">Legal
-                            Mgr</button>
-                        <button type="button" class="dev-ql-btn"
-                            onclick="quickLogin('auditor@hpe.com')">Auditor</button>
-                        <button type="button" class="dev-ql-btn dev-ql-btn--vendor"
-                            onclick="quickLogin('vendoruser@cisco.com')">Vendor User</button>
-                    </div>
-                </div>
-
             </div>
         </div>
 
@@ -856,22 +755,6 @@
             });
         }
 
-        // Quick Login helper
-        function quickLogin(email) {
-            try {
-                sessionStorage.removeItem('ps_nav_stack');
-                sessionStorage.removeItem('ps_nav_index');
-                sessionStorage.setItem('ps_just_logged_in', 'true');
-            } catch (e) { }
-            const emailField = document.getElementById('email');
-            const pwField = document.getElementById('password');
-            if (emailField) emailField.value = email;
-            if (pwField) pwField.value = 'Password123!';
-            document.getElementById('loginForm').submit();
-        }
-        window.quickLogin = quickLogin;
-        window.modalQuickLogin = quickLogin;
-
         const loginForm = document.getElementById('loginForm');
         if (loginForm) {
             loginForm.addEventListener('submit', function () {
@@ -879,6 +762,7 @@
                     sessionStorage.removeItem('ps_nav_stack');
                     sessionStorage.removeItem('ps_nav_index');
                     sessionStorage.setItem('ps_just_logged_in', 'true');
+                    sessionStorage.setItem('ps_active_tab', 'true');
                 } catch (e) { }
             });
         }

@@ -378,6 +378,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 sessionStorage.removeItem('ps_just_logged_in');
                 sessionStorage.removeItem('ps_visited_subpage');
                 sessionStorage.removeItem('ps_last_subpage_path');
+                sessionStorage.removeItem('ps_active_tab');
             } catch (err) {}
             const targetUrl = logoutLink.getAttribute('href') || '/logout/';
             fetch(targetUrl, {

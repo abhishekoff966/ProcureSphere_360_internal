@@ -17,8 +17,8 @@ class TestBrowserNavigationAndSignoutGuard:
         cache_control = response.headers.get("Cache-Control", "")
         assert "no-cache" in cache_control or "no-store" in cache_control
 
-    def test_authenticated_user_can_view_landing_page_with_dashboard_nav(self, client):
-        """Authenticated users visiting '/' can view the landing page with 'Dashboard' and 'Sign Out' actions."""
+    def test_landing_page_expires_session_and_renders_clean_navbar(self, client):
+        """Visiting '/' with an active session terminates the session and renders clean public navbar (no Dashboard/Sign Out buttons)."""
         role, _ = Role.objects.get_or_create(code=Role.REQUESTER, defaults={"name": "Requester"})
         user = User.objects.create_user(
             email="nav_test_requester@procuresphere.com",
@@ -31,10 +31,37 @@ class TestBrowserNavigationAndSignoutGuard:
         assert response.status_code == 200
         content = response.content.decode("utf-8")
         assert "ProcureSphere 360" in content
-        assert "/dashboard/" in content or "Dashboard" in content
+
+        # Navbar must NOT contain extra Dashboard or Sign Out buttons
+        assert "navbar-dashboard-btn" not in content
+        assert "navbar-signout-btn" not in content
+
+        # Session was expired on server
+        session = client.session
+        assert "_auth_user_id" not in session
 
         cache_control = response.headers.get("Cache-Control", "")
         assert "no-cache" in cache_control or "no-store" in cache_control
+
+    def test_login_templates_contain_no_one_click_login_buttons(self):
+        """Login templates must have no 1-click / quick test credentials / demo buttons."""
+        from django.template.loader import render_to_string
+
+        # Standalone login page
+        login_page_html = render_to_string("pages/login.html", {})
+        assert "Quick Test Credentials" not in login_page_html
+        assert "dev-quick-login-section" not in login_page_html
+        assert "quickLogin" not in login_page_html
+
+        # Accounts login page
+        accounts_login_html = render_to_string("accounts/login.html", {})
+        assert "Quick Test Credentials" not in accounts_login_html
+        assert "fillCredentials" not in accounts_login_html
+
+        # Landing modal login
+        modal_login_html = render_to_string("landing/modals/login_modal.html", {})
+        assert "dev-quick-login" not in modal_login_html
+        assert "quickLogin" not in modal_login_html
 
     def test_dashboard_templates_contain_signout_modal_and_no_inpage_arrow_boxes(self, client):
         """Dashboard renders sign-out confirmation modal and avoids in-page undo/redo boxes (browser arrows used instead)."""
