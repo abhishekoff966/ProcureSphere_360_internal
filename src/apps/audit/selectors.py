@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from django.db.models import Count, Q
 from django.utils import timezone
 
+from apps.accounts.models import Role
 from apps.approvals.models import ApprovalAction
 from apps.audit.models import AuditLog
 from apps.contracts.models import Contract, ContractAlert, ContractObligation
@@ -12,7 +13,7 @@ from apps.invoices.models import MatchException, SupplierInvoice
 from apps.orders.models import PurchaseOrder
 from apps.requisitions.models import PurchaseRequisition
 from apps.sourcing.models import SourcingEvent, VendorBid
-from apps.vendors.models import Vendor
+from apps.vendors.models import Vendor, VendorDocument
 
 
 def is_entity_authorized_for_org(target_model: str, target_object_id: str, organization) -> bool:
@@ -353,10 +354,19 @@ def get_auditor_dashboard_data(period_days: int = 30, user=None, organization=No
     logs_qs = get_scoped_audit_logs_queryset(AuditLog.objects.select_related("actor"), organization=scoped_org)
     recent_logs = list(logs_qs.order_by("-timestamp")[:25])
 
+    user_role = getattr(user, "role_code", None) or (
+        user.role.code if getattr(user, "role", None) else None
+    )
+    is_auditor_or_admin = (
+        not user
+        or user.is_superuser
+        or user_role in (Role.AUDITOR, Role.SUPER_ADMIN, "AUDITOR", "SUPER_ADMIN")
+    )
+
     appr_qs = ApprovalAction.objects.select_related("actor", "policy_step")
     if scoped_org:
         appr_qs = appr_qs.filter(Q(actor__organization=scoped_org) | Q(created_by__organization=scoped_org))
-    elif user and not user.is_superuser:
+    elif not is_auditor_or_admin:
         appr_qs = appr_qs.none()
     recent_approvals = list(appr_qs.order_by("-created_at")[:15])
 
@@ -385,7 +395,7 @@ def get_auditor_dashboard_data(period_days: int = 30, user=None, organization=No
             "suspended_vendors_count": Vendor.objects.filter(organization=scoped_org, status__in=["ON_HOLD", "SUSPENDED"]).count(),
             "overdue_obligations_count": ContractObligation.objects.filter(contract__vendor__organization=scoped_org, is_fulfilled=False, due_date__lt=timezone.now().date()).count(),
         }
-    elif user and not user.is_superuser:
+    elif not is_auditor_or_admin:
         domain_counts = {k: 0 for k in ["total_prs", "total_sourcing_events", "total_bids", "total_pos", "total_invoices", "total_contracts", "total_vendors", "open_exceptions_count", "suspended_vendors_count", "overdue_obligations_count"]}
     else:
         domain_counts = {
@@ -515,6 +525,12 @@ def get_vendor_compliance_audit(
     draft_or_pending = base_v_qs.filter(
         status__in=[Vendor.STATUS_DRAFT, Vendor.STATUS_SUBMITTED, Vendor.STATUS_KYC_REVIEW]
     ).count()
+    kyc_verified_count = base_v_qs.filter(
+        Q(documents__is_verified=True)
+        | Q(documents__review_status=VendorDocument.REVIEW_VERIFIED)
+        | Q(documents__status=VendorDocument.STATUS_VERIFIED)
+        | Q(status__in=[Vendor.STATUS_ACTIVE, Vendor.STATUS_APPROVED])
+    ).distinct().count()
 
     compliance_rate = (
         round((active_vendors / total_vendors * 100), 2) if total_vendors > 0 else 100.0
@@ -527,20 +543,42 @@ def get_vendor_compliance_audit(
         verified_docs = sum(1 for d in docs if d.is_verified)
         active_contracts_count = v.contracts.filter(status=Contract.STATUS_ACTIVE).count()
 
+        is_kyc_verified = (total_docs > 0 and verified_docs == total_docs) or v.status in (
+            Vendor.STATUS_ACTIVE,
+            Vendor.STATUS_APPROVED,
+        )
+        if is_kyc_verified:
+            kyc_status_display = "VERIFIED"
+        elif total_docs > 0:
+            kyc_status_display = "UNDER_REVIEW"
+        else:
+            kyc_status_display = "PENDING"
+
+        category_name = v.category.name if v.category else "General"
+        scorecard = v.scorecards.order_by("-created_at").first() if hasattr(v, "scorecards") else None
+        perf_score = (
+            scorecard.composite_score
+            if scorecard and scorecard.composite_score is not None
+            else (100 if v.status == Vendor.STATUS_ACTIVE else 100)
+        )
+
         items.append(
             {
                 "id": str(v.id),
                 "vendor_number": v.vendor_number,
                 "legal_name": v.legal_name,
                 "category": v.category.name if v.category else None,
+                "category_name": category_name,
                 "status": v.status,
                 "status_display": v.get_status_display(),
+                "kyc_status": kyc_status_display,
                 "tax_id": v.tax_identification_number,
                 "email": v.email,
                 "total_documents": total_docs,
                 "verified_documents": verified_docs,
-                "kyc_complete": total_docs > 0 and verified_docs == total_docs,
+                "kyc_complete": is_kyc_verified,
                 "active_contracts_count": active_contracts_count,
+                "performance_score": perf_score,
                 "created_at": v.created_at.isoformat(),
                 "updated_at": v.updated_at.isoformat(),
             }
@@ -549,10 +587,14 @@ def get_vendor_compliance_audit(
     return {
         "summary": {
             "total_vendors": total_vendors,
+            "total_count": total_vendors,
             "active_vendors": active_vendors,
+            "active_count": active_vendors,
             "suspended_vendors": suspended_vendors,
+            "suspended_count": suspended_vendors,
             "draft_or_pending": draft_or_pending,
             "compliance_rate": compliance_rate,
+            "kyc_verified_count": kyc_verified_count,
         },
         "count": total_count,
         "next": None,

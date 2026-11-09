@@ -77,13 +77,15 @@ def create_contract_service(
 
     if end_date and start_date and end_date < start_date:
         raise ValidationError("Contract end date cannot be earlier than start date.")
-    if contract_value is not None:
-        try:
-            val = Decimal(str(contract_value))
-            if val < Decimal("0.00"):
-                raise ValidationError("Contract value cannot be negative.")
-        except (ValueError, TypeError, InvalidOperation):
-            raise ValidationError("Invalid contract value format.")
+    if contract_value is None:
+        raise ValidationError("Contract value is required.")
+    try:
+        val = Decimal(str(contract_value))
+        if val < Decimal("0.00"):
+            raise ValidationError("Contract value cannot be negative.")
+        contract_value = val
+    except (ValueError, TypeError, InvalidOperation):
+        raise ValidationError("Invalid contract value format.")
     if renewal_notice_days is not None and renewal_notice_days <= 0:
         raise ValidationError("Renewal notice period must be a positive number of days.")
 
@@ -358,13 +360,15 @@ def create_contract_version_service(
         raise ValidationError("Amendment summary is required.")
     if end_date and start_date and end_date < start_date:
         raise ValidationError("Contract end date cannot be earlier than start date.")
-    if contract_value is not None:
-        try:
-            val = Decimal(str(contract_value))
-            if val < Decimal("0.00"):
-                raise ValidationError("Contract value cannot be negative.")
-        except (ValueError, TypeError, InvalidOperation):
-            raise ValidationError("Invalid contract value format.")
+    if contract_value is None:
+        raise ValidationError("Contract value is required.")
+    try:
+        val = Decimal(str(contract_value))
+        if val < Decimal("0.00"):
+            raise ValidationError("Contract value cannot be negative.")
+        contract_value = val
+    except (ValueError, TypeError, InvalidOperation):
+        raise ValidationError("Invalid contract value format.")
 
     previous_version = contract.version
     previous_value = contract.contract_value
@@ -435,9 +439,13 @@ def add_contract_milestone_service(
     if not due_date:
         raise ValidationError("Milestone due date is required.")
     import datetime
-    d_val = due_date if isinstance(due_date, (datetime.date, datetime.datetime)) else datetime.date.fromisoformat(str(due_date)[:10])
-    if isinstance(d_val, datetime.datetime):
-        d_val = d_val.date()
+    if isinstance(due_date, (datetime.date, datetime.datetime)):
+        d_val = due_date.date() if isinstance(due_date, datetime.datetime) else due_date
+    else:
+        try:
+            d_val = datetime.date.fromisoformat(str(due_date).strip()[:10])
+        except (ValueError, TypeError):
+            raise ValidationError(f"Invalid due date format '{due_date}'. Expected YYYY-MM-DD.")
     if contract.start_date and d_val < contract.start_date:
         raise ValidationError(f"Milestone due date ({d_val}) cannot be earlier than contract start date ({contract.start_date}).")
     if contract.end_date and d_val > contract.end_date:
@@ -582,9 +590,10 @@ def upload_contract_document_service(
     if not file:
         raise ValidationError("Document file is required.")
 
+    allowed_extensions = ["pdf", "docx", "doc", "xlsx", "xls", "png", "jpg", "jpeg", "txt"]
     if hasattr(file, "read") or hasattr(file, "size"):
         from apps.core.validators import validate_file_upload
-        validate_file_upload(file)
+        validate_file_upload(file, allowed_extensions=allowed_extensions)
 
     file_name = ""
     if hasattr(file, "name"):
@@ -597,7 +606,6 @@ def upload_contract_document_service(
 
     import os
     ext = os.path.splitext(file_name)[1].lstrip(".").lower()
-    allowed_extensions = ["pdf", "docx", "doc", "xlsx", "xls", "png", "jpg", "jpeg", "txt"]
     if ext not in allowed_extensions:
         raise ValidationError(
             f"Unsupported file extension '.{ext}'. Allowed formats: PDF, DOCX, XLSX, PNG, JPG, TXT."

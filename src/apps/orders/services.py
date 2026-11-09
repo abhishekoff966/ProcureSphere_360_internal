@@ -180,6 +180,14 @@ def acknowledge_purchase_order_service(
             f"Cannot acknowledge PO in status '{po.status}'. Must be ISSUED."
         )
 
+    if not (
+        getattr(vendor_user, "is_superuser", False)
+        or (getattr(vendor_user, "vendor_id", None) and po.vendor_id == vendor_user.vendor_id)
+    ):
+        raise ValidationError(
+            "Permission Denied: Only users belonging to this purchase order's vendor can acknowledge it."
+        )
+
     previous_status = po.status
     po.status = PurchaseOrder.STATUS_ACKNOWLEDGED
     po.acknowledged_at = timezone.now()
@@ -972,6 +980,17 @@ def cancel_purchase_order_governance_service(
     - Creates a reversal SpendLedger entry.
     - Records an append-only AuditLog entry.
     """
+    role_code = getattr(actor, "role_code", None) or (
+        actor.role.code if getattr(actor, "role", None) else None
+    )
+    if not (
+        getattr(actor, "is_superuser", False)
+        or role_code in (Role.PROC_MGR, Role.SUPER_ADMIN)
+    ):
+        raise ValidationError(
+            "Permission Denied: Only Procurement Managers or Super Admin can cancel purchase orders."
+        )
+
     if not reason or not str(reason).strip():
         raise ValidationError("Cancellation reason / justification is mandatory.")
 
@@ -997,7 +1016,22 @@ def cancel_purchase_order_governance_service(
         Decimal("0.00"), po.total_amount - total_received_value
     )
 
-    if unfulfilled_commitment > Decimal("0.00"):
+    had_commitment = (
+        previous_status in (
+            PurchaseOrder.STATUS_APPROVED,
+            PurchaseOrder.STATUS_ISSUED,
+            PurchaseOrder.STATUS_ACKNOWLEDGED,
+            PurchaseOrder.STATUS_PARTIAL_RECEIPT,
+        )
+        or SpendLedger.objects.filter(
+            budget__cost_center=po.cost_center,
+            reference_number=po.po_number,
+            entry_type=SpendLedger.ENTRY_COMMITMENT,
+            amount__gt=Decimal("0.00"),
+        ).exists()
+    )
+
+    if had_commitment and unfulfilled_commitment > Decimal("0.00"):
         budget = (
             Budget.objects.filter(cost_center=po.cost_center)
             .order_by("-created_at")
@@ -1100,6 +1134,17 @@ def approve_purchase_order_service(
     Commits funds against the designated Cost Center budget.
     Enforces separation of duties: the submitter cannot approve their own PO.
     """
+    role_code = getattr(approver, "role_code", None) or (
+        approver.role.code if getattr(approver, "role", None) else None
+    )
+    if not (
+        getattr(approver, "is_superuser", False)
+        or role_code in (Role.PROC_MGR, Role.SUPER_ADMIN)
+    ):
+        raise ValidationError(
+            "Permission Denied: Only Procurement Managers or Super Admin can approve purchase orders."
+        )
+
     if po.status != PurchaseOrder.STATUS_APPROVAL:
         raise ValidationError(
             f"Cannot approve PO in status '{po.status}'. PO must be in APPROVAL status to be approved and issued."
@@ -1325,7 +1370,7 @@ def reject_purchase_order_service(
     """
     Rejects a PO in approval, returning it to DRAFT state.
     """
-    if not reason:
+    if not reason or not str(reason).strip():
         raise ValidationError("Rejection reason is required.")
 
     if po.status != PurchaseOrder.STATUS_APPROVAL:
