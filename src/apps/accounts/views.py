@@ -11,30 +11,13 @@ from django.views.decorators.cache import never_cache
 
 @never_cache
 def portal_login_view(request):
-
     """
-
     Renders and processes the ProcureSphere 360 ERP Portal login form.
-
-    Redirects authenticated users straight to the ERP Dashboard (/) or
-
-    forces password change if must_change_password is True.
-
+    If an authenticated user visits /login/ directly (e.g. in a new tab), expire the previous
+    session and present a clean login form requiring re-authentication.
     """
-
     if request.user.is_authenticated:
-        from apps.core.views import get_dashboard_url_for_user
-
-        if getattr(request.user, "must_change_password", False):
-            try:
-                change_url = reverse("accounts:change_password")
-            except Exception:
-                change_url = reverse("change_password")
-            return redirect(change_url)
-
-        return redirect(get_dashboard_url_for_user(request.user))
-
-
+        logout(request)
 
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
@@ -299,6 +282,10 @@ def portal_logout_view(request):
 
 
     logout(request)
+
+    if request.GET.get("reason") == "new_tab":
+        messages.info(request, "Your previous session expired due to multiple active tabs. Please sign in again.")
+        return redirect("/login/?session_expired=1")
 
     messages.info(request, "You have been logged out successfully.")
 

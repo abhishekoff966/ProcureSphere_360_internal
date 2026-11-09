@@ -120,12 +120,7 @@
 
     <!-- Right: Login + CTA + Mobile Toggle -->
     <div class="nav-right-group">
-      {% if request.user.is_authenticated %}
-      <a href="/dashboard/" class="nav-login-btn" aria-label="Go to Dashboard" style="text-decoration:none;font-weight:600;">Dashboard</a>
-      <a href="/logout/" class="btn btn-sm btn-outline-danger d-none d-sm-inline-flex align-items-center ms-2" style="border-radius:20px;padding:5px 14px;font-size:0.82rem;font-weight:600;text-decoration:none;">Sign Out</a>
-      {% else %}
       <a href="/login/" id="login-btn" class="nav-login-btn" aria-label="Login to Portal" style="text-decoration:none;">Login</a>
-      {% endif %}
       <a href="/" class="navarino-blue-btn" id="nav-demo-btn" onclick="goToContact(event)">Contact Us</a>
       <button type="button" id="mobile-menu-toggle" class="navarino-mobile-toggle" aria-label="Open Navigation" aria-expanded="false">
         <svg id="hamburger-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

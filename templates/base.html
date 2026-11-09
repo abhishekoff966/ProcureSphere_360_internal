@@ -28,6 +28,17 @@
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <!-- Chart.js 4.4 JS -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    {% if user.is_authenticated %}
+    <script>
+        (function enforceActiveTabSession() {
+            try {
+                if (!sessionStorage.getItem('ps_active_tab')) {
+                    window.location.replace('/logout/?reason=new_tab');
+                }
+            } catch (err) {}
+        })();
+    </script>
+    {% endif %}
     <style>
         /* ========================================================================= */
         /* GLOBAL LIGHT BLUE ENTERPRISE NAVBAR & SIDEBAR THEME                       */

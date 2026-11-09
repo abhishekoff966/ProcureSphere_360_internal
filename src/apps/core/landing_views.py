@@ -19,6 +19,7 @@ Integration notes
 
 import re
 from django.conf import settings
+from django.contrib.auth import logout
 from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
@@ -37,10 +38,12 @@ def landing_home(request):
     """
     Root URL handler.
 
-    Renders the public marketing home page for all users (including authenticated
-    users viewing the landing page in a tab). For authenticated users, the landing
-    navbar offers 'Dashboard' and 'Sign Out' actions.
+    If an authenticated user visits the landing page (e.g. opens the render link in a new tab),
+    expire the previous session so the previous login terminates and forces re-login.
+    The public marketing home page is always rendered cleanly without internal dashboard controls.
     """
+    if request.user.is_authenticated:
+        logout(request)
 
     context = {
         'page_title': 'ProcureSphere 360 — Intelligent Enterprise Procurement Platform',
@@ -216,8 +219,11 @@ ABOUT_SECTION_MAP = {
 }
 
 
+@never_cache
 def about(request, section_slug=None):
     """About page."""
+    if request.user.is_authenticated:
+        logout(request)
     context = {
         'page_title': 'About ProcureSphere 360 — Enterprise Procurement Platform',
         'page_description': "Learn about ProcureSphere 360's mission to transform enterprise procurement from a tactical back-office headache to a strategic, transparent advantage.",
@@ -352,8 +358,11 @@ def about(request, section_slug=None):
 # Solutions
 # ---------------------------------------------------------------------------
 
+@never_cache
 def solutions(request, stage_slug=None):
     """Solutions page."""
+    if request.user.is_authenticated:
+        logout(request)
     s2p_steps = [
         {
             'id': 'vendors',
@@ -460,8 +469,11 @@ def solutions(request, stage_slug=None):
 # Benefits
 # ---------------------------------------------------------------------------
 
+@never_cache
 def benefits(request):
     """Benefits page."""
+    if request.user.is_authenticated:
+        logout(request)
     benefits_list = [
         {'title': 'Traceable Workflows', 'description': 'No more approvals lost in email. Every requisition, bid, purchase order, and invoice is strictly traceable to its state and timestamp.', 'color': '#3b82f6'},
         {'title': 'Zero Silent Overspend', 'description': 'Real-time budget validation distinguishes available, reserved, and actual spend. Exceptions require an explicit, documented route.', 'color': '#10b981'},
@@ -492,8 +504,11 @@ def benefits(request):
 # Process
 # ---------------------------------------------------------------------------
 
+@never_cache
 def process(request):
     """Process page — End-to-End Procurement Lifecycle."""
+    if request.user.is_authenticated:
+        logout(request)
     stages = [
         {
             'id': 'step-1',
@@ -618,8 +633,11 @@ def process(request):
 # FAQ
 # ---------------------------------------------------------------------------
 
+@never_cache
 def faq(request):
     """FAQ page — matching AnimatedFAQ.tsx (4 accordion) + FAQPage.tsx (4 extra static cards)."""
+    if request.user.is_authenticated:
+        logout(request)
     # These 4 match AnimatedFAQ.tsx exactly (displayed as accordion, first open)
     faqs = [
         {

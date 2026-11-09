@@ -55,39 +55,18 @@
                     <i class="fa-solid fa-right-to-bracket me-2"></i> Sign In to ProcureSphere 360
                 </button>
             </form>
-
-            <hr class="my-4 text-muted">
-
-            <!-- Demo Role Quick-Select Buttons -->
-            <div>
-                <h6 class="fw-bold text-dark mb-2 text-center small text-uppercase" style="letter-spacing: 0.05em;">
-                    <i class="fa-solid fa-user-gear text-primary me-1"></i> Quick Test Credentials (1-Click Fill)
-                </h6>
-                <p class="text-muted small text-center mb-3">Click any PRD role below to auto-fill test credentials:</p>
-                <div class="d-flex flex-wrap gap-2 justify-content-center">
-                    {% for account in demo_accounts %}
-                        <button type="button" class="btn btn-outline-{{ account.color }} btn-sm rounded-pill px-3 py-1 shadow-sm" onclick="fillCredentials('{{ account.email }}', 'Password123!')">
-                            <i class="fa-solid fa-user-tag me-1"></i> {{ account.role }}
-                        </button>
-                    {% endfor %}
-                </div>
-            </div>
         </div>
     </div>
 </div>
 
 <script>
-function fillCredentials(email, password) {
-    document.getElementById('emailInput').value = email;
-    document.getElementById('passwordInput').value = password;
-}
-
 document.querySelectorAll('form[action="/login/"]').forEach(function (form) {
     form.addEventListener('submit', function () {
         try {
             sessionStorage.removeItem('ps_nav_stack');
             sessionStorage.removeItem('ps_nav_index');
             sessionStorage.setItem('ps_just_logged_in', 'true');
+            sessionStorage.setItem('ps_active_tab', 'true');
         } catch (e) {}
     });
 });
