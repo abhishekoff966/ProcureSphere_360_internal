@@ -17,8 +17,8 @@ class TestBrowserNavigationAndSignoutGuard:
         cache_control = response.headers.get("Cache-Control", "")
         assert "no-cache" in cache_control or "no-store" in cache_control
 
-    def test_authenticated_user_on_landing_page_redirects_with_never_cache(self, client):
-        """Authenticated users visiting '/' are served dashboard or redirected with never_cache headers."""
+    def test_authenticated_user_can_view_landing_page_with_dashboard_nav(self, client):
+        """Authenticated users visiting '/' can view the landing page with 'Dashboard' and 'Sign Out' actions."""
         role, _ = Role.objects.get_or_create(code=Role.REQUESTER, defaults={"name": "Requester"})
         user = User.objects.create_user(
             email="nav_test_requester@procuresphere.com",
@@ -28,10 +28,10 @@ class TestBrowserNavigationAndSignoutGuard:
         client.force_login(user)
 
         response = client.get("/")
-        # In test mode, landing_home delegates directly to home_view (200), or redirects (302)
-        assert response.status_code in (200, 302)
-        if response.status_code == 302:
-            assert response.url == "/requester/"
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert "ProcureSphere 360" in content
+        assert "/dashboard/" in content or "Dashboard" in content
 
         cache_control = response.headers.get("Cache-Control", "")
         assert "no-cache" in cache_control or "no-store" in cache_control
