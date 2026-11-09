@@ -85,11 +85,6 @@ urlpatterns = [
         views.vendor_invoice_submit_view,
         name="vendor_invoice_submit",
     ),
-    path(
-        "purchase-orders/<uuid:po_id>/submit-invoice/",
-        views.vendor_invoice_submit_view,
-        name="vendor_po_submit_invoice",
-    ),
     path("contracts/", views.vendor_contracts_view, name="vendor_contracts"),
     # Documents & Secure Download
     path("documents/", views.vendor_documents_view, name="vendor_documents"),

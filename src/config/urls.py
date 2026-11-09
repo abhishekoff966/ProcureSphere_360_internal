@@ -27,6 +27,7 @@ urlpatterns = [
     path("favicon.ico", RedirectView.as_view(url="/static/icons/favicon.ico", permanent=False), name="favicon"),
     path("health", health, name="health"),
     path("readyz", readyz, name="readyz"),
+    re_path(r"^[Qq]uit/?$", RedirectView.as_view(url="/", permanent=False)),
     re_path(r"^.*prompts\.json$", lambda request: JsonResponse({})),
     path("admin/dashboard/", RedirectView.as_view(url="/admin/", permanent=False), name="admin_dashboard"),
     path("admin/logout/", portal_logout_view, name="admin_logout_override"),

@@ -285,6 +285,102 @@
         </div>
     </div>
 
+    <!-- Section: Supplier Performance & Scorecard Integration -->
+    <div class="card glass-card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="brand-icon-box" style="width: 36px; height: 36px; background: rgba(13, 110, 253, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa-solid fa-award text-primary fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 fw-bold text-dark">Supplier Performance &amp; Scorecard</h6>
+                        <small class="text-muted">Periodic delivery timeliness, quality assurance, pricing adherence, and compliance evaluation</small>
+                    </div>
+                </div>
+                <a href="/vendor/performance/" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold">
+                    View Full Performance History &rarr;
+                </a>
+            </div>
+
+            {% if latest_scorecard %}
+            <div class="row align-items-center g-3 pt-2">
+                <div class="col-md-3 text-center border-end-md">
+                    <div class="text-uppercase small text-muted fw-bold mb-1">Period: {{ latest_scorecard.evaluation_period }}</div>
+                    <div class="display-5 fw-bold {% if latest_scorecard.composite_score >= 85 %}text-success{% elif latest_scorecard.composite_score >= 70 %}text-primary{% elif latest_scorecard.composite_score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ latest_scorecard.composite_score|floatformat:1 }}<span class="fs-6 text-muted">/100</span>
+                    </div>
+                    <span class="badge mt-1 {% if latest_scorecard.composite_score >= 85 %}bg-success{% elif latest_scorecard.composite_score >= 70 %}bg-primary{% elif latest_scorecard.composite_score >= 50 %}bg-warning text-dark{% else %}bg-danger{% endif %} rounded-pill px-3 py-1">
+                        {% if latest_scorecard.composite_score >= 85 %}Tier 1 / Preferred
+                        {% elif latest_scorecard.composite_score >= 70 %}Approved / Good
+                        {% elif latest_scorecard.composite_score >= 50 %}Under Observation
+                        {% else %}High Risk / Deficient{% endif %}
+                    </span>
+                </div>
+                <div class="col-md-9">
+                    <div class="row g-2">
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="p-2 bg-light rounded-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small text-muted fw-semibold" style="font-size: 0.75rem;">Delivery</span>
+                                    <span class="fw-bold text-dark small">{{ latest_scorecard.delivery_score|floatformat:1 }}%</span>
+                                </div>
+                                <div class="progress" style="height: 5px;">
+                                    <div class="progress-bar bg-success" style="width: {{ latest_scorecard.delivery_score }}%;"></div>
+                                </div>
+                                <span class="text-muted d-block mt-1" style="font-size: 0.65rem;">Weight: 30%</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="p-2 bg-light rounded-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small text-muted fw-semibold" style="font-size: 0.75rem;">Quality</span>
+                                    <span class="fw-bold text-dark small">{{ latest_scorecard.quality_score|floatformat:1 }}%</span>
+                                </div>
+                                <div class="progress" style="height: 5px;">
+                                    <div class="progress-bar bg-info" style="width: {{ latest_scorecard.quality_score }}%;"></div>
+                                </div>
+                                <span class="text-muted d-block mt-1" style="font-size: 0.65rem;">Weight: 30%</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="p-2 bg-light rounded-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small text-muted fw-semibold" style="font-size: 0.75rem;">Pricing</span>
+                                    <span class="fw-bold text-dark small">{{ latest_scorecard.price_score|floatformat:1 }}%</span>
+                                </div>
+                                <div class="progress" style="height: 5px;">
+                                    <div class="progress-bar bg-primary" style="width: {{ latest_scorecard.price_score }}%;"></div>
+                                </div>
+                                <span class="text-muted d-block mt-1" style="font-size: 0.65rem;">Weight: 20%</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="p-2 bg-light rounded-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small text-muted fw-semibold" style="font-size: 0.75rem;">Compliance</span>
+                                    <span class="fw-bold text-dark small">{{ latest_scorecard.compliance_score|floatformat:1 }}%</span>
+                                </div>
+                                <div class="progress" style="height: 5px;">
+                                    <div class="progress-bar bg-warning" style="width: {{ latest_scorecard.compliance_score }}%;"></div>
+                                </div>
+                                <span class="text-muted d-block mt-1" style="font-size: 0.65rem;">Weight: 20%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="p-3 bg-light rounded-3 text-center">
+                <span class="text-muted small">
+                    <i class="fa-solid fa-circle-info text-primary me-1"></i>
+                    No published scorecard evaluation yet. Evaluations are automatically published after goods receipt inspections and PO fulfillments.
+                </span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- Row: Sections A & B (Recent RFQ/RFP Invitations & Upcoming Deadlines) -->
     <div class="row g-4 mb-4">
         <!-- Section A: Recent RFQ/RFP Invitations -->

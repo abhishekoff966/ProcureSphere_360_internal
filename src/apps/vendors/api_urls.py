@@ -794,7 +794,10 @@ class VendorRiskRecordViewSet(viewsets.ModelViewSet):
 class VendorAssessRiskAPIView(APIView):
     """
     POST /api/v1/vendors/<uuid:pk>/assess-risk/
-    Records a new VendorRiskRecord and optionally updates vendor status (ACTIVE, ON_HOLD, SUSPENDED).
+    Manager risk evaluation endpoint.
+    Note: VendorViewSet.risk (POST /api/v1/vendors/<uuid:pk>/risk/) provides equivalent
+    functionality on the ViewSet. This standalone route is maintained for compatibility
+    with the Procurement Manager frontend (vendor_risk.html) and existing test suites.
     """
 
     permission_classes = [IsAuthenticated, IsProcurementManager]
@@ -885,6 +888,9 @@ class VendorGovernanceStatusAPIView(APIView):
     """
     POST /api/v1/vendors/<uuid:pk>/governance-status/
     Manager governance action to set vendor status to ACTIVE, ON_HOLD, SUSPENDED, or REJECTED.
+    Note: VendorViewSet.set_status (POST /api/v1/vendors/<uuid:pk>/set-status/) provides equivalent
+    functionality on the ViewSet. This standalone route is maintained for compatibility
+    with the Procurement Manager frontend (vendor_suspension.html) and existing test suites.
     """
 
     permission_classes = [IsAuthenticated, IsProcurementManager]

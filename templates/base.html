@@ -79,7 +79,9 @@
             align-items: center !important;
             justify-content: flex-start !important;
             background: transparent !important;
+            background-color: transparent !important;
             border: none !important;
+            border-radius: 0 !important;
             box-shadow: none !important;
             padding: 0 !important;
             text-decoration: none !important;
@@ -100,7 +102,7 @@
             max-height: 58px !important;
             object-fit: contain !important;
             display: block !important;
-            filter: drop-shadow(0 1px 2px rgba(30, 64, 120, 0.08)) !important;
+            filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.45)) !important;
             background: transparent !important;
         }
 
@@ -1235,16 +1237,39 @@
         });
 
         // Intercept HTMX responses to prevent login page from being injected into modal containers
+        function isLoginResponse(xhr) {
+            if (!xhr) return false;
+            var respUrl = xhr.responseURL || '';
+            var respText = xhr.responseText || '';
+            return (
+                respUrl.indexOf('/login') !== -1 ||
+                respText.indexOf('login-char-img') !== -1 ||
+                respText.indexOf('normal.webp') !== -1 ||
+                respText.indexOf('Sign In') !== -1 ||
+                xhr.status === 401 ||
+                xhr.status === 403
+            );
+        }
+
+        document.body.addEventListener('htmx:beforeSwap', function(evt) {
+            if (isLoginResponse(evt.detail.xhr)) {
+                evt.detail.shouldSwap = false;
+                window.location.href = '/login/?session_expired=1';
+            }
+        });
+
         document.body.addEventListener('htmx:beforeOnLoad', function(evt) {
-            var xhr = evt.detail.xhr;
-            if (xhr) {
-                var respUrl = xhr.responseURL || '';
-                var respText = xhr.responseText || '';
-                // If server redirected to login or response contains login form / character image
-                if (respUrl.indexOf('/login/') !== -1 || respText.indexOf('Sign In — ProcureSphere 360') !== -1 || respText.indexOf('login-char-img') !== -1 || respText.indexOf('normal.webp') !== -1) {
-                    evt.preventDefault();
-                    window.location.href = '/login/?session_expired=1';
-                }
+            if (isLoginResponse(evt.detail.xhr)) {
+                evt.preventDefault();
+                evt.detail.shouldSwap = false;
+                window.location.href = '/login/?session_expired=1';
+            }
+        });
+
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            if (evt.detail.xhr && (evt.detail.xhr.status === 401 || evt.detail.xhr.status === 403)) {
+                evt.detail.shouldSwap = false;
+                window.location.href = '/login/?session_expired=1';
             }
         });
 

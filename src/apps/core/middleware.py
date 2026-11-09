@@ -159,3 +159,38 @@ class VendorPortalIsolationMiddleware:
 
         return self.get_response(request)
 
+
+class HtmxAuthInterceptorMiddleware:
+    """
+    Prevents HTMX requests from swapping full HTML login pages into partial or modal containers.
+    If an HTMX request receives a redirect to login or an unauthenticated response,
+    this converts it into a 200 response with the 'HX-Redirect' header so HTMX
+    navigates the entire browser window cleanly.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        is_htmx = (
+            request.headers.get("HX-Request") == "true"
+            or request.META.get("HTTP_HX_REQUEST") == "true"
+        )
+        if is_htmx:
+            location = response.get("Location", "")
+            if response.status_code in (301, 302, 303, 307) and (
+                "/login" in location or "accounts/login" in location
+            ):
+                from django.http import HttpResponse
+
+                clean_loc = location if location else "/login/?session_expired=1"
+                htmx_resp = HttpResponse(status=200)
+                htmx_resp["HX-Redirect"] = clean_loc
+                return htmx_resp
+
+            if response.status_code in (401, 403):
+                response["HX-Redirect"] = "/login/?session_expired=1"
+
+        return response
+
