@@ -126,10 +126,12 @@ def _next_document_number(model, field: str, prefix: str) -> str:
 def _parse_weight(value, label):
     try:
         weight = Decimal(str(value))
+        if weight.is_nan():
+            raise ValidationError(f"{label} must be a number between 0 and 100.")
+        if weight < 0 or weight > 100:
+            raise ValidationError(f"{label} must be between 0 and 100.")
     except (InvalidOperation, TypeError):
         raise ValidationError(f"{label} must be a number between 0 and 100.")
-    if weight < 0 or weight > 100:
-        raise ValidationError(f"{label} must be between 0 and 100.")
     return weight
 
 
@@ -1275,10 +1277,12 @@ def _get_evaluable_bid(event: SourcingEvent, bid: VendorBid) -> VendorBid:
 def _parse_score(value, label):
     try:
         score = Decimal(str(value))
+        if score.is_nan():
+            raise ValidationError(f"{label} must be a number between 0 and 100.")
+        if score < 0 or score > 100:
+            raise ValidationError(f"{label} must be between 0 and 100.")
     except (InvalidOperation, TypeError):
         raise ValidationError(f"{label} must be a number between 0 and 100.")
-    if score < 0 or score > 100:
-        raise ValidationError(f"{label} must be between 0 and 100.")
     return score
 
 

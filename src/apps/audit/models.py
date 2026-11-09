@@ -117,14 +117,25 @@ class AuditLog(models.Model):
     @property
     def readable_target(self):
         from django.apps import apps
+        from django.contrib.auth import get_user_model
 
         try:
+            user_model = get_user_model()
+            if self.target_model in ("User", user_model._meta.object_name):
+                try:
+                    obj = user_model.objects.get(pk=self.target_object_id)
+                    return f"{self.target_model} {str(obj)}"
+                except (user_model.DoesNotExist, ValueError):
+                    pass
+
             for app_config in apps.get_app_configs():
                 try:
                     model = app_config.get_model(self.target_model)
+                    if getattr(model._meta, "swapped", False):
+                        continue
                     obj = model.objects.get(pk=self.target_object_id)
                     return f"{self.target_model} {str(obj)}"
-                except LookupError:
+                except (LookupError, AttributeError):
                     continue
                 except model.DoesNotExist:
                     break

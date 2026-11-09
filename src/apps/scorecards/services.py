@@ -278,12 +278,21 @@ def latest_scorecards_queryset():
             .distinct("vendor_id")
             .values("id")
         )
-    else:
-        ids = (
-            VendorScorecard.objects.values("vendor_id")
-            .annotate(latest_id=models.Max("id"))
-            .values("latest_id")
+        return VendorScorecard.objects.filter(id__in=models.Subquery(ids)).select_related(
+            "vendor", "vendor__category"
         )
-    return VendorScorecard.objects.filter(id__in=models.Subquery(ids)).select_related(
-        "vendor", "vendor__category"
-    )
+    else:
+        latest_ids = [
+            sid
+            for sid in (
+                VendorScorecard.objects.filter(vendor_id=v_id)
+                .order_by("-created_at", "-updated_at")
+                .values_list("id", flat=True)
+                .first()
+                for v_id in VendorScorecard.objects.values_list("vendor_id", flat=True).distinct()
+            )
+            if sid
+        ]
+        return VendorScorecard.objects.filter(id__in=latest_ids).select_related(
+            "vendor", "vendor__category"
+        )

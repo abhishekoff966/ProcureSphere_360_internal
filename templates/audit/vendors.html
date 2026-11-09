@@ -33,14 +33,14 @@
     <div class="col-sm-6 col-xl-3">
         <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-emerald">
             <div class="text-muted small fw-bold text-uppercase">ACTIVE VENDORS</div>
-            <div class="fs-3 fw-bold text-success font-heading mt-1">{{ summary.active_count|default:0 }}</div>
+            <div class="fs-3 fw-bold text-success font-heading mt-1">{{ summary.active_count|default:summary.active_vendors|default:0 }}</div>
             <div class="text-muted small mt-1">In Good Standing</div>
         </div>
     </div>
     <div class="col-sm-6 col-xl-3">
         <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-rose">
             <div class="text-muted small fw-bold text-uppercase">SUSPENDED / AT-RISK</div>
-            <div class="fs-3 fw-bold text-danger font-heading mt-1">{{ summary.suspended_count|default:0 }}</div>
+            <div class="fs-3 fw-bold text-danger font-heading mt-1">{{ summary.suspended_count|default:summary.suspended_vendors|default:0 }}</div>
             <div class="text-muted small mt-1">Sanctioned or Blacklisted</div>
         </div>
     </div>

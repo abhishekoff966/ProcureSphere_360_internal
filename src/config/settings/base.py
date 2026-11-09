@@ -181,6 +181,8 @@ MIDDLEWARE = [
 
     "django.contrib.sessions.middleware.SessionMiddleware",
 
+    "apps.core.middleware.ApiSlashMiddleware",
+
     "django.middleware.common.CommonMiddleware",
 
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -422,6 +424,9 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 
 SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=False)
+
+# Support reverse proxy TLS headers (Render, Nginx, ALB)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 CSRF_COOKIE_HTTPONLY = False  # Allows frontend JS/HTMX to attach CSRF headers
 

@@ -126,7 +126,7 @@ def check_upload_rate_limit(key: str, max_requests: int = 10, window_seconds: in
         pass
 
 
-def validate_file_upload(file):
+def validate_file_upload(file, allowed_extensions=None):
     """
     Validates uploaded file size, extension, and binary content signature.
     Enforces:
@@ -156,10 +156,11 @@ def validate_file_upload(file):
         raise ValidationError(_("File must have a valid extension."))
 
     ext = os.path.splitext(file_name)[1][1:].lower()
-    if ext not in ALLOWED_EXTENSIONS:
+    permitted_extensions = set(allowed_extensions) if allowed_extensions is not None else ALLOWED_EXTENSIONS
+    if ext not in permitted_extensions:
         raise ValidationError(
             _(
-                f"File extension '.{ext}' is not permitted. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
+                f"File extension '.{ext}' is not permitted. Allowed: {', '.join(sorted(permitted_extensions))}"
             )
         )
 
@@ -182,7 +183,9 @@ def validate_file_upload(file):
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "application/zip",
             },
+            "xls": {"application/vnd.ms-excel", "application/msexcel"},
             "csv": {"text/csv", "application/csv", "application/vnd.ms-excel"},
+            "txt": {"text/plain"},
         }.get(ext, set())
         valid_mimes = allowed_mimes | generic_fallbacks
         if allowed_mimes and raw_mime not in valid_mimes:
@@ -197,6 +200,12 @@ def validate_file_upload(file):
             initial_pos = file.tell()
         except (AttributeError, OSError):
             initial_pos = None
+
+    if hasattr(file, "seek"):
+        try:
+            file.seek(0)
+        except (AttributeError, OSError):
+            pass
 
     try:
         if ext == "pdf":
@@ -220,7 +229,7 @@ def validate_file_upload(file):
                     _("Invalid file content for JPEG. The file is not a valid JPEG image.")
                 )
 
-        elif ext == "doc":
+        elif ext in ("doc", "xls"):
             header = file.read(8)
             if not header.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"):
                 raise ValidationError(
@@ -296,6 +305,37 @@ def validate_file_upload(file):
                 except Exception:
                     raise ValidationError(
                         _("Invalid file content for .csv. File contains non-text binary data.")
+                    )
+
+        elif ext == "txt":
+            sample = file.read(4096)
+            binary_headers = (
+                b"MZ",                     # DOS / PE executable
+                b"%PDF-",                  # PDF
+                b"PK\x03\x04",             # ZIP / OpenXML
+                b"\x7fELF",                # ELF executable
+                b"\x89PNG",                # PNG
+                b"\xff\xd8\xff",           # JPEG
+                b"\xd0\xcf\x11\xe0",       # OLECF (doc/xls)
+            )
+            if any(sample.startswith(sig) for sig in binary_headers):
+                raise ValidationError(
+                    _("Invalid file content for .txt. Binary file disguised with .txt extension.")
+                )
+            if b"\x00" in sample:
+                raise ValidationError(
+                    _(
+                        "Invalid file content for .txt. Binary content and null bytes are not permitted."
+                    )
+                )
+            try:
+                sample.decode("utf-8")
+            except UnicodeDecodeError:
+                try:
+                    sample.decode("latin-1")
+                except Exception:
+                    raise ValidationError(
+                        _("Invalid file content for .txt. File contains non-text binary data.")
                     )
 
     finally:

@@ -257,10 +257,45 @@ class UserViewSet(viewsets.ModelViewSet):
             return get_all_users()
         return User.objects.filter(id=user.id)
 
-    def get_serializer_class(self):
-        if self.action == "create":
-            return UserCreateSerializer
-        return UserSerializer
+    def perform_create(self, serializer):
+        user = serializer.save()
+        from apps.audit.models import AuditLog
+        actor = self.request.user if getattr(self.request, "user", None) and self.request.user.is_authenticated else None
+        AuditLog.objects.create(
+            actor=actor,
+            action=AuditLog.ACTION_CREATE,
+            target_model="User",
+            target_object_id=str(user.id),
+            previous_state=None,
+            new_state={
+                "email": user.email,
+                "role": getattr(user.role, "code", None),
+                "is_active": user.is_active,
+            },
+        )
+
+    def perform_update(self, serializer):
+        old_user = self.get_object()
+        old_state = {
+            "email": old_user.email,
+            "role": getattr(old_user.role, "code", None),
+            "is_active": old_user.is_active,
+        }
+        user = serializer.save()
+        from apps.audit.models import AuditLog
+        actor = self.request.user if getattr(self.request, "user", None) and self.request.user.is_authenticated else None
+        AuditLog.objects.create(
+            actor=actor,
+            action=AuditLog.ACTION_UPDATE,
+            target_model="User",
+            target_object_id=str(user.id),
+            previous_state=old_state,
+            new_state={
+                "email": user.email,
+                "role": getattr(user.role, "code", None),
+                "is_active": user.is_active,
+            },
+        )
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -274,6 +309,19 @@ class UserViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        from apps.audit.models import AuditLog
+        actor = request.user if getattr(request, "user", None) and request.user.is_authenticated else None
+        AuditLog.objects.create(
+            actor=actor,
+            action=AuditLog.ACTION_DELETE,
+            target_model="User",
+            target_object_id=str(instance.id),
+            previous_state={
+                "email": instance.email,
+                "role": getattr(instance.role, "code", None),
+            },
+            new_state=None,
+        )
         return super().destroy(request, *args, **kwargs)
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])

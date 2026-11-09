@@ -154,6 +154,7 @@ def submit_purchase_requisition_service(
     2. Runs pre-approval budget check & locks reservation.
     3. Transitions PR status to SUBMITTED / MANAGER_REVIEW.
     """
+    requisition = PurchaseRequisition.objects.select_for_update().get(id=requisition.id)
     if requisition.status != PurchaseRequisition.STATUS_DRAFT:
         raise ValidationError(
             f"Cannot submit requisition in status '{requisition.status}'. Must be DRAFT."
