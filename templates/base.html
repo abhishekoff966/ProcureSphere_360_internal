@@ -998,6 +998,31 @@
         }
 
         /* 9. SCROLLBARS */
+        html {
+            scrollbar-width: thin !important;
+            scrollbar-color: #2456D6 #f1f5f9 !important;
+        }
+        body::-webkit-scrollbar,
+        html::-webkit-scrollbar {
+            width: 10px !important;
+            height: 10px !important;
+            display: block !important;
+        }
+        body::-webkit-scrollbar-track,
+        html::-webkit-scrollbar-track {
+            background: #f1f5f9 !important;
+        }
+        body::-webkit-scrollbar-thumb,
+        html::-webkit-scrollbar-thumb {
+            background: #2456D6 !important;
+            border-radius: 6px !important;
+            border: 2px solid #f1f5f9 !important;
+        }
+        body::-webkit-scrollbar-thumb:hover,
+        html::-webkit-scrollbar-thumb:hover {
+            background: #1b47cb !important;
+        }
+
         aside,
         aside nav,
         aside .sidebar-nav-container,
