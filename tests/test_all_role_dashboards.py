@@ -42,7 +42,36 @@ def test_all_role_dashboards_render_successfully(client):
         client.force_login(user)
         response = client.get("/")
         assert response.status_code == 200
-        assert expected_snippet.lower() in response.content.decode().lower()
+        html = response.content.decode()
+        assert expected_snippet.lower() in html.lower()
+        # Verify standardized global navbar presence and branding
+        assert "procuresphere_360_nav_brand.png" in html
+        assert "global-enterprise-navbar" in html
+        # Verify logo is positioned at the top of the sidebar and toggle is in navbar
+        assert "sidebar-brand-box" in html
+        assert "global-brand-logo" in html
+        nav_start = html.find("<nav ")
+        assert nav_start != -1
+        nav_end = html.find("</nav>", nav_start)
+        assert nav_end != -1
+        navbar_html = html[nav_start:nav_end]
+
+        # Verify toggle is in navbar and logo is NOT duplicated in top navbar
+        assert "sidebar-toggle-btn" in navbar_html
+        assert "global-brand-logo" not in navbar_html
+
+        # Verify unwanted navbar elements are completely removed
+        assert "global-context-badge" not in navbar_html
+        assert "fa-magnifying-glass" not in navbar_html
+        assert "fa-circle-question" not in navbar_html
+        assert "fa-handshake" not in navbar_html
+
+        # Verify Profile dropdown contains strictly user email and Sign Out
+        assert user.email in navbar_html
+        assert "/logout/" in navbar_html
+        assert "Sign Out" in navbar_html
+        assert "/accounts/change-password/" not in navbar_html
+        assert "Audit History" not in navbar_html
 
 
 @pytest.mark.django_db

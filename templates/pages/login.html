@@ -69,25 +69,25 @@
             z-index: 1;
         }
 
-        /* ── EXIT PILL (top-right, outside card) ──────────────── */
+        /* ── EXIT PILL (embedded inside card, top-right) ──────── */
         .lm-exit-pill {
-            position: fixed;
-            top: 24px;
-            right: 28px;
-            z-index: 5010;
+            position: absolute;
+            top: 18px;
+            right: 20px;
+            z-index: 50;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 18px;
+            gap: 6px;
+            padding: 6px 14px;
             background: #ffffff;
             border: 1px solid #cbd5e1;
             border-radius: 9999px;
-            font-size: 13.5px;
+            font-size: 13px;
             font-weight: 600;
-            color: #1e293b;
+            color: #475569;
             text-decoration: none;
             cursor: pointer;
-            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
             font-family: inherit;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             letter-spacing: 0.01em;
@@ -95,24 +95,24 @@
         .lm-exit-pill:hover {
             background: #f8fafc;
             border-color: #94a3b8;
-            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.10);
             transform: translateY(-1px);
             color: #0f172a;
         }
 
-        /* ── LARGE SPLIT-SCREEN CARD CONTAINER ───────────────── */
+        /* ── SPLIT-SCREEN CARD CONTAINER ───────────────── */
         .login-content-wrapper {
             background: #ffffff;
-            border-radius: 28px;
-            box-shadow: 0 32px 80px -12px rgba(15, 30, 75, 0.20), 0 0 0 1px rgba(220, 230, 245, 0.85);
+            border-radius: 24px;
+            box-shadow: 0 24px 64px -12px rgba(15, 30, 75, 0.18), 0 0 0 1px rgba(220, 230, 245, 0.85);
             display: flex;
             flex-direction: row;
             overflow: hidden;
-            width: 88vw;
-            max-width: 1380px;
-            height: 84vh;
-            min-height: 660px;
-            max-height: 860px;
+            width: 82vw;
+            max-width: 1180px;
+            height: 80vh;
+            min-height: 580px;
+            max-height: 750px;
             position: relative;
             z-index: 10;
             animation: lmSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -130,7 +130,7 @@
             background: linear-gradient(155deg, #f0f6ff 0%, #e2edfc 42%, #d5e5fa 78%, #c5daf7 100%);
             display: flex;
             flex-direction: column;
-            padding: 44px 44px 0 44px;
+            padding: 36px 36px 0 36px;
             position: relative;
             overflow: hidden;
             border-right: 1px solid rgba(210, 225, 245, 0.7);
@@ -164,7 +164,7 @@
             letter-spacing: 0.1em;
             text-transform: uppercase;
             font-family: 'DM Mono', monospace, sans-serif;
-            margin-bottom: 22px;
+            margin-bottom: 16px;
             width: fit-content;
             border: 1px solid rgba(190, 218, 255, 0.9);
             box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
@@ -181,11 +181,11 @@
         /* Headline */
         .lm-headline {
             font-family: 'Playfair Display', Georgia, serif;
-            font-size: 38px;
+            font-size: 32px;
             font-weight: 700;
             line-height: 1.2;
             color: #0b1528;
-            margin: 0 0 16px 0;
+            margin: 0 0 12px 0;
             letter-spacing: -0.015em;
         }
         .lm-headline-blue {
@@ -197,12 +197,13 @@
 
         /* Subtext */
         .lm-sub {
-            font-size: 15px;
-            line-height: 1.65;
+            font-size: 14px;
+            line-height: 1.6;
             color: #475569;
-            margin: 0 0 24px 0;
-            max-width: 480px;
+            margin: 0 0 18px 0;
+            max-width: 460px;
             font-family: 'DM Sans', 'Inter', sans-serif;
+        }
         }
 
         /* Trust Points Pill Tray */
@@ -263,7 +264,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 36px 56px;
+            padding: 28px 40px;
             overflow-y: auto;
             scrollbar-width: thin;
             scrollbar-color: rgba(203, 213, 225, 0.6) transparent;
@@ -279,7 +280,7 @@
         /* Form Wrapper - generous enterprise width */
         .lm-form-wrap {
             width: 100%;
-            max-width: 460px;
+            max-width: 420px;
             margin: auto;
         }
 
@@ -289,40 +290,40 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
         .lm-logo-emblem {
-            height: 76px;
-            width: 76px;
+            height: 66px;
+            width: 66px;
             object-fit: contain;
             display: block;
             filter: drop-shadow(0 6px 18px rgba(37, 99, 235, 0.22));
             transition: transform 0.2s ease;
         }
         .lm-logo-wordmark {
-            height: 30px;
+            height: 27px;
             width: auto;
             object-fit: contain;
             display: block;
-            margin-top: 6px;
+            margin-top: 5px;
         }
 
         .lm-heading {
             text-align: center;
             font-family: 'Playfair Display', Georgia, serif;
-            font-size: 28px;
+            font-size: 25px;
             font-weight: 700;
             color: #0b1528;
-            margin: 0 0 4px 0;
+            margin: 0 0 3px 0;
             letter-spacing: -0.01em;
             line-height: 1.25;
         }
 
         .lm-tagline {
             text-align: center;
-            font-size: 13.5px;
+            font-size: 13px;
             color: #64748b;
-            margin: 0 0 16px 0;
+            margin: 0 0 14px 0;
             font-family: 'DM Sans', 'Inter', sans-serif;
             line-height: 1.4;
         }
@@ -602,17 +603,17 @@
 </head>
 <body>
 
-    <!-- Exit pill — top-right of viewport -->
-    <a href="/" id="login-exit-btn" class="lm-exit-pill" aria-label="Exit to Home">
-        Exit
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-    </a>
-
-    <!-- Main Large Enterprise Card -->
+    <!-- Main Enterprise Login Card -->
     <div class="login-content-wrapper">
+
+        <!-- Exit pill — embedded at top-right inside the login card -->
+        <a href="/" id="login-exit-btn" class="lm-exit-pill" aria-label="Exit to Home">
+            Exit
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </a>
 
         <!-- ═══════ LEFT PANEL (BRAND EXPERIENCE) ═══════ -->
         <div class="lm-left">

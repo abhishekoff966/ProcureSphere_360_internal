@@ -4,73 +4,7 @@
 {% block title %}Compliance & Audit Portal — ProcureSphere 360{% endblock %}
 
 {% block navbar %}
-<!-- Top Navigation Bar for Compliance Auditor (Vendor Dashboard Standard) -->
-<nav class="navbar shadow-sm py-2 sticky-top enterprise-topbar">
-    <div class="container-fluid ps-2 pe-2 pe-sm-3 pe-lg-4 d-flex align-items-center justify-content-between flex-nowrap">
-        <div class="d-flex align-items-center flex-nowrap auditor-brand-wrapper">
-            <a href="/audit/dashboard/" class="dashboard-brand-badge auditor-top-brand" aria-label="ProcureSphere 360 Home">
-                <img src="{% static 'landing/images/procuresphere_360_nav_brand_dark.png' %}" alt="ProcureSphere 360" class="dashboard-brand-logo">
-            </a>
-            {% include 'partials/sidebar_toggle_button.html' with sidebar_id='auditorSidebar' %}
-        </div>
-
-        <div class="d-flex align-items-center gap-2 gap-sm-3 flex-shrink-0">
-            <!-- Organization / Department Information (Matching Vendor Entity Pill) -->
-            {% with entity=user.organization|default:user.effective_organization|default:user.department %}
-            <div class="d-none d-md-flex align-items-center bg-dark bg-opacity-75 border border-secondary border-opacity-50 rounded-pill px-3 py-1 text-white">
-                <i class="fa-solid fa-building text-cyan me-2 fs-5"></i>
-                <div class="text-start lh-sm">
-                    <span class="fw-semibold small d-block mb-1">{% if entity.name %}{{ entity.name|truncatechars:35 }}{% else %}Hewlett Packard Enterprise{% endif %}</span>
-                    <span class="text-white-50 d-block" style="font-size: 0.7rem; line-height: 1;">{% if user.cost_center %}{{ user.cost_center.code }}{% elif entity.code %}{{ entity.code }}{% else %}HPE-GLOBAL{% endif %} &bull; Active</span>
-                </div>
-                <span class="badge ms-2 rounded-pill bg-success" style="font-size: 0.65rem;">Active</span>
-            </div>
-            <span class="d-none" id="auditorOrgScopeBadge">Scope: <span id="activeScopeLabel">{{ entity.name|default:"Authorized Organization" }}</span></span>
-            {% endwith %}
-            <!-- Notifications Icon -->
-            <a href="/notifications/" class="btn btn-outline-secondary btn-sm position-relative text-white border-0 d-flex align-items-center justify-content-center p-0" style="width: 36px; height: 36px;" title="Notifications">
-                <i class="fa-solid fa-bell fs-5"></i>
-                {% if unread_notifications_count and unread_notifications_count > 0 %}
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
-                    {{ unread_notifications_count }}
-                </span>
-                {% elif metrics and metrics.unread_notifications and metrics.unread_notifications > 0 %}
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
-                    {{ metrics.unread_notifications }}
-                </span>
-                {% endif %}
-            </a>
-
-            <!-- User Profile Dropdown (Vendor Style) -->
-            {% if user.is_authenticated %}
-            <div class="dropdown">
-                <button class="btn btn-link text-decoration-none p-0 border-0 d-flex align-items-center justify-content-center rounded-circle" 
-                        type="button" 
-                        id="auditorProfileDropdown" 
-                        data-bs-toggle="dropdown" 
-                        aria-expanded="false" 
-                        title="Account Menu"
-                        style="width: 38px; height: 38px; background: rgba(255, 255, 255, 0.08); transition: all 0.2s ease;">
-                    <i class="fa-solid fa-circle-user text-cyan fs-4"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-lg py-2 mt-2" 
-                    aria-labelledby="auditorProfileDropdown" 
-                    style="min-width: 220px; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px;">
-                    <li class="px-3 py-2 border-bottom border-secondary border-opacity-25">
-                        <div class="fw-semibold text-white small text-truncate" title="{{ user.email }}">{{ user.email|default:"auditor@hpe.com" }}</div>
-                        <div class="text-white-50" style="font-size: 0.72rem;">Compliance Auditor</div>
-                    </li>
-                    <li>
-                        <a class="dropdown-item text-danger d-flex align-items-center py-2 px-3 small" href="/logout/" style="transition: background 0.15s ease;">
-                            <i class="fa-solid fa-arrow-right-from-bracket me-2" style="width: 16px;"></i> Sign Out
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-</nav>
+{% include 'partials/global_navbar.html' with sidebar_id='auditorSidebar' dashboard_url='/audit/dashboard/' profile_dropdown_id='auditorProfileDropdown' %}
 {% endblock navbar %}
 
 {% block layout %}
@@ -82,32 +16,26 @@
     <!-- ========================================================================= -->
     <!-- 1. STICKY DARK SIDEBAR (Vendor Dashboard Standard: 260px, sticky top: 79px) -->
     <!-- ========================================================================= -->
-    <aside id="auditorSidebar" class="offcanvas-lg offcanvas-start border-end shadow-sm enterprise-sidebar border-end border-secondary border-opacity-25 shadow-sm text-white auditor-sidebar" tabindex="-1" aria-labelledby="auditorSidebarLabel" style="width: 260px; min-width: 260px; height: calc(100vh - 79px); position: sticky; top: 79px; z-index: 1000; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent;">
+    <aside id="auditorSidebar" class="offcanvas-lg offcanvas-start border-end shadow-sm enterprise-sidebar border-end border-secondary border-opacity-25 shadow-sm text-white auditor-sidebar" tabindex="-1" aria-labelledby="auditorSidebarLabel" style="width: 260px; min-width: 260px; height: 100vh; position: fixed; top: 0; left: 0; bottom: 0; z-index: 1040; overflow: hidden; overflow-y: hidden; scrollbar-width: none;">
         
-        <!-- Mobile Drawer Header (Hidden on Desktop) -->
-        <div class="sidebar-brand-box px-3 py-3 border-bottom border-secondary border-opacity-25 flex-shrink-0 d-flex d-lg-none align-items-center justify-content-between">
-            <a href="/audit/dashboard/" class="d-flex align-items-center text-white text-decoration-none" id="auditorSidebarLabel">
-                <div class="brand-icon-box me-2 flex-shrink-0" style="width: 32px; height: 32px; background: rgba(0, 184, 217, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                    <i class="fa-solid fa-layer-group text-cyan"></i>
-                </div>
-                <div class="overflow-hidden">
-                    <div class="fs-6 fw-bold tracking-tight text-white d-block text-truncate">ProcureSphere <span class="text-cyan">360</span></div>
-                    <span class="badge bg-secondary bg-opacity-50 text-light px-2 py-0.5 rounded-pill" style="font-size: 0.62rem; letter-spacing: 0.04em;">COMPLIANCE AUDITOR</span>
-                </div>
-            </a>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#auditorSidebar" aria-label="Close menu"></button>
-        </div>
+        <!-- Sidebar Brand Header (Logo + Toggle Button) -->
+        {% include 'partials/sidebar_header.html' with sidebar_id='auditorSidebar' dashboard_url='/audit/dashboard/' %}
 
         <div class="px-2 py-3">
-            <div class="d-flex align-items-center justify-content-between px-2 mb-2 text-secondary text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.06em;">
-                <span>Audit &amp; Traceability</span>
-                <i class="fa-solid fa-shield-check text-cyan" style="font-size:0.75rem;"></i>
+            <!-- 1. Workspace Heading -->
+            <div class="workspace-heading sa-workspace-header">
+                <i class="fa-solid fa-file-shield me-2"></i>
+                <span>AUDIT &amp; TRACEABILITY</span>
             </div>
             
             <nav class="d-flex flex-column gap-1" id="sidebarMenu" aria-label="Compliance Auditor Navigation">
+                <!-- 2. Standalone Dashboard -->
                 <a href="/audit/dashboard/" class="vendor-navlink unified-navlink {% if request.path == '/audit/dashboard/' or request.path == '/' or request.path == '/audit/' %}active active-nav-item{% endif %}">
-                    <span>Executive Dashboard</span>
+                    <span>Dashboard</span>
                 </a>
+
+                <!-- 3. Audit Trail & Governance Section -->
+                <div class="nav-section-label">Audit Trail &amp; Governance</div>
                 <a href="/audit/logs/" class="vendor-navlink unified-navlink {% if '/audit/logs/' in request.path %}active active-nav-item{% endif %}">
                     <span>Audit Logs</span>
                 </a>
@@ -323,15 +251,24 @@
     .text-white-75 { color: rgba(255, 255, 255, 0.75) !important; }
     .hover-bg-slate:hover { background-color: #F8FAFC; }
 
-    /* Section label style matching Vendor Standard */
+    /* Section label style */
     .nav-section-label {
-        font-size: 0.68rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: rgba(255, 255, 255, 0.38);
-        padding: 0.6rem 0.75rem 0.2rem;
-        margin-top: 0.25rem;
+        display: flex !important;
+        align-items: center !important;
+        font-size: 11.5px !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.8px !important;
+        color: #163A70 !important;
+        background: #D4E5FF !important;
+        border-left: 3px solid #1677FF !important;
+        border-radius: 6px !important;
+        padding: 0.35rem 0.65rem !important;
+        margin-top: 12px !important;
+        margin-bottom: 5px !important;
+        user-select: none !important;
+        cursor: default !important;
+        box-shadow: 0 1px 2px rgba(22, 58, 112, 0.05) !important;
     }
 
     .auditor-main-content {
@@ -347,26 +284,6 @@
 
     /* Brand sizing */
     @media (min-width: 992px) {
-        .auditor-brand-wrapper {
-            min-width: 260px;
-            max-min-width: 260px;
-            flex-shrink: 0;
-        }
-        .auditor-top-brand {
-            width: 100% !important;
-            max-width: 100% !important;
-            height: 44px !important;
-            max-height: 44px !important;
-            padding: 0 !important;
-            border-radius: 0 !important;
-            margin: 0 !important;
-        }
-        .auditor-top-brand .dashboard-brand-logo {
-            width: 100% !important;
-            height: 100% !important;
-            max-height: 34px !important;
-            object-fit: contain !important;
-        }
     }
     @media (max-width: 991.98px) {
         .auditor-brand-wrapper { width: auto; max-width: none; }
@@ -386,19 +303,23 @@
         .auditor-sidebar {
             width: 260px !important;
             min-width: 260px !important;
-            height: calc(100vh - 84px) !important;
-            position: -webkit-sticky !important;
-            position: sticky !important;
-            top: 84px !important;
-            z-index: 1000;
-            background-color: #212529 !important;
-            border-right: 1px solid rgba(255, 255, 255, 0.15) !important;
-            overflow-y: auto !important;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+            height: 100vh !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: 0 !important;
+            z-index: 1040;
+            background: #DFEAFF !important;
+            border-right: 1px solid #B4C8E8 !important;
+            box-shadow: 3px 0 10px rgba(30, 64, 120, 0.08) !important;
+            overflow: hidden !important;
+            overflow-y: hidden !important;
+            scrollbar-width: none !important;
         }
         .auditor-sidebar::-webkit-scrollbar {
-            width: 4px;
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
         }
         .auditor-sidebar::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.15);
@@ -453,8 +374,9 @@
             z-index: 1050;
             transform: translateX(-100%);
             transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            background-color: #212529 !important;
-            box-shadow: none;
+            background: #DFEAFF !important;
+            border-right: 1px solid #B4C8E8 !important;
+            box-shadow: 3px 0 10px rgba(30, 64, 120, 0.08) !important;
         }
         .auditor-sidebar.show {
             transform: translateX(0);

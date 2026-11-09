@@ -1,0 +1,13 @@
+{% load static %}
+<!-- ProcureSphere 360 - Sidebar Brand Header (Absolute Top-Left) -->
+<div class="sidebar-brand-box px-3 py-2 border-bottom d-flex align-items-center flex-shrink-0"
+     style="min-height: 70px; height: 70px; border-color: #B4C8E8 !important; background: #DFEAFF !important;">
+    <a href="{% if dashboard_url %}{{ dashboard_url }}{% elif user.is_superuser or user.role_code == 'SUPER_ADMIN' %}/superadmin/{% elif user.role_code == 'PROC_MGR' %}/manager/{% elif user.role_code == 'AUDITOR' %}/audit/dashboard/{% elif user.role_code == 'REQUESTER' %}/requester/{% elif user.role_code == 'DEPT_APPROVER' %}/approver/{% elif user.role_code == 'FINANCE_AP' %}/finance/{% elif user.role_code == 'STORES_RECEIVER' %}/stores/{% elif user.role_code == 'LEGAL_MGR' %}/legal/{% elif user.role_code == 'VENDOR_USER' %}/vendor/{% else %}/procurement/{% endif %}"
+       class="d-flex align-items-center text-decoration-none w-100 overflow-hidden"
+       aria-label="ProcureSphere 360 Home">
+        <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}"
+             alt="ProcureSphere 360"
+             class="global-brand-logo dashboard-brand-logo"
+             style="height: 44px; max-height: 48px; width: auto; max-width: 210px; object-fit: contain;">
+    </a>
+</div>

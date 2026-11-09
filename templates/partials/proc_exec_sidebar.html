@@ -7,17 +7,20 @@
             width: 260px !important;
             min-width: 260px !important;
             flex-shrink: 0 !important;
-            position: sticky !important;
-            top: 79px !important;
-            height: calc(100vh - 79px) !important;
-            max-height: calc(100vh - 79px) !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: 0 !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
             overflow: hidden !important;
             overflow-y: hidden !important;
             display: flex !important;
             flex-direction: column !important;
-            z-index: 1000;
-            align-self: flex-start;
-            background-color: #212529 !important;
+            z-index: 1040;
+            background: #DFEAFF !important;
+            border-right: 1px solid #B4C8E8 !important;
+            box-shadow: 3px 0 10px rgba(30, 64, 120, 0.08) !important;
         }
         .proc-exec-sidebar-desktop nav#procExecNav,
         .proc-exec-sidebar-desktop nav {
@@ -38,29 +41,45 @@
 
     /* Section label style */
     .nav-section-label {
-        font-size: 0.68rem;
-        letter-spacing: 0.08em;
-        font-weight: 700;
-        text-transform: uppercase;
-        color: rgba(255,255,255,0.4);
-        padding: 0.6rem 0.75rem 0.2rem;
-        margin-top: 0.25rem;
+        display: flex !important;
+        align-items: center !important;
+        font-size: 11.5px !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.8px !important;
+        color: #163A70 !important;
+        background: #D4E5FF !important;
+        border-left: 3px solid #1677FF !important;
+        border-radius: 6px !important;
+        padding: 0.35rem 0.65rem !important;
+        margin-top: 12px !important;
+        margin-bottom: 5px !important;
+        user-select: none !important;
+        cursor: default !important;
+        box-shadow: 0 1px 2px rgba(22, 58, 112, 0.05) !important;
     }
 
     /* Top-level nav link */
     .vendor-navlink,
     .proc-navlink {
-        display: flex;
-        align-items: center;
-        padding: 0.45rem 0.75rem;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: rgba(255,255,255,0.75);
-        text-decoration: none;
-        transition: background 0.15s, color 0.15s;
+        display: flex !important;
+        align-items: center !important;
+        min-height: 38px !important;
+        padding: 0.5rem 0.75rem !important;
+        border-radius: 9px !important;
+        font-size: 13.5px !important;
+        font-weight: 500 !important;
+        color: #1E293B !important;
+        text-decoration: none !important;
+        transition: all 0.15s ease !important;
     }
     .vendor-navlink:hover,
+    .vendor-navlink:focus,
+    .proc-navlink:hover,
+    .proc-navlink:focus {
+        background: rgba(22, 119, 255, 0.08) !important;
+        color: #0F172A !important;
+    }
     .vendor-navlink:focus,
     .proc-navlink:hover,
     .proc-navlink:focus {
@@ -104,35 +123,24 @@
     }
 </style>
 
-<aside class="offcanvas-lg offcanvas-start border-end shadow-sm enterprise-sidebar text-white border-end border-secondary border-opacity-25 shadow-sm proc-exec-sidebar-desktop" tabindex="-1" id="procExecSidebar" aria-labelledby="procExecSidebarLabel" style="width: 260px; min-width: 260px; background-color: #212529 !important;">
-    <!-- Mobile Drawer Header (Hidden on Desktop) -->
-    <div class="sidebar-brand-box px-3 py-3 border-bottom border-secondary border-opacity-25 flex-shrink-0 d-flex d-lg-none align-items-center justify-content-between">
-        <a href="/procurement/" class="d-flex align-items-center text-white text-decoration-none" id="procExecSidebarLabel">
-            <div class="brand-icon-box me-2 flex-shrink-0" style="width: 32px; height: 32px; background: rgba(0, 184, 217, 0.2); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                <i class="fa-solid fa-layer-group text-cyan"></i>
-            </div>
-            <div class="overflow-hidden">
-                <div class="fs-6 fw-bold tracking-tight text-white d-block text-truncate">ProcureSphere <span class="text-cyan">360</span></div>
-                <span class="badge bg-secondary bg-opacity-50 text-light px-2 py-0.5 rounded-pill" style="font-size: 0.62rem; letter-spacing: 0.04em;">PROCUREMENT EXECUTIVE</span>
-            </div>
-        </a>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#procExecSidebar" aria-label="Close menu"></button>
-    </div>
+<aside class="offcanvas-lg offcanvas-start border-end shadow-sm enterprise-sidebar text-white border-end border-secondary border-opacity-25 shadow-sm proc-exec-sidebar-desktop" tabindex="-1" id="procExecSidebar" aria-labelledby="procExecSidebarLabel" style="width: 260px; min-width: 260px;">
+    <!-- Sidebar Brand Header (Logo + Toggle Button) -->
+    {% include 'partials/sidebar_header.html' with sidebar_id='procExecSidebar' dashboard_url='/procurement/' %}
 
     <!-- Navigation (Scrollable, NO FOOTER, NO DUPLICATE LOGOUT BUTTON) -->
     <nav class="flex-grow-1 overflow-y-auto px-2 py-3 d-flex flex-column gap-1" id="procExecNav" style="flex: 1 1 0%; min-height: 0;" aria-label="Procurement Executive Navigation">
-        <div class="d-flex align-items-center justify-content-between px-2 mb-2 text-secondary text-uppercase fw-bold" style="font-size: 0.68rem; letter-spacing: 0.06em;">
-            <span>Procurement Desk</span>
-            
+        <!-- 1. Workspace Heading -->
+        <div class="workspace-heading sa-workspace-header">
+            <i class="fa-solid fa-briefcase me-2"></i>
+            <span>PROCUREMENT DESK</span>
         </div>
 
-        <!-- Main Section -->
-        <div class="nav-section-label">Main</div>
+        <!-- 2. Standalone Dashboard -->
         <a href="/procurement/" class="vendor-navlink proc-navlink {% if p == '/procurement/' or p == '/procurement/dashboard/' or p == '/' %}active-nav-item{% endif %}">
             <span>Dashboard</span>
         </a>
 
-        <!-- Vendors Section -->
+        <!-- 3. Vendors Section -->
         <div class="nav-section-label">Vendors</div>
         <a href="{% url 'vendor_onboarding' %}" class="vendor-navlink proc-navlink {% if p == '/vendors/onboarding/' or p == '/vendors/create/' %}active-nav-item{% endif %}">
             <span>Vendor Onboarding &amp; KYC</span>
