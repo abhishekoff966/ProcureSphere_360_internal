@@ -21,6 +21,22 @@ def create_user_service(
     )
     user.set_password(password)
     user.save()
+
+    from apps.audit.models import AuditLog
+    from apps.core.middleware import get_current_user
+
+    AuditLog.objects.create(
+        actor=get_current_user(),
+        action=AuditLog.ACTION_CREATE,
+        target_model="User",
+        target_object_id=str(user.id),
+        previous_state=None,
+        new_state={
+            "email": user.email,
+            "role": getattr(user.role, "code", None),
+            "is_active": user.is_active,
+        },
+    )
     return user
 
 

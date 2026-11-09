@@ -49,6 +49,25 @@ class RequestIDMiddleware:
         return response
 
 
+class ApiSlashMiddleware:
+    """
+    Appends trailing slash internally to /api/ requests so POST/PUT/PATCH/DELETE
+    do not trigger Django's CommonMiddleware APPEND_SLASH RuntimeError 500.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if (
+            request.path_info.startswith("/api/")
+            and not request.path_info.endswith("/")
+            and not request.path_info.endswith((".json", ".yaml", ".yml", ".pdf", ".xlsx", ".csv"))
+        ):
+            request.path_info = request.path_info + "/"
+        return self.get_response(request)
+
+
 class AuditContextMiddleware:
     """
     Middleware that sets the current user in thread-local storage for audit tracking.

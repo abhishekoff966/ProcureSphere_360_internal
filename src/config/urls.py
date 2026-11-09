@@ -14,7 +14,7 @@ from apps.accounts.views import (
 from apps.core.seo_views import robots_txt, sitemap_xml
 from apps.core.views import (
     custom_404_view,
-    home_view,
+    custom_api_404_view,
     protected_media_view,
     protected_vendor_document_view,
 )
@@ -96,6 +96,9 @@ urlpatterns = [
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs", SpectacularSwaggerView.as_view(url_name="schema")),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+
+    # Catch-all for unknown /api/ routes ensuring consistent JSON error response
+    re_path(r"^api/.*$", custom_api_404_view, name="api_not_found"),
 
     # Protected Media Serving (Audit-controlled access)
     re_path(
