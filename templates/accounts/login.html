@@ -82,6 +82,16 @@ function fillCredentials(email, password) {
     document.getElementById('passwordInput').value = password;
 }
 
+document.querySelectorAll('form[action="/login/"]').forEach(function (form) {
+    form.addEventListener('submit', function () {
+        try {
+            sessionStorage.removeItem('ps_nav_stack');
+            sessionStorage.removeItem('ps_nav_index');
+            sessionStorage.setItem('ps_just_logged_in', 'true');
+        } catch (e) {}
+    });
+});
+
 // Password visibility toggle
 const pwInput = document.getElementById('passwordInput');
 const toggleBtn = document.getElementById('togglePassword');

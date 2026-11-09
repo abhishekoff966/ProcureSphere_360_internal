@@ -20,6 +20,7 @@ Integration notes
 import re
 from django.conf import settings
 from django.shortcuts import redirect, render
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 
@@ -31,21 +32,15 @@ def _site_url():
 # Home / landing page
 # ---------------------------------------------------------------------------
 
+@never_cache
 def landing_home(request):
     """
     Root URL handler.
 
-    Anonymous → renders the public marketing home page.
-    Authenticated → delegates to the existing role-based home_view dispatcher
-                   (imported lazily to avoid circular-import risk at module load).
+    Renders the public marketing home page for all users (including authenticated
+    users viewing the landing page in a tab). For authenticated users, the landing
+    navbar offers 'Dashboard' and 'Sign Out' actions.
     """
-    if request.user.is_authenticated:
-        import sys
-        if getattr(settings, "TESTING", False) or "pytest" in sys.modules:
-            from apps.core.views import home_view  # noqa: PLC0415
-            return home_view(request)
-        from apps.core.views import get_dashboard_url_for_user  # noqa: PLC0415
-        return redirect(get_dashboard_url_for_user(request.user))
 
     context = {
         'page_title': 'ProcureSphere 360 — Intelligent Enterprise Procurement Platform',
