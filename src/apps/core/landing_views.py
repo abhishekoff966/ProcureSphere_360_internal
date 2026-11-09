@@ -20,6 +20,7 @@ Integration notes
 import re
 from django.conf import settings
 from django.shortcuts import redirect, render
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 
@@ -31,6 +32,7 @@ def _site_url():
 # Home / landing page
 # ---------------------------------------------------------------------------
 
+@never_cache
 def landing_home(request):
     """
     Root URL handler.

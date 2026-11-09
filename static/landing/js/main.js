@@ -370,8 +370,13 @@
 
         if (data && data.ok) {
           // setLoginCharState('success');
-          // Navigate to role-based dashboard returned by ERP backend
-          window.location.href = data.redirect || '/';
+          try {
+            sessionStorage.removeItem('ps_nav_stack');
+            sessionStorage.removeItem('ps_nav_index');
+            sessionStorage.setItem('ps_just_logged_in', 'true');
+          } catch (_) {}
+          // Replace history state so the unauthenticated landing page is not in history
+          window.location.replace(data.redirect || '/');
         } else {
           // Invalid credentials — stay in modal, show error
           // setLoginCharState('failed');
