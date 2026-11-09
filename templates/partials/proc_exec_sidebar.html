@@ -142,13 +142,13 @@
 
         <!-- 3. Vendors Section -->
         <div class="nav-section-label">Vendors</div>
-        <a href="{% url 'vendor_onboarding' %}" class="vendor-navlink proc-navlink {% if p == '/vendors/onboarding/' or p == '/vendors/create/' %}active-nav-item{% endif %}">
+        <a href="{% url 'vendor_onboarding' %}" class="vendor-navlink proc-navlink {% if section == 'onboarding' or p == '/vendors/onboarding/' or p == '/vendors/create/' %}active-nav-item{% endif %}">
             <span>Vendor Onboarding &amp; KYC</span>
         </a>
-        <a href="{% url 'vendor_list' %}" class="vendor-navlink proc-navlink {% if p == '/vendors/' %}active-nav-item{% endif %}">
+        <a href="{% url 'vendor_list' %}" class="vendor-navlink proc-navlink {% if section == 'master' or p == '/vendors/' or '/vendors/' in p and section != 'governance' and section != 'onboarding' and not '/vendors/governance/' in p and not '/vendors/onboarding/' in p and not '/vendors/create/' in p %}active-nav-item{% endif %}">
             <span>Vendor Master &amp; Risk</span>
         </a>
-        <a href="{% url 'vendor_governance' %}" class="vendor-navlink proc-navlink {% if p == '/vendors/governance/' %}active-nav-item{% endif %}">
+        <a href="{% url 'vendor_governance' %}" class="vendor-navlink proc-navlink {% if section == 'governance' or p == '/vendors/governance/' %}active-nav-item{% endif %}">
             <span>Vendor Governance</span>
         </a>
 

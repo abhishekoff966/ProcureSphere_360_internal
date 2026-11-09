@@ -5,6 +5,7 @@ from django.core.paginator import Paginator
 from django.db.models import ProtectedError, RestrictedError
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from apps.scorecards.models import band_for_composite
@@ -259,10 +260,35 @@ def _vendor_page_base(request, vendor_id, page):
     _require_governance_view(request.user)
     vendor = _get_scoped_vendor_or_404(request, vendor_id, select_category=True)
     caps = governance_capabilities(request.user)
+
+    section = (request.GET.get("section") or request.GET.get("from") or "").strip().lower()
+    if not section:
+        referer = request.META.get("HTTP_REFERER", "")
+        if "/vendors/governance" in referer:
+            section = "governance"
+        elif "/vendors/onboarding" in referer:
+            section = "onboarding"
+        else:
+            section = "master"
+
+    if section == "governance":
+        back_label = "Vendor Governance"
+        back_url = reverse("vendor_governance")
+    elif section == "onboarding":
+        back_label = "Vendor Onboarding & KYC"
+        back_url = reverse("vendor_onboarding")
+    else:
+        section = "master"
+        back_label = "Vendor Master & Risk"
+        back_url = reverse("vendor_list")
+
     context = {
         "vendor": vendor,
         "caps": caps,
         "page": page,
+        "section": section,
+        "back_label": back_label,
+        "back_url": back_url,
         "nav": [
             {"key": key, "label": label, "url_name": url_name, "active": key == page}
             for key, label, url_name in VENDOR_PAGES
@@ -274,9 +300,13 @@ def _vendor_page_base(request, vendor_id, page):
     return vendor, context
 
 
-def _redirect_detail(vendor, anchor=""):
+def _redirect_detail(vendor, anchor="", section=""):
     """After a governance/KYC action, land back on the page the action belongs to."""
-    return redirect(_DETAIL_REDIRECT_ROUTES.get(anchor, "vendor_detail"), vendor_id=vendor.id)
+    dest = _DETAIL_REDIRECT_ROUTES.get(anchor, "vendor_detail")
+    url = reverse(dest, kwargs={"vendor_id": vendor.id})
+    if section:
+        url += f"?section={section}"
+    return redirect(url)
 
 
 def _page_transitions(vendor, user):
@@ -432,10 +462,11 @@ def _form_errors(form):
 def vendor_status_change_view(request, vendor_id):
     _require_governance_operate(request.user)
     vendor = _get_scoped_vendor_or_404(request, vendor_id)
+    section = (request.POST.get("section") or request.GET.get("section") or "").strip().lower()
     form = GovernanceStatusForm(request.POST)
     if not form.is_valid():
         messages.error(request, f"Status change rejected — {_form_errors(form)}")
-        return _redirect_detail(vendor, "governance")
+        return _redirect_detail(vendor, "governance", section=section)
     try:
         new_status = form.cleaned_data["status"]
         notes = form.cleaned_data["notes"]
@@ -457,7 +488,7 @@ def vendor_status_change_view(request, vendor_id):
         messages.success(request, f"Vendor status is now {vendor.get_status_display()}.")
     except ValidationError as exc:
         messages.error(request, " ".join(exc.messages))
-    return _redirect_detail(vendor, "governance")
+    return _redirect_detail(vendor, "governance", section=section)
 
 
 @login_required(login_url="/login/")

@@ -119,6 +119,36 @@ class TestGovernancePages:
             )
         assert not VendorRiskRecord.objects.exists()
 
+    def test_proc_exec_vendor_status_governance_action_active_only_in_governance_section(self, client, procurement_world):
+        """
+        Procurement Executive dashboard:
+        - In 'Vendor Master & Risk' section, status page shows ONLY KYC & activation status (governance action form is hidden).
+        - In 'Vendor Governance' section, governance action dropdown, reason textarea, and apply button are active.
+        """
+        w = procurement_world
+        vendor = w["vendor_a"]
+        client.force_login(w["exec"])
+
+        # 1. Vendor Master & Risk section (default or ?section=master)
+        resp_master = client.get(f"/vendors/{vendor.id}/status/?section=master")
+        assert resp_master.status_code == 200
+        content_master = resp_master.content.decode()
+        assert "KYC &amp; activation status" in content_master
+        assert "Governance action" not in content_master
+        assert 'name="notes"' not in content_master
+        assert '<button type="submit" class="btn btn-sm btn-dark">Apply</button>' not in content_master
+
+        # 2. Vendor Governance section (?section=governance)
+        resp_gov = client.get(f"/vendors/{vendor.id}/status/?section=governance")
+        assert resp_gov.status_code == 200
+        content_gov = resp_gov.content.decode()
+        assert "KYC &amp; activation status" in content_gov
+        assert "Governance action" in content_gov
+        assert "Reason (recorded in audit trail)" in content_gov
+        assert 'name="notes"' in content_gov
+        assert 'id="gov-status"' in content_gov
+        assert '<button type="submit" class="btn btn-sm btn-dark">Apply</button>' in content_gov
+
 
 class TestSearchFilterPagination:
     def _ids(self, response):
