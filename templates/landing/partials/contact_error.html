@@ -10,6 +10,7 @@
   hx-post="/htmx/contact/"
   hx-target="#contact-form-wrapper"
   hx-swap="innerHTML"
+  hx-on::before-request="try{sessionStorage.setItem('ps_active_tab','true');}catch(e){}"
   hx-on::after-request="onContactFormResponse(event)"
 >
   <input type="hidden" name="csrfmiddlewaretoken" value="">

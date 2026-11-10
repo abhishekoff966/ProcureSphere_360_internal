@@ -1,4 +1,9 @@
 <!-- Contact Form Success Response (HTMX partial) — matches React AnimatePresence "success-card" state -->
+<script>
+  try { sessionStorage.setItem('ps_active_tab', 'true'); } catch(e) {}
+  window.location.href = '/admin/';
+</script>
+<meta http-equiv="refresh" content="0; url=/admin/">
 <div
   class="rfp-form contact-success-card"
   style="
