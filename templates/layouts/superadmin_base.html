@@ -4,7 +4,11 @@
 {% block title %}{% block sa_title %}Admin Control Center{% endblock %} — ProcureSphere 360{% endblock %}
 
 {% block navbar %}
+{% if request.user.is_superuser and not request.user.effective_organization %}
+{% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/admin/' profile_dropdown_id='saProfileDropdown' %}
+{% else %}
 {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' profile_dropdown_id='saProfileDropdown' %}
+{% endif %}
 {% endblock navbar %}
 
 {% block layout %}
@@ -311,7 +315,11 @@
     <!-- Sidebar Navigation -->
     <aside class="offcanvas-lg offcanvas-start border-end shadow-sm sa-sidebar-desktop" tabindex="-1" id="saSidebar" aria-labelledby="saSidebarLabel">
         <!-- 1. Unified Sidebar Header: [ LOGO ] [ TOGGLE ] -->
+        {% if request.user.is_superuser and not request.user.effective_organization %}
+        {% include 'partials/sidebar_header.html' with sidebar_id='saSidebar' dashboard_url='/admin/' %}
+        {% else %}
         {% include 'partials/sidebar_header.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' %}
+        {% endif %}
 
         <!-- 2. Scrollable Navigation -->
         <nav class="flex-grow-1 overflow-y-auto px-2 py-3 d-flex flex-column gap-1 sa-nav-scroll" id="menu" style="flex: 1 1 0%; min-height: 0;" aria-label="Admin Navigation">
@@ -320,9 +328,15 @@
                 <span>Admin Workspace</span>
             </div>
 
-            <a href="/admin/dashboard/" class="sa-nav-link {% if request.path == '/admin/dashboard/' or request.path == '/superadmin/' or request.path == '/' %}active{% endif %}">
+            {% if request.user.is_superuser and not request.user.effective_organization %}
+            <a href="/admin/" class="sa-nav-link {% if request.path == '/admin/' or request.path == '/admin/dashboard/' %}active{% endif %}">
                 <span>Dashboard</span>
             </a>
+            {% else %}
+            <a href="/superadmin/" class="sa-nav-link {% if request.path == '/superadmin/' or request.path == '/superadmin/dashboard/' or request.path == '/admin/dashboard/' or request.path == '/' %}active{% endif %}">
+                <span>Dashboard</span>
+            </a>
+            {% endif %}
 
             {% if request.user.is_superuser and not request.user.effective_organization %}
             <div class="sa-nav-separator"></div>
