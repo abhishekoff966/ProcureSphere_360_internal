@@ -246,19 +246,10 @@
 
   /* Signature Super Admin Sidebar Styling - Light Blue Gradient */
   .sa-sidebar {
-    width: 260px !important;
-    min-width: 260px !important;
-    max-width: 260px !important;
-    height: 100vh !important;
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    bottom: 0 !important;
     background: #DFEAFF !important;
     border-right: 1px solid #B4C8E8 !important;
     box-shadow: 3px 0 14px rgba(30, 64, 120, 0.14) !important;
     color: #1B2A4A !important;
-    z-index: 1040;
     align-self: flex-start !important;
     display: flex;
     flex-direction: column;
@@ -280,6 +271,19 @@
 
   /* Desktop layout alignment for fixed 260px sidebar */
   @media (min-width: 992px) {
+    .sa-sidebar,
+    aside#saSidebar {
+      width: 260px !important;
+      min-width: 260px !important;
+      max-width: 260px !important;
+      height: 100vh !important;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      bottom: 0 !important;
+      z-index: 1040;
+    }
+
     nav.global-enterprise-navbar,
     nav.sa-topbar,
     nav.enterprise-topbar {
@@ -333,22 +337,29 @@
   @media (max-width: 991.98px) {
     .sa-sidebar,
     aside#saSidebar {
-      transform: translateX(-100%) !important;
-      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      background: #DFEAFF !important;
+      border-right: 1px solid #B4C8E8 !important;
+      box-shadow: 4px 0 24px rgba(30, 64, 120, 0.22) !important;
+      width: 280px !important;
+      max-width: 85vw !important;
+      height: 100vh !important;
+      max-height: 100vh !important;
+      bottom: 0 !important;
       z-index: 1050 !important;
-    }
-    body.sidebar-mobile-open .sa-sidebar,
-    body.sidebar-mobile-open aside#saSidebar {
-      transform: translateX(0) !important;
     }
     nav.global-enterprise-navbar,
     nav.sa-topbar {
       margin-left: 0 !important;
       width: 100% !important;
+      max-width: 100% !important;
     }
     .admin-index-layout-container {
       margin-left: 0 !important;
       width: 100% !important;
+      max-width: 100% !important;
+    }
+    .tooltip {
+      display: none !important;
     }
   }
 
@@ -532,7 +543,7 @@
 <div class="d-flex flex-column min-vh-100 bg-light w-100 position-relative">
 
     <!-- LEFT SIDEBAR (No icons/emojis, light blue gradient) -->
-    <aside id="saSidebar" class="sa-sidebar d-flex flex-column flex-shrink-0">
+    <aside id="saSidebar" class="offcanvas-lg offcanvas-start sa-sidebar d-flex flex-column flex-shrink-0" tabindex="-1" aria-labelledby="saSidebarLabel">
         <!-- Sidebar Brand Header (Logo + Toggle Button) -->
         {% include 'partials/sidebar_header.html' with sidebar_id='saSidebar' dashboard_url='/admin/' %}
         <!-- Sidebar Workspace Header -->
@@ -663,7 +674,7 @@
             <div class="mb-4">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                     <div>
-                        <div class="d-flex align-items-center gap-2 mb-2">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                             {% if is_global_superadmin and not scoped_org %}
                             <span class="badge rounded-pill fw-bold px-3 py-1.5" style="background: #E0F2FE; color: #0369A1; font-size: 0.72rem; letter-spacing: 0.04em;">
                                 <i class="fa-solid fa-shield-halved me-1"></i> SUPER ADMIN &bull; TENANT MANAGEMENT
@@ -684,7 +695,7 @@
                             Welcome, {{ request.user.email|default:"admin@hpe.com" }} &bull; Manage departments, cost centers, staff users &amp; roles, and operational policies for {{ scoped_org.name|default:"Hewlett Packard Enterprise" }}.
                         </p>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
                         {% if can_add_organization and not scoped_org %}
                         <button type="button" hx-get="/superadmin/organizations/create/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn rounded-pill fw-bold px-4 shadow-sm" style="background: #F59E0B; color: #1B2A4A;">
                             <i class="fa-solid fa-plus me-1"></i> Create Organization
@@ -1164,12 +1175,15 @@
 
         toggleBtns.forEach(btn => {
             if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-                let tip = bootstrap.Tooltip.getInstance(btn);
-                if (!tip) {
-                    new bootstrap.Tooltip(btn, {
-                        boundary: 'window',
-                        container: 'body'
-                    });
+                const hasHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+                if (hasHover) {
+                    let tip = bootstrap.Tooltip.getInstance(btn);
+                    if (!tip) {
+                        new bootstrap.Tooltip(btn, {
+                            boundary: 'window',
+                            container: 'body'
+                        });
+                    }
                 }
             }
 
@@ -1187,10 +1201,33 @@
                     } catch(err) {}
                     updateSidebarToggleState(nowCollapsed);
                 } else {
-                    document.body.classList.toggle('sidebar-mobile-open');
+                    const sidebarEl = document.getElementById('saSidebar');
+                    if (sidebarEl && typeof bootstrap !== 'undefined') {
+                        const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(sidebarEl);
+                        offcanvas.toggle();
+                    }
                 }
             });
         });
+
+        const sidebarEl = document.getElementById('saSidebar');
+        if (sidebarEl && sidebarEl.dataset.offcanvasEventsBound !== 'true') {
+            sidebarEl.dataset.offcanvasEventsBound = 'true';
+            sidebarEl.addEventListener('show.bs.offcanvas', function() {
+                if (window.innerWidth < 992) updateSidebarToggleState(false);
+            });
+            sidebarEl.addEventListener('hidden.bs.offcanvas', function() {
+                if (window.innerWidth < 992) updateSidebarToggleState(true);
+            });
+            sidebarEl.querySelectorAll('a.nav-link, a.sa-nav-link').forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth < 992 && typeof bootstrap !== 'undefined') {
+                        const offcanvas = bootstrap.Offcanvas.getInstance(sidebarEl);
+                        if (offcanvas) offcanvas.hide();
+                    }
+                });
+            });
+        }
     }
 
     document.addEventListener('DOMContentLoaded', initSidebarToggle);

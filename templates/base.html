@@ -126,24 +126,91 @@
             display: block !important;
             filter: drop-shadow(0 1px 2px rgba(30, 64, 120, 0.08)) !important;
         }
-        @media (max-width: 576px) {
-            .global-navbar-mobile-brand img {
-                height: 44px !important;
-                max-height: 46px !important;
-                max-width: 190px !important;
+        @media (max-width: 991.98px) {
+            nav.navbar,
+            .enterprise-topbar,
+            .sa-topbar,
+            .proc-exec-topbar,
+            header nav.navbar,
+            .global-enterprise-navbar {
+                min-height: 64px !important;
+                height: 64px !important;
+                padding: 6px 12px !important;
+            }
+            .tooltip {
+                display: none !important;
+            }
+            /* Safeguard: ensure every table is horizontally scrollable on mobile */
+            .table:not(.table-responsive .table) {
+                display: block !important;
+                width: 100% !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
             }
         }
-        @media (max-width: 375px) {
-            .global-navbar-mobile-brand img {
-                height: 40px !important;
-                max-height: 42px !important;
-                max-width: 168px !important;
-            }
-        }
-        /* Mobile-only spacing for notification & profile icons */
         @media (max-width: 768px) {
+            .dashboard-brand-badge,
+            a.dashboard-brand-badge,
+            nav a.navbar-brand {
+                width: auto !important;
+                max-width: 180px !important;
+                height: 44px !important;
+            }
+            .dashboard-brand-logo,
+            img.dashboard-brand-logo,
+            .global-brand-logo,
+            .global-navbar-mobile-brand img {
+                width: auto !important;
+                max-width: 170px !important;
+                height: 40px !important;
+                max-height: 40px !important;
+            }
             .global-navbar-right-actions {
-                gap: 18px !important;
+                gap: 12px !important;
+            }
+        }
+        @media (max-width: 576px) {
+            nav.navbar,
+            .enterprise-topbar,
+            .sa-topbar,
+            .proc-exec-topbar,
+            header nav.navbar,
+            .global-enterprise-navbar {
+                min-height: 60px !important;
+                height: 60px !important;
+                padding: 4px 10px !important;
+            }
+            .dashboard-brand-logo,
+            img.dashboard-brand-logo,
+            .global-brand-logo,
+            .global-navbar-mobile-brand img {
+                height: 36px !important;
+                max-height: 36px !important;
+                max-width: 145px !important;
+            }
+            .global-navbar-right-actions {
+                gap: 10px !important;
+            }
+        }
+        @media (max-width: 380px) {
+            .dashboard-brand-logo,
+            img.dashboard-brand-logo,
+            .global-brand-logo,
+            .global-navbar-mobile-brand img {
+                height: 32px !important;
+                max-height: 32px !important;
+                max-width: 125px !important;
+            }
+            .global-navbar-right-actions {
+                gap: 6px !important;
+            }
+            .global-nav-action-btn,
+            .sa-nav-action-btn,
+            .global-profile-btn,
+            .sa-profile-btn {
+                width: 34px !important;
+                height: 34px !important;
+                min-width: 34px !important;
             }
         }
         @media (min-width: 992px) {
@@ -1400,12 +1467,15 @@
 
             toggleBtns.forEach(btn => {
                 if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-                    let tip = bootstrap.Tooltip.getInstance(btn);
-                    if (!tip) {
-                        new bootstrap.Tooltip(btn, {
-                            boundary: 'window',
-                            container: 'body'
-                        });
+                    const hasHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+                    if (hasHover) {
+                        let tip = bootstrap.Tooltip.getInstance(btn);
+                        if (!tip) {
+                            new bootstrap.Tooltip(btn, {
+                                boundary: 'window',
+                                container: 'body'
+                            });
+                        }
                     }
                 }
 

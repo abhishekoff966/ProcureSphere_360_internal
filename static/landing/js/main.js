@@ -222,9 +222,12 @@
     // Overlay login button
     const overlayLoginBtn = document.getElementById('overlay-login-btn');
     if (overlayLoginBtn) {
-      overlayLoginBtn.addEventListener('click', () => {
+      overlayLoginBtn.addEventListener('click', (e) => {
         closeMenu();
-        window.location.href = '/login/';
+        const targetUrl = overlayLoginBtn.getAttribute('href') || '/login/';
+        if (targetUrl && targetUrl !== '#' && !targetUrl.startsWith('javascript:')) {
+          window.location.href = targetUrl;
+        }
       });
     }
   })();
@@ -262,6 +265,10 @@
     // Direct navigation to dedicated /login/ page
     document.querySelectorAll('#login-btn, #overlay-login-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
+        const href = btn.getAttribute('href');
+        if (href && href !== '#' && !href.startsWith('javascript:')) {
+          return;
+        }
         e.preventDefault();
         window.location.href = '/login/';
       });
