@@ -2149,4 +2149,46 @@ img.dashboard-brand-logo {
     z-index: 1060 !important;
 }
 
+/* ========================================================================= */
+/* Platform Admin Dashboard Layout Offsets (Index & Core Views)               */
+/* ========================================================================= */
+@media (min-width: 992px) {
+    .dashboard-superadmin nav.global-enterprise-navbar,
+    .dashboard-superadmin nav.sa-topbar {
+        margin-left: 260px !important;
+        width: calc(100% - 260px) !important;
+        max-width: calc(100% - 260px) !important;
+    }
+
+    .admin-index-layout-container {
+        margin-left: 260px !important;
+        width: calc(100% - 260px) !important;
+        max-width: calc(100% - 260px) !important;
+    }
+
+    body.sidebar-collapsed.dashboard-superadmin nav.global-enterprise-navbar,
+    body.sidebar-collapsed.dashboard-superadmin nav.sa-topbar {
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    body.sidebar-collapsed .admin-index-layout-container {
+        margin-left: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    body.sidebar-collapsed .dashboard-superadmin .sa-sidebar {
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        transform: translateX(-100%) !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        overflow: hidden !important;
+    }
+}
+
+
 

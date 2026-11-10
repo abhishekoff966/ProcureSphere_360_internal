@@ -248,13 +248,14 @@
   .sa-sidebar {
     width: 260px !important;
     min-width: 260px !important;
+    max-width: 260px !important;
     height: 100vh !important;
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     bottom: 0 !important;
-    background: linear-gradient(180deg, #EAF2FF 0%, #DCE9FF 55%, #D2E2FF 100%) !important;
-    border-right: 1px solid #AFC7EB !important;
+    background: #DFEAFF !important;
+    border-right: 1px solid #B4C8E8 !important;
     box-shadow: 3px 0 14px rgba(30, 64, 120, 0.14) !important;
     color: #1B2A4A !important;
     z-index: 1040;
@@ -266,12 +267,89 @@
     overflow-x: hidden !important;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
+    transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s ease !important;
   }
 
   .sa-sidebar::-webkit-scrollbar {
     display: none !important;
     width: 0 !important;
     height: 0 !important;
+  }
+
+  /* Desktop layout alignment for fixed 260px sidebar */
+  @media (min-width: 992px) {
+    nav.global-enterprise-navbar,
+    nav.sa-topbar,
+    nav.enterprise-topbar {
+      margin-left: 260px !important;
+      width: calc(100% - 260px) !important;
+      max-width: calc(100% - 260px) !important;
+      min-height: 70px !important;
+      height: 70px !important;
+      transition: margin-left 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                  width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                  max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    .admin-index-layout-container {
+      margin-left: 260px !important;
+      width: calc(100% - 260px) !important;
+      max-width: calc(100% - 260px) !important;
+      min-height: calc(100vh - 70px) !important;
+      transition: margin-left 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                  width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                  max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    /* Desktop Collapsed State */
+    body.sidebar-collapsed nav.global-enterprise-navbar,
+    body.sidebar-collapsed nav.sa-topbar,
+    body.sidebar-collapsed nav.enterprise-topbar {
+      margin-left: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    body.sidebar-collapsed .admin-index-layout-container {
+      margin-left: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    body.sidebar-collapsed aside.sa-sidebar,
+    body.sidebar-collapsed aside#saSidebar {
+      width: 0 !important;
+      min-width: 0 !important;
+      max-width: 0 !important;
+      transform: translateX(-100%) !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      overflow: hidden !important;
+    }
+  }
+
+  @media (max-width: 991.98px) {
+    .sa-sidebar,
+    aside#saSidebar {
+      transform: translateX(-100%) !important;
+      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      z-index: 1050 !important;
+    }
+    body.sidebar-mobile-open .sa-sidebar,
+    body.sidebar-mobile-open aside#saSidebar {
+      transform: translateX(0) !important;
+    }
+    nav.global-enterprise-navbar,
+    nav.sa-topbar {
+      margin-left: 0 !important;
+      width: 100% !important;
+    }
+    .admin-index-layout-container {
+      margin-left: 0 !important;
+      width: 100% !important;
+    }
   }
 
   .sa-nav-label {
@@ -451,107 +529,121 @@
 {% block content_title %}{% endblock %}
 
 {% block content %}
-<div class="d-flex flex-column min-vh-100 bg-light w-100">
+<div class="d-flex flex-column min-vh-100 bg-light w-100 position-relative">
+
+    <!-- LEFT SIDEBAR (No icons/emojis, light blue gradient) -->
+    <aside id="saSidebar" class="sa-sidebar d-flex flex-column flex-shrink-0">
+        <!-- Sidebar Brand Header (Logo + Toggle Button) -->
+        {% include 'partials/sidebar_header.html' with sidebar_id='saSidebar' dashboard_url='/admin/' %}
+        <!-- Sidebar Workspace Header -->
+        <div class="px-2 pt-2">
+            <div class="workspace-heading sa-workspace-header">
+                <i class="fa-solid fa-user-shield me-2"></i>
+                <span>ADMIN WORKSPACE</span>
+            </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <div class="flex-grow-1 overflow-y-auto px-2 py-2">
+            <ul class="nav nav-pills flex-column gap-1" id="menu">
+                <li class="nav-item">
+                    <a href="/admin/" class="nav-link sa-nav-link rounded-3 py-2 px-3 active">
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+
+                {% if is_global_superadmin and not scoped_org %}
+                <li class="sa-nav-separator"></li>
+                <li class="sa-nav-label">Organization Management</li>
+                <li class="nav-item">
+                    <a href="/superadmin/organizations/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Organizations</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/superadmin/users/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Manage Users &amp; Roles</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin/core/contactenquiry/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Contact Enquiries</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="sa-nav-separator"></li>
+                <li class="sa-nav-label">Organization &amp; Masters</li>
+                <li class="nav-item">
+                    <a href="/superadmin/organizations/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Departments &amp; Cost Centers</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/superadmin/locations/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Locations</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/superadmin/users/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Manage Users &amp; Roles</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/vendors/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Vendor Management</span>
+                    </a>
+                </li>
+
+                <li class="sa-nav-separator"></li>
+                <li class="sa-nav-label">Policies &amp; Rules</li>
+                <li class="nav-item">
+                    <a href="/superadmin/policies/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Approval Policies</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/superadmin/budgets/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Budget Configuration</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/invoices/settings/tolerances/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Business Rules</span>
+                    </a>
+                </li>
+
+                <li class="sa-nav-separator"></li>
+                <li class="sa-nav-label">Oversight &amp; Audit</li>
+                <li class="nav-item">
+                    <a href="/admin/core/contactenquiry/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Contact Enquiries</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/notifications/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Notifications &amp; Alerts</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/reports/hub/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Reports &amp; Analytics</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/superadmin/audit/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Audit Logs</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </aside>
 
     <!-- GLOBAL ENTERPRISE STANDARDIZED NAVBAR -->
-    {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' profile_dropdown_id='adminIndexProfileDropdown' %}
-
-    <div class="d-flex align-items-start w-100 flex-grow-1" style="min-height: calc(100vh - 58px);">
-        <!-- LEFT SIDEBAR (No icons/emojis, light blue gradient) -->
-        <aside id="saSidebar" class="sa-sidebar d-flex flex-column flex-shrink-0">
-            <!-- Sidebar Brand Header (Logo + Toggle Button) -->
-            {% include 'partials/sidebar_header.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' %}
-            <!-- Sidebar Workspace Header -->
-            <div class="px-2 pt-2">
-                <div class="workspace-heading sa-workspace-header">
-                    <i class="fa-solid fa-user-shield me-2"></i>
-                    <span>ADMIN WORKSPACE</span>
-                </div>
-            </div>
-
-            <!-- Navigation Links -->
-            <div class="flex-grow-1 overflow-y-auto px-2 py-2">
-                <ul class="nav nav-pills flex-column gap-1" id="menu">
-                    <li class="nav-item">
-                        <a href="/superadmin/" class="nav-link sa-nav-link rounded-3 py-2 px-3 active">
-                            <span>Dashboard</span>
-                        </a>
-                    </li>
-
-                    {% if is_global_superadmin and not scoped_org %}
-                    <li class="sa-nav-separator"></li>
-                    <li class="sa-nav-label">Organization Management</li>
-                    <li class="nav-item">
-                        <a href="/superadmin/organizations/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                            <span>Organizations</span>
-                        </a>
-                    </li>
-                    {% else %}
-                    <li class="sa-nav-separator"></li>
-                    <li class="sa-nav-label">Organization &amp; Masters</li>
-                    <li class="nav-item">
-                        <a href="/superadmin/organizations/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                            <span>Departments &amp; Cost Centers</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/superadmin/locations/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                            <span>Locations</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/superadmin/users/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                            <span>Manage Users &amp; Roles</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/vendors/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                            <span>Vendor Management</span>
-                        </a>
-                    </li>
-
-                    <li class="sa-nav-separator"></li>
-                    <li class="sa-nav-label">Policies &amp; Rules</li>
-                    <li class="nav-item">
-                        <a href="/superadmin/policies/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                            <span>Approval Policies</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/superadmin/budgets/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                            <span>Budget Configuration</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/invoices/settings/tolerances/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                            <span>Business Rules</span>
-                        </a>
-                    </li>
-
-                    <li class="sa-nav-separator"></li>
-                    <li class="sa-nav-label">Oversight &amp; Audit</li>
-                    <li class="nav-item">
-                        <a href="/notifications/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                            <span>Notifications &amp; Alerts</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/reports/hub/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                            <span>Reports &amp; Analytics</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="/superadmin/audit/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                            <span>Audit Logs</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </div>
-        </aside>
+    {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/admin/' profile_dropdown_id='adminIndexProfileDropdown' %}
 
     <!-- MAIN DASHBOARD CONTENT AREA -->
-    <div class="flex-grow-1 d-flex flex-column overflow-hidden" style="min-width: 0;">
+    <div class="d-flex flex-column flex-grow-1 admin-index-layout-container overflow-hidden" style="min-width: 0; min-height: calc(100vh - 70px);">
 
         <!-- DASHBOARD BODY CONTAINER -->
         <main class="flex-grow-1 p-3 p-md-4">
@@ -1009,7 +1101,6 @@
         </main>
     </div>
 </div>
-</div>
 
 <!-- Bootstrap 5 JS & HTMX for Frontend Interactivity -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -1021,6 +1112,88 @@
             event.detail.headers['X-CSRFToken'] = csrfToken;
         }
     });
+
+    function updateSidebarToggleState(isCollapsed) {
+        const toggleBtns = document.querySelectorAll('.sidebar-toggle-btn');
+        toggleBtns.forEach(btn => {
+            const iconCollapse = btn.querySelector('.sidebar-icon-collapse');
+            const iconExpand = btn.querySelector('.sidebar-icon-expand');
+            const label = isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar';
+
+            if (iconCollapse && iconExpand) {
+                if (isCollapsed) {
+                    iconCollapse.classList.add('d-none');
+                    iconExpand.classList.remove('d-none');
+                } else {
+                    iconCollapse.classList.remove('d-none');
+                    iconExpand.classList.add('d-none');
+                }
+            }
+
+            btn.setAttribute('aria-label', label);
+            btn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+            btn.setAttribute('title', label);
+            btn.setAttribute('data-bs-original-title', label);
+
+            if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                const tooltipInstance = bootstrap.Tooltip.getInstance(btn);
+                if (tooltipInstance) {
+                    tooltipInstance.hide();
+                    tooltipInstance.setContent({ '.tooltip-inner': label });
+                }
+            }
+        });
+    }
+
+    function initSidebarToggle() {
+        const toggleBtns = document.querySelectorAll('.sidebar-toggle-btn');
+        if (!toggleBtns.length) return;
+
+        const isDesktop = window.innerWidth >= 992;
+        const savedState = localStorage.getItem('ps_sidebar_collapsed');
+
+        if (isDesktop && savedState === 'true') {
+            document.body.classList.add('sidebar-collapsed');
+            updateSidebarToggleState(true);
+        } else if (isDesktop) {
+            document.body.classList.remove('sidebar-collapsed');
+            updateSidebarToggleState(false);
+        } else {
+            updateSidebarToggleState(true);
+        }
+
+        toggleBtns.forEach(btn => {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                let tip = bootstrap.Tooltip.getInstance(btn);
+                if (!tip) {
+                    new bootstrap.Tooltip(btn, {
+                        boundary: 'window',
+                        container: 'body'
+                    });
+                }
+            }
+
+            if (btn.dataset.toggleBound === 'true') return;
+            btn.dataset.toggleBound = 'true';
+
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const isDesktopNow = window.innerWidth >= 992;
+
+                if (isDesktopNow) {
+                    const nowCollapsed = document.body.classList.toggle('sidebar-collapsed');
+                    try {
+                        localStorage.setItem('ps_sidebar_collapsed', nowCollapsed ? 'true' : 'false');
+                    } catch(err) {}
+                    updateSidebarToggleState(nowCollapsed);
+                } else {
+                    document.body.classList.toggle('sidebar-mobile-open');
+                }
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', initSidebarToggle);
 </script>
 {% endblock %}
 
