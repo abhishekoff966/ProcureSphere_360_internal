@@ -71,7 +71,7 @@
                         <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.05em; font-size: 0.72rem;">TOTAL BUDGET ALLOCATED</span>
                         <span class="badge rounded-pill text-bg-success px-2.5 py-1">Allocated</span>
                     </div>
-                    <div class="h3 fw-bold mb-0 mt-1" style="color:#10B981;">${{ metrics.allocated_budget|floatformat:2|default:"0.00" }}</div>
+                    <div class="h3 fw-bold mb-0 mt-1" style="color:#10B981;">₹{{ metrics.allocated_budget|floatformat:2|default:"0.00" }}</div>
                     <div class="mt-3 pt-2 border-top small text-secondary d-flex justify-content-between align-items-center" style="font-size: 0.78rem;">
                         <span>Across all cost centers</span>
                         <span class="fw-semibold d-flex align-items-center" style="color:#10B981;">Budgets <i class="fa-solid fa-arrow-right ms-1"></i></span>

@@ -67,12 +67,19 @@
                 </div>
             </div>
             <div class="col-12 col-sm-8 col-md-4 col-lg-3">
-                <select name="status" class="form-select text-secondary fw-medium">
+                <select name="status" class="form-select text-secondary fw-medium" style="background-image: url(&quot;data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e&quot;) !important; background-repeat: no-repeat !important; background-position: right 0.85rem center !important; background-size: 16px 12px !important; padding-right: 2.25rem !important;">
                     <option value="">All Statuses</option>
                     {% if active_tab == 'history' %}
                     <option value="APPROVED" {% if status_filter == 'APPROVED' %}selected{% endif %}>Approved</option>
                     <option value="REJECTED" {% if status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                    <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending Review</option>
+                    <option value="MANAGER_REVIEW" {% if status_filter == 'MANAGER_REVIEW' %}selected{% endif %}>Manager Review</option>
+                    <option value="SUBMITTED" {% if status_filter == 'SUBMITTED' %}selected{% endif %}>Submitted</option>
+                    <option value="BUDGET_REVIEW" {% if status_filter == 'BUDGET_REVIEW' %}selected{% endif %}>Budget Review</option>
+                    <option value="SOURCING" {% if status_filter == 'SOURCING' %}selected{% endif %}>In Sourcing</option>
+                    <option value="PO_ISSUED" {% if status_filter == 'PO_ISSUED' %}selected{% endif %}>PO Issued</option>
                     {% else %}
+                    <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending Review</option>
                     <option value="SUBMITTED" {% if status_filter == 'SUBMITTED' %}selected{% endif %}>Submitted</option>
                     <option value="MANAGER_REVIEW" {% if status_filter == 'MANAGER_REVIEW' %}selected{% endif %}>Manager Review</option>
                     <option value="BUDGET_REVIEW" {% if status_filter == 'BUDGET_REVIEW' %}selected{% endif %}>Budget Review</option>
@@ -109,7 +116,7 @@
                             </div>
                         </div>
                         <div class="text-end flex-shrink-0">
-                            <div class="fw-bold text-navy fs-6">${{ pr.total_amount|floatformat:2 }}</div>
+                            <div class="fw-bold text-navy fs-6">₹{{ pr.total_amount|floatformat:2 }}</div>
                             {% if pr.status == 'APPROVED' or pr.status == 'SOURCING' or pr.status == 'PO_ISSUED' %}
                                 <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 0.65rem;">
                                     <i class="fa-solid fa-check me-1"></i>Approved
@@ -117,6 +124,14 @@
                             {% elif pr.status == 'REJECTED' %}
                                 <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-0.5" style="font-size: 0.65rem;">
                                     <i class="fa-solid fa-xmark me-1"></i>Rejected
+                                </span>
+                            {% elif pr.status == 'MANAGER_REVIEW' or pr.status == 'SUBMITTED' %}
+                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size: 0.65rem;">
+                                    <i class="fa-solid fa-clock me-1"></i>{{ pr.get_status_display }}
+                                </span>
+                            {% elif pr.status == 'BUDGET_REVIEW' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-0.5" style="font-size: 0.65rem;">
+                                    <i class="fa-solid fa-triangle-exclamation me-1"></i>Budget Review
                                 </span>
                             {% else %}
                                 <span class="badge bg-secondary rounded-pill px-2 py-0.5" style="font-size: 0.65rem;">{{ pr.get_status_display }}</span>
@@ -155,7 +170,7 @@
                                 <div class="text-muted small"><code>{{ pr.pr_number }}</code> &bull; {{ pr.department.name }}</div>
                             </td>
                             <td><span class="small text-dark fw-semibold text-truncate d-inline-block" style="max-width: 160px;">{{ pr.requester.email }}</span></td>
-                            <td class="text-end fw-bold text-navy text-nowrap">${{ pr.total_amount|floatformat:2 }}</td>
+                            <td class="text-end fw-bold text-navy text-nowrap">₹{{ pr.total_amount|floatformat:2 }}</td>
                             <td class="text-center text-nowrap">
                                 {% if pr.status == 'APPROVED' or pr.status == 'SOURCING' or pr.status == 'PO_ISSUED' %}
                                     <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
@@ -164,6 +179,14 @@
                                 {% elif pr.status == 'REJECTED' %}
                                     <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1">
                                         <i class="fa-solid fa-xmark me-1"></i> Rejected
+                                    </span>
+                                {% elif pr.status == 'MANAGER_REVIEW' or pr.status == 'SUBMITTED' %}
+                                    <span class="badge bg-warning-subtle text-dark border border-warning-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-clock me-1"></i> {{ pr.get_status_display }}
+                                    </span>
+                                {% elif pr.status == 'BUDGET_REVIEW' %}
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1">
+                                        <i class="fa-solid fa-triangle-exclamation me-1"></i> Budget Review
                                     </span>
                                 {% else %}
                                     <span class="badge bg-secondary rounded-pill px-3 py-1">{{ pr.get_status_display }}</span>
@@ -207,7 +230,7 @@
                             </div>
                         </div>
                         <div class="text-end flex-shrink-0">
-                            <div class="fw-bold text-navy fs-6">${{ pr.total_amount|floatformat:2 }}</div>
+                            <div class="fw-bold text-navy fs-6">₹{{ pr.total_amount|floatformat:2 }}</div>
                             {% if pr.status == 'BUDGET_REVIEW' %}
                                 <span class="badge bg-danger text-white rounded-pill px-2 py-0.5" style="font-size: 0.65rem;">Budget Review</span>
                             {% else %}
@@ -281,7 +304,7 @@
                             </td>
                             <td><span class="small text-dark fw-semibold text-truncate d-inline-block" style="max-width: 160px;">{{ pr.requester.email }}</span></td>
                             <td class="text-end fw-bold text-navy text-nowrap">
-                                ${{ pr.total_amount|floatformat:2 }}
+                                ₹{{ pr.total_amount|floatformat:2 }}
                                 {% if pr.status == 'BUDGET_REVIEW' %}
                                 <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-0 small d-block mt-1 text-nowrap" style="font-size: 0.68rem;">
                                     <i class="fa-solid fa-triangle-exclamation me-1"></i>Over Budget

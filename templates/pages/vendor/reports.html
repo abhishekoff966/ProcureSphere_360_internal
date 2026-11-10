@@ -87,7 +87,7 @@
                             <td class="ps-4 font-monospace fw-bold text-primary">{{ bid.bid_number }}</td>
                             <td class="fw-semibold text-dark">{{ bid.event.event_number }}</td>
                             <td><span class="badge bg-secondary rounded-pill">V{{ bid.version }} ({{ bid.versions.count }} snapshots)</span></td>
-                            <td class="fw-bold text-dark">${{ bid.total_bid_amount|floatformat:2 }}</td>
+                            <td class="fw-bold text-dark">₹{{ bid.total_bid_amount|floatformat:2 }}</td>
                             <td class="small text-muted">{{ bid.created_at|date:"M d, Y" }}</td>
                             <td class="small text-muted">{{ bid.submitted_at|date:"M d, Y H:i"|default:"Draft" }}</td>
                             <td><span class="badge bg-info text-dark">{{ bid.status }}</span></td>
@@ -177,7 +177,7 @@
                         <tr>
                             <td class="ps-4 font-monospace fw-bold text-primary">{{ po.po_number }}</td>
                             <td class="small text-muted">{{ po.po_date|date:"M d, Y" }}</td>
-                            <td class="fw-bold text-dark">${{ po.total_amount|floatformat:2 }}</td>
+                            <td class="fw-bold text-dark">₹{{ po.total_amount|floatformat:2 }}</td>
                             <td><span class="badge bg-primary">{{ po.status }}</span></td>
                             <td class="small text-muted">{{ po.acknowledged_at|date:"M d, Y H:i"|default:"Pending" }}</td>
                             <td class="small text-muted">{{ po.created_at|date:"M d, Y" }}</td>

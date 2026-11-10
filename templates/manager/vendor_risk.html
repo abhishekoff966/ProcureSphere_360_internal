@@ -602,7 +602,7 @@
                     </div>
                     <div class="col-6 col-md-3">
                         <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Total Committed Spend</div>
-                        <div class="fw-bold text-success fs-5" id="dossierTotalSpend">$0.00</div>
+                        <div class="fw-bold text-success fs-5" id="dossierTotalSpend">₹0.00</div>
                         <div class="small text-muted" id="dossierActivePos">0 active POs</div>
                     </div>
                 </div>
@@ -1628,7 +1628,7 @@
         document.getElementById('dossierRegNumber').textContent = vendor.registration_number ? 'Reg: ' + vendor.registration_number : 'Reg: Unspecified';
         document.getElementById('dossierRiskLevel').textContent = (vendor.current_risk_level || 'LOW') + ' RISK';
         document.getElementById('dossierStatus').textContent = vendor.status_display || vendor.status;
-        document.getElementById('dossierTotalSpend').textContent = '$' + Number(vendor.total_po_spend || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('dossierTotalSpend').textContent = '₹' + Number(vendor.total_po_spend || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         document.getElementById('dossierActivePos').textContent = (vendor.active_pos_count || 0) + ' active POs';
 
         // Documents

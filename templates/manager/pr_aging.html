@@ -55,7 +55,7 @@
                     </div>
                     <div class="d-flex align-items-baseline gap-2">
                         <h3 class="fw-bold text-success mb-0 font-heading" id="bracketUnder3dCount">-</h3>
-                        <span class="text-muted small" id="bracketUnder3dAmount">$0.00</span>
+                        <span class="text-muted small" id="bracketUnder3dAmount">₹0.00</span>
                     </div>
                     <div class="text-muted small mt-1" style="font-size: 0.75rem;">Processing within standard SLA</div>
                 </div>
@@ -72,7 +72,7 @@
                     </div>
                     <div class="d-flex align-items-baseline gap-2">
                         <h3 class="fw-bold text-warning mb-0 font-heading" id="bracket3to7dCount">-</h3>
-                        <span class="text-muted small" id="bracket3to7dAmount">$0.00</span>
+                        <span class="text-muted small" id="bracket3to7dAmount">₹0.00</span>
                     </div>
                     <div class="text-muted small mt-1" style="font-size: 0.75rem;">Approaching escalation SLA</div>
                 </div>
@@ -89,7 +89,7 @@
                     </div>
                     <div class="d-flex align-items-baseline gap-2">
                         <h3 class="fw-bold text-orange-emphasis mb-0 font-heading" id="bracket7to14dCount">-</h3>
-                        <span class="text-muted small" id="bracket7to14dAmount">$0.00</span>
+                        <span class="text-muted small" id="bracket7to14dAmount">₹0.00</span>
                     </div>
                     <div class="text-muted small mt-1" style="font-size: 0.75rem;">Requires proactive manager push</div>
                 </div>
@@ -106,7 +106,7 @@
                     </div>
                     <div class="d-flex align-items-baseline gap-2">
                         <h3 class="fw-bold text-danger mb-0 font-heading" id="bracketOver14dCount">-</h3>
-                        <span class="text-muted small" id="bracketOver14dAmount">$0.00</span>
+                        <span class="text-muted small" id="bracketOver14dAmount">₹0.00</span>
                     </div>
                     <div class="text-muted small mt-1" style="font-size: 0.75rem;">Severe workflow bottleneck</div>
                 </div>
@@ -774,7 +774,7 @@
     // Helpers & Formatters
     function formatCurrency(amount) {
         const num = Number(amount || 0);
-        return '$' + num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return '₹' + num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     function formatDate(dateString) {

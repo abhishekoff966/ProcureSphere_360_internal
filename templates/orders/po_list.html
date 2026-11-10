@@ -62,7 +62,7 @@
                             <div class="fw-semibold text-dark">{{ order.vendor.legal_name }}</div>
                             <div class="text-muted small"><code>{{ order.vendor.vendor_code }}</code></div>
                         </td>
-                        <td class="fw-bold text-navy">${{ order.total_amount|floatformat:2 }} {{ order.currency }}</td>
+                        <td class="fw-bold text-navy">₹{{ order.total_amount|floatformat:2 }} {{ order.currency }}</td>
                         <td>
                             <span class="badge bg-light text-dark border"><i class="fa-solid fa-truck-ramp-box me-1"></i> {{ order.receipt_status|default:"PENDING" }}</span>
                         </td>

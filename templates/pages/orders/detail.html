@@ -243,8 +243,8 @@
                                 <td class="text-center">
                                     <span class="badge bg-light text-dark border">{{ line.unit_of_measure }}</span>
                                 </td>
-                                <td class="text-end text-muted">${{ line.unit_price|floatformat:2 }}</td>
-                                <td class="text-end fw-bold text-dark pe-3">${{ line.line_total|floatformat:2 }}</td>
+                                <td class="text-end text-muted">₹{{ line.unit_price|floatformat:2 }}</td>
+                                <td class="text-end fw-bold text-dark pe-3">₹{{ line.line_total|floatformat:2 }}</td>
                             </tr>
                             {% empty %}
                             <tr>
@@ -255,15 +255,15 @@
                         <tfoot class="table-light">
                             <tr>
                                 <td colspan="7" class="text-end text-muted">Subtotal:</td>
-                                <td class="text-end fw-semibold text-dark pe-3">${{ po.subtotal|floatformat:2 }}</td>
+                                <td class="text-end fw-semibold text-dark pe-3">₹{{ po.subtotal|floatformat:2 }}</td>
                             </tr>
                             <tr>
                                 <td colspan="7" class="text-end text-muted">Tax Amount:</td>
-                                <td class="text-end fw-semibold text-dark pe-3">${{ po.tax_amount|floatformat:2 }}</td>
+                                <td class="text-end fw-semibold text-dark pe-3">₹{{ po.tax_amount|floatformat:2 }}</td>
                             </tr>
                             <tr class="table-primary border-top border-2 border-primary-subtle">
                                 <td colspan="7" class="text-end fw-bold text-dark fs-6">Total Amount:</td>
-                                <td class="text-end fw-bold text-primary fs-5 pe-3">${{ po.total_amount|floatformat:2 }}</td>
+                                <td class="text-end fw-bold text-primary fs-5 pe-3">₹{{ po.total_amount|floatformat:2 }}</td>
                             </tr>
                         </tfoot>
                     </table>

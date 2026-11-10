@@ -33,7 +33,7 @@
                             <li>
                                 <a class="dropdown-item py-2" href="{% url 'vendor_invoice_submit' p.id %}">
                                     <div class="fw-semibold">{{ p.po_number }}</div>
-                                    <small class="text-muted">${{ p.total_amount }} &bull; {{ p.get_status_display }}</small>
+                                    <small class="text-muted">₹{{ p.total_amount }} &bull; {{ p.get_status_display }}</small>
                                 </a>
                             </li>
                             {% endfor %}
@@ -108,7 +108,7 @@
                             <td class="text-muted small">{{ invoice.invoice_date|date:"M d, Y" }}</td>
                             <td class="text-muted small">{{ invoice.due_date|date:"M d, Y" }}</td>
                             <td>
-                                <span class="fw-bold text-dark">${{ invoice.total_amount }}</span>
+                                <span class="fw-bold text-dark">₹{{ invoice.total_amount }}</span>
                             </td>
                             <td>
                                 <a href="/vendor/purchase-orders/{{ invoice.po.id }}/" class="text-decoration-none text-primary fw-semibold">{{ invoice.po.po_number }}</a>

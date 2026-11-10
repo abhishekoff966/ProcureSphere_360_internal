@@ -133,7 +133,7 @@
                                 <span class="badge bg-secondary">{{ entry.get_entry_type_display }}</span>
                             {% endif %}
                         </td>
-                        <td class="fw-bold text-dark">${{ entry.amount|floatformat:2 }}</td>
+                        <td class="fw-bold text-dark">₹{{ entry.amount|floatformat:2 }}</td>
                         <td><code>{{ entry.reference_number }}</code></td>
                         <td class="text-muted small pe-4">{{ entry.description }}</td>
                     </tr>

@@ -113,7 +113,7 @@
                             <span class="badge bg-light text-dark border">{{ exception.department.name }}</span>
                         </td>
                         <td><span class="badge bg-secondary">{{ exception.cost_center.code }}</span></td>
-                        <td class="text-end fw-bold text-danger">${{ exception.total_amount|floatformat:2 }}</td>
+                        <td class="text-end fw-bold text-danger">₹{{ exception.total_amount|floatformat:2 }}</td>
                         <td class="text-end pe-4">
                             <div class="d-inline-flex gap-2">
                                 <form action="{% url 'approvals_inbox' %}" method="POST"

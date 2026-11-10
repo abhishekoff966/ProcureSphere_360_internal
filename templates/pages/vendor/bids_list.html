@@ -93,7 +93,7 @@
                             <td>
                                 <span class="badge bg-dark">{{ item.event.event_type }}</span>
                             </td>
-                            <td class="fw-bold text-dark fs-6">${{ item.bid.total_bid_amount|floatformat:2 }}</td>
+                            <td class="fw-bold text-dark fs-6">₹{{ item.bid.total_bid_amount|floatformat:2 }}</td>
                             <td>
                                 <span class="badge bg-secondary rounded-pill">V{{ item.bid.version }}</span>
                             </td>

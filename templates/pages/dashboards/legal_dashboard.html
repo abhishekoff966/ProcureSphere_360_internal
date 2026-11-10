@@ -44,7 +44,7 @@
         <div class="d-flex gap-2 flex-wrap align-items-center">
             <div class="bg-white border rounded-pill px-3 py-1.5 shadow-sm text-start d-none d-sm-inline-block">
                 <span class="text-muted text-uppercase fw-bold me-1" style="font-size: 0.65rem;">Portfolio:</span>
-                <span class="fw-bold text-primary font-heading">${{ metrics.total_contract_value|floatformat:2 }}</span>
+                <span class="fw-bold text-primary font-heading">₹{{ metrics.total_contract_value|floatformat:2 }}</span>
             </div>
             <a href="{% url 'contracts_list' %}" class="btn btn-outline-dark btn-sm rounded-pill px-3">
                 <i class="fa-solid fa-file-contract me-1"></i> Contract Register
@@ -148,7 +148,7 @@
                         <div>
                             <span class="text-muted small fw-bold text-uppercase" style="letter-spacing: 0.05em; font-size: 0.7rem;">Total Contract Value</span>
                             <div class="d-flex align-items-baseline gap-2 mt-1">
-                                <h3 class="fw-bold mb-0 text-success fs-3">${{ metrics.total_contract_value|floatformat:2 }}</h3>
+                                <h3 class="fw-bold mb-0 text-success fs-3">₹{{ metrics.total_contract_value|floatformat:2 }}</h3>
                             </div>
                             <div class="text-success mt-2 fw-semibold small d-flex align-items-center" style="font-size: 0.75rem;">
                                 <span>Committed Portfolio</span>
@@ -598,7 +598,7 @@
                                             <div class="fw-semibold text-dark small text-truncate" style="max-width: 200px;" title="{{ contract.vendor.legal_name }}">{{ contract.vendor.legal_name }}</div>
                                         </div>
                                     </td>
-                                    <td class="fw-bold text-success small">${{ contract.contract_value|floatformat:2 }}</td>
+                                    <td class="fw-bold text-success small">₹{{ contract.contract_value|floatformat:2 }}</td>
                                     <td class="small text-muted text-nowrap">{{ contract.start_date|date:"M d, Y" }} &rarr; {{ contract.end_date|date:"M d, Y" }}</td>
                                     <td class="text-end pe-3">
                                         <a href="{% url 'contract_detail' contract_id=contract.id %}" class="btn btn-warning btn-sm rounded-pill px-3 fw-bold text-dark shadow-sm">

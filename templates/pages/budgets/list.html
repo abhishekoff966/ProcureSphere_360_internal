@@ -96,31 +96,31 @@
     <div class="col-6 col-md">
         <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-secondary border-4">
             <div class="text-muted small fw-bold text-uppercase">Allocated</div>
-            <div class="fs-5 fw-bold text-dark mt-1">${{ totals.allocated|floatformat:2 }}</div>
+            <div class="fs-5 fw-bold text-dark mt-1">₹{{ totals.allocated|floatformat:2 }}</div>
         </div>
     </div>
     <div class="col-6 col-md">
         <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-warning border-4">
             <div class="text-muted small fw-bold text-uppercase">Reserved (PR)</div>
-            <div class="fs-5 fw-bold text-warning mt-1">${{ totals.reserved|floatformat:2 }}</div>
+            <div class="fs-5 fw-bold text-warning mt-1">₹{{ totals.reserved|floatformat:2 }}</div>
         </div>
     </div>
     <div class="col-6 col-md">
         <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-primary border-4">
             <div class="text-muted small fw-bold text-uppercase">Committed (PO)</div>
-            <div class="fs-5 fw-bold text-primary mt-1">${{ totals.committed|floatformat:2 }}</div>
+            <div class="fs-5 fw-bold text-primary mt-1">₹{{ totals.committed|floatformat:2 }}</div>
         </div>
     </div>
     <div class="col-6 col-md">
         <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-danger border-4">
             <div class="text-muted small fw-bold text-uppercase">Actual Spend</div>
-            <div class="fs-5 fw-bold text-danger mt-1">${{ totals.actual|floatformat:2 }}</div>
+            <div class="fs-5 fw-bold text-danger mt-1">₹{{ totals.actual|floatformat:2 }}</div>
         </div>
     </div>
     <div class="col-12 col-md">
         <div class="card border-0 shadow-sm rounded-4 p-3 bg-white border-start border-success border-4">
             <div class="text-muted small fw-bold text-uppercase">Available</div>
-            <div class="fs-5 fw-bold text-success mt-1">${{ totals.available|floatformat:2 }}</div>
+            <div class="fs-5 fw-bold text-success mt-1">₹{{ totals.available|floatformat:2 }}</div>
         </div>
     </div>
 </div>
@@ -152,11 +152,11 @@
                             <span class="badge bg-light text-dark border">{{ budget.cost_center.department.name }}</span>
                         </td>
                         <td>{{ budget.fiscal_period.name }}</td>
-                        <td class="fw-semibold text-secondary">${{ budget.allocated_amount|floatformat:2 }}</td>
-                        <td class="text-warning">${{ budget.reserved_amount|floatformat:2 }}</td>
-                        <td class="text-primary">${{ budget.committed_amount|floatformat:2 }}</td>
-                        <td class="text-danger fw-bold">${{ budget.actual_amount|floatformat:2 }}</td>
-                        <td class="text-success fw-bold pe-4">${{ budget.available_amount|floatformat:2 }}</td>
+                        <td class="fw-semibold text-secondary">₹{{ budget.allocated_amount|floatformat:2 }}</td>
+                        <td class="text-warning">₹{{ budget.reserved_amount|floatformat:2 }}</td>
+                        <td class="text-primary">₹{{ budget.committed_amount|floatformat:2 }}</td>
+                        <td class="text-danger fw-bold">₹{{ budget.actual_amount|floatformat:2 }}</td>
+                        <td class="text-success fw-bold pe-4">₹{{ budget.available_amount|floatformat:2 }}</td>
                     </tr>
                     {% empty %}
                     <tr>

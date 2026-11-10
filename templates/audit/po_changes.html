@@ -33,7 +33,7 @@
     <div class="col-sm-6 col-xl-4">
         <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-indigo">
             <div class="text-muted small fw-bold text-uppercase">TOTAL COMMITTED VALUE</div>
-            <div class="fs-3 fw-bold text-indigo font-heading mt-1">${{ summary.total_committed_value|default:"0.00" }}</div>
+            <div class="fs-3 fw-bold text-indigo font-heading mt-1">₹{{ summary.total_committed_value|default:"0.00" }}</div>
             <div class="text-muted small mt-1">Active Spend Commitments</div>
         </div>
     </div>
@@ -154,7 +154,7 @@
                         <td class="ps-4"><strong class="text-dark">{{ po.po_number|default:po.id }}</strong></td>
                         <td>{{ po.vendor_name|default:"Vendor" }}</td>
                         <td><span class="badge bg-light text-dark border">v{{ po.version|default:1 }}</span></td>
-                        <td><strong>${{ po.total_amount|default:"0.00" }}</strong></td>
+                        <td><strong>₹{{ po.total_amount|default:"0.00" }}</strong></td>
                         <td>
                             <span class="badge bg-light text-dark border">{{ po.status|default:"ISSUED" }}</span>
                         </td>

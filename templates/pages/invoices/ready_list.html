@@ -45,7 +45,7 @@
                         <strong>Vendor:</strong> {{ invoice.vendor.legal_name }}
                     </div>
                     <div class="mb-3">
-                        <strong>Total Amount:</strong> <span class="text-success fw-bold">${{ invoice.total_amount|floatformat:2 }}</span>
+                        <strong>Total Amount:</strong> <span class="text-success fw-bold">₹{{ invoice.total_amount|floatformat:2 }}</span>
                     </div>
 
                     <!-- Transaction Reference / UTR # -->
@@ -102,7 +102,7 @@
                 <tr>
                     <td class="ps-4 fw-bold" data-label="{{ invoice.invoice_number }}">{{ invoice.invoice_number }}</td>
                     <td data-label="{{ invoice.vendor.legal_name }}">{{ invoice.vendor.legal_name }}</td>
-                    <td class="text-success fw-bold" data-label="Total Amount">${{ invoice.total_amount|floatformat:2 }}</td>
+                    <td class="text-success fw-bold" data-label="Total Amount">₹{{ invoice.total_amount|floatformat:2 }}</td>
                     <td data-label="Due Date">{{ invoice.due_date|date:"M d, Y" }}</td>
                     <td class="pe-4 text-end" data-label="Actions">
                         <button type="button" class="btn btn-sm btn-primary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#paymentModal-{{ invoice.id }}">
