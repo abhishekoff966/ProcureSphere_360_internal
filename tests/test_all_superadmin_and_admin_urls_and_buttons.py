@@ -102,7 +102,7 @@ def test_all_superadmin_dashboard_urls_and_buttons(admin_dashboards_setup):
     ]
 
     for url in urls_to_test:
-        response = client.get(url)
+        response = client.get(url, follow=True)
         assert response.status_code == 200, f"Superadmin URL failed: {url} with status {response.status_code}"
 
 
@@ -138,8 +138,52 @@ def test_all_org_admin_dashboard_urls_and_buttons(admin_dashboards_setup):
     ]
 
     for url in urls_to_test:
-        response = client.get(url)
+        response = client.get(url, follow=True)
         assert response.status_code == 200, f"Org Admin URL failed: {url} with status {response.status_code}"
+
+
+@pytest.mark.django_db
+def test_superadmin_dashboard_navigation_never_shows_django_login(admin_dashboards_setup):
+    """
+    Regression test: ensures returning to dashboard from any superadmin subpage
+    never redirects to or renders the raw Django login screen (/admin/login/?next=...).
+    """
+    # 1. Org Admin (tenant admin without staff flag)
+    org_admin = admin_dashboards_setup["org_admin"]
+    org_admin.is_staff = False
+    org_admin.save(update_fields=["is_staff"])
+
+    client_org = Client()
+    client_org.force_login(org_admin)
+
+    # Subpage visit
+    res_subpage = client_org.get("/superadmin/organizations/")
+    assert res_subpage.status_code == 200
+    # Sidebar dashboard link should be /superadmin/
+    assert 'href="/superadmin/"' in res_subpage.content.decode("utf-8")
+
+    # Accessing /admin/dashboard/ must redirect cleanly to /superadmin/
+    res_dash_redirect = client_org.get("/admin/dashboard/")
+    assert res_dash_redirect.status_code == 302
+    assert res_dash_redirect.url == "/superadmin/"
+
+    # Accessing /admin/ directly must redirect cleanly to /superadmin/ (not Django login)
+    res_admin_direct = client_org.get("/admin/", follow=True)
+    assert res_admin_direct.status_code == 200
+    assert res_admin_direct.request["PATH_INFO"] == "/superadmin/"
+    assert "login" not in res_admin_direct.request["PATH_INFO"]
+
+    # 2. Global Superadmin
+    client_global = Client()
+    client_global.force_login(admin_dashboards_setup["global_superadmin"])
+    res_global_subpage = client_global.get("/superadmin/organizations/")
+    assert res_global_subpage.status_code == 200
+    # Sidebar dashboard link should be /admin/
+    assert 'href="/admin/"' in res_global_subpage.content.decode("utf-8")
+
+    res_global_dash = client_global.get("/admin/dashboard/")
+    assert res_global_dash.status_code == 302
+    assert res_global_dash.url == "/admin/"
 
 
 @pytest.mark.django_db

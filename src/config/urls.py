@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.http import JsonResponse
+from django.shortcuts import redirect
 from django.urls import include, path, re_path
 from django.views.generic.base import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -21,6 +22,20 @@ from apps.core.views import (
 
 from .healthchecks import health, readyz
 
+def admin_dashboard_dispatch_view(request):
+    """
+    Intelligent dispatch for /admin/dashboard/:
+    - Anonymous: forward to /login/
+    - Platform Superadmin (superuser without assigned organization): /admin/
+    - Tenant / Org Admin & others: canonical /superadmin/
+    """
+    if not request.user.is_authenticated:
+        return redirect("/login/")
+    if request.user.is_superuser and not getattr(request.user, "organization_id", None):
+        return redirect("/admin/")
+    return redirect("/superadmin/")
+
+
 urlpatterns = [
     path("robots.txt", robots_txt, name="robots_txt"),
     path("sitemap.xml", sitemap_xml, name="sitemap_xml"),
@@ -29,7 +44,7 @@ urlpatterns = [
     path("readyz", readyz, name="readyz"),
     re_path(r"^[Qq]uit/?$", RedirectView.as_view(url="/", permanent=False)),
     re_path(r"^.*prompts\.json$", lambda request: JsonResponse({})),
-    path("admin/dashboard/", RedirectView.as_view(url="/admin/", permanent=False), name="admin_dashboard"),
+    path("admin/dashboard/", admin_dashboard_dispatch_view, name="admin_dashboard"),
     path("admin/logout/", portal_logout_view, name="admin_logout_override"),
     path("admin/", admin.site.urls),
     path("login/", portal_login_view, name="login"),

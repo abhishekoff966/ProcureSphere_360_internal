@@ -1,6 +1,7 @@
 from django import forms
 
 from django.contrib import admin, messages
+from django.shortcuts import redirect
 
 from django.db.models import Q
 
@@ -1056,6 +1057,23 @@ admin.site.site_header = "ProcureSphere 360 — Platform Administration"
 admin.site.site_title = "ProcureSphere 360 Super Admin"
 
 admin.site.index_title = "Super Admin Control Center & Multi-Tenant Manager"
+
+_orig_admin_login = admin.site.login
+
+
+def _safe_admin_login(request, extra_context=None):
+    """
+    Prevents authenticated non-platform-superadmin users (e.g. Org Super Admins)
+    from being kicked to the raw Django login screen when accessing /admin/.
+    Redirects them seamlessly to their canonical portal dashboard.
+    """
+    if request.user.is_authenticated:
+        from apps.core.views import get_dashboard_url_for_user
+        return redirect(get_dashboard_url_for_user(request.user))
+    return _orig_admin_login(request, extra_context=extra_context)
+
+
+admin.site.login = _safe_admin_login
 
 
 
