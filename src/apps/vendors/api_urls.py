@@ -383,7 +383,7 @@ class VendorRiskAndHistoryPermission(BasePermission):
         from apps.accounts.models import Role
         if request.method in SAFE_METHODS:
             return role in {Role.SUPER_ADMIN, Role.PROC_EXEC, Role.PROC_MGR, Role.AUDITOR}
-        return role in {Role.SUPER_ADMIN, Role.PROC_MGR}
+        return role in {Role.SUPER_ADMIN, Role.PROC_MGR, Role.PROC_EXEC}
 
 class VendorViewSet(viewsets.ModelViewSet):
     queryset = (

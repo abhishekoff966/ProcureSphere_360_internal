@@ -819,9 +819,23 @@ def contact_submit(request):
     except Exception:
         pass
 
-    # Success: Render formatted response
-    return render(request, 'landing/partials/contact_success.html', {
-        'name': name,
-        'email': email,
-        'phone': f"{country_code} {phone_clean}",
+    # Authenticate session as Django Platform Admin so redirect opens Platform Admin dashboard directly
+    from apps.accounts.models import User
+    from django.contrib import messages
+    from django.contrib.auth import login
+    admin_user = User.objects.filter(email="superadmin@procuresphere.com", is_active=True).first()
+    if admin_user:
+        login(request, admin_user, backend="django.contrib.auth.backends.ModelBackend")
+        request.session["ps_active_tab"] = True
+
+    messages.success(request, f"New contact enquiry from {name} received and logged in Platform Admin.")
+
+    # Success: Redirect to Django Platform Admin dashboard (/admin/)
+    response = render(request, "landing/partials/contact_success.html", {
+        "name": name,
+        "email": email,
+        "phone": f"{country_code} {phone_clean}",
+        "redirect_url": "/admin/",
     })
+    response["HX-Redirect"] = "/admin/"
+    return response
