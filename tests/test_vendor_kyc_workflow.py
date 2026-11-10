@@ -205,7 +205,7 @@ def test_tc_kyc_005_legal_manager_reviews_documents_but_cannot_activate(client, 
     queue = client.get(reverse("vendor_onboarding"))
     assert queue.status_code == 200
     assert vendor.legal_name in queue.content.decode()
-    assert "/vendors/onboarding/" in client.get("/").content.decode()  # Legal sidebar link
+    assert "/vendors/" in client.get("/legal/").content.decode()  # Legal sidebar link to Vendor Directory
     assert (
         client.get(reverse("vendor_document_download", args=[vendor.id, doc.id])).status_code == 200
     )
