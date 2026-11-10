@@ -103,6 +103,8 @@ class UserAdmin(BaseUserAdmin):
                 kwargs["queryset"] = Department.objects.filter(organization=org)
             elif db_field.name == "cost_center":
                 kwargs["queryset"] = CostCenter.objects.filter(department__organization=org)
+            elif db_field.name == "role":
+                kwargs["queryset"] = Role.objects.exclude(code=Role.VENDOR_USER).order_by("name")
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def save_model(self, request, obj, form, change):

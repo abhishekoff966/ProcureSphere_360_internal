@@ -132,12 +132,9 @@
   input[type="number"],
   input[type="tel"],
   textarea,
-  select,
   .form-control,
-  .form-select,
   .modal input,
-  .modal textarea,
-  .modal select {
+  .modal textarea {
     background-color: #ffffff !important;
     background: #ffffff !important;
     color: #1e293b !important;
@@ -145,12 +142,42 @@
     border: 1px solid #cbd5e1 !important;
   }
 
+  /* Dropdown Select Controls across Admin workspace with persistent dropdown arrow */
+  select,
+  .form-select,
+  .modal select {
+    background-color: #ffffff !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.85rem center !important;
+    background-size: 16px 12px !important;
+    padding-right: 2.25rem !important;
+    color: #1e293b !important;
+    -webkit-text-fill-color: #1e293b !important;
+    border: 1px solid #cbd5e1 !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+  }
+
   input:focus,
   textarea:focus,
-  select:focus,
-  .form-control:focus,
-  .form-select:focus {
+  .form-control:focus {
     background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15) !important;
+  }
+
+  select:focus,
+  .form-select:focus,
+  .modal select:focus {
+    background-color: #ffffff !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%231677FF' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.85rem center !important;
+    background-size: 16px 12px !important;
+    padding-right: 2.25rem !important;
     color: #0f172a !important;
     border-color: #3b82f6 !important;
     box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15) !important;
@@ -545,7 +572,7 @@
     <!-- LEFT SIDEBAR (No icons/emojis, light blue gradient) -->
     <aside id="saSidebar" class="offcanvas-lg offcanvas-start sa-sidebar d-flex flex-column flex-shrink-0" tabindex="-1" aria-labelledby="saSidebarLabel">
         <!-- Sidebar Brand Header (Logo + Toggle Button) -->
-        {% include 'partials/sidebar_header.html' with sidebar_id='saSidebar' dashboard_url='/admin/' %}
+        {% include 'partials/sidebar_header.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' %}
         <!-- Sidebar Workspace Header -->
         <div class="px-2 pt-2">
             <div class="workspace-heading sa-workspace-header">
@@ -558,7 +585,7 @@
         <div class="flex-grow-1 overflow-y-auto px-2 py-2">
             <ul class="nav nav-pills flex-column gap-1" id="menu">
                 <li class="nav-item">
-                    <a href="/admin/" class="nav-link sa-nav-link rounded-3 py-2 px-3 active">
+                    <a href="/superadmin/" class="nav-link sa-nav-link rounded-3 py-2 px-3 {% if request.path == '/superadmin/' or request.path == '/' %}active{% endif %}">
                         <span>Dashboard</span>
                     </a>
                 </li>
@@ -600,7 +627,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/vendors/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                    <a href="/superadmin/vendors/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
                         <span>Vendor Management</span>
                     </a>
                 </li>
@@ -618,7 +645,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/invoices/settings/tolerances/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                    <a href="/superadmin/rules/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
                         <span>Business Rules</span>
                     </a>
                 </li>
@@ -631,12 +658,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/notifications/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                    <a href="/superadmin/notifications/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
                         <span>Notifications &amp; Alerts</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/reports/hub/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                    <a href="/superadmin/reports/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
                         <span>Reports &amp; Analytics</span>
                     </a>
                 </li>
@@ -651,7 +678,7 @@
     </aside>
 
     <!-- GLOBAL ENTERPRISE STANDARDIZED NAVBAR -->
-    {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/admin/' profile_dropdown_id='adminIndexProfileDropdown' %}
+    {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' profile_dropdown_id='adminIndexProfileDropdown' notification_url='/superadmin/notifications/' %}
 
     <!-- MAIN DASHBOARD CONTENT AREA -->
     <div class="d-flex flex-column flex-grow-1 admin-index-layout-container overflow-hidden" style="min-width: 0; min-height: calc(100vh - 70px);">

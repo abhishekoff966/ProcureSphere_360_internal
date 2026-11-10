@@ -1,13 +1,8 @@
 from decimal import Decimal, InvalidOperation
 
 from django import forms
-
 from django.contrib.auth import password_validation
 from django.db.models import Q
-
-from django.db.models import Q
-from django.contrib.auth import password_validation
-
 from django.utils import timezone
 
 from apps.accounts.models import Role, User
@@ -15,6 +10,13 @@ from apps.accounts.password_utils import generate_secure_password
 from apps.approvals.models import ApprovalPolicy
 from apps.budgets.models import Budget
 from apps.organization.models import CostCenter, Department, FiscalPeriod, Location, Organization
+from apps.organization.validators import (
+    validate_org_address,
+    validate_org_admin_email,
+    validate_org_code,
+    validate_org_name,
+    validate_org_tax_identifier,
+)
 
 
 def _get_form_scoped_org(request):
@@ -229,7 +231,7 @@ class UserAdminForm(forms.ModelForm):
         if not scoped_org and self.instance and getattr(self.instance, "organization_id", None):
             scoped_org = self.instance.organization
 
-        role_qs = Role.objects.all().order_by("name")
+        role_qs = Role.objects.exclude(code=Role.VENDOR_USER).order_by("name")
         if scoped_org:
             # Exclude roles already assigned in this organization, EXCEPT Role.REQUESTER which is unlimited
             assigned_user_qs = User.objects.filter(
@@ -546,6 +548,9 @@ class UserAdminForm(forms.ModelForm):
         cleaned_data = super().clean()
 
         role = cleaned_data.get("role")
+
+        if role and getattr(role, "code", "") == Role.VENDOR_USER:
+            self.add_error("role", "Vendor Portal Users cannot be created or assigned here. Please manage vendors in the Vendor Management portal.")
 
         # Enforce single user per role in organization, EXCEPT Role.REQUESTER which is unlimited
         if role and role.code != Role.REQUESTER:
@@ -1091,7 +1096,7 @@ class OrganizationAdminForm(forms.ModelForm):
     proc_mgr_password = forms.CharField(
         label="Manager Password (Optional)",
         required=False,
-        widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Leave blank to auto-generate"}),
+        widget=forms.PasswordInput(attrs={"class": "form-control", "id": "id_proc_mgr_password", "placeholder": "Leave blank to auto-generate"}),
         help_text="Leave blank to auto-generate secure password.",
     )
 
@@ -1117,7 +1122,7 @@ class OrganizationAdminForm(forms.ModelForm):
     auditor_password = forms.CharField(
         label="Auditor Password (Optional)",
         required=False,
-        widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Leave blank to auto-generate"}),
+        widget=forms.PasswordInput(attrs={"class": "form-control", "id": "id_auditor_password", "placeholder": "Leave blank to auto-generate"}),
         help_text="Leave blank to auto-generate secure password.",
     )
 
@@ -1211,7 +1216,7 @@ class OrganizationAdminForm(forms.ModelForm):
 
 
 
-        is_create = not self.instance or not self.instance.pk
+        is_create = not self.instance or (getattr(self.instance, "_state", None) and self.instance._state.adding) or not self.instance.pk
 
 
 
@@ -1262,7 +1267,7 @@ class OrganizationAdminForm(forms.ModelForm):
                 "onfocus": "this.removeAttribute('readonly');",
                 "value": "",
             })
-        elif self.instance:
+        elif self.instance and self.instance.pk and not (getattr(self.instance, "_state", None) and self.instance._state.adding):
             if self.instance.admin_user:
                 self.fields["admin_email"].initial = self.instance.admin_user.email
                 self.fields["admin_first_name"].initial = self.instance.admin_user.first_name
@@ -1290,10 +1295,10 @@ class OrganizationAdminForm(forms.ModelForm):
         admin_email = (cleaned_data.get("admin_email") or "").strip()
         proc_mgr_email = (cleaned_data.get("proc_mgr_email") or "").strip()
         auditor_email = (cleaned_data.get("auditor_email") or "").strip()
-        is_create = not self.instance or not self.instance.pk
+        is_create = not self.instance or (getattr(self.instance, "_state", None) and self.instance._state.adding) or not self.instance.pk
 
         if is_create and not admin_user and not admin_email:
-            self.add_error("admin_email", "Please provide an Admin Email for the organization administrator.")
+            self.add_error("admin_email", "Admin Email is mandatory (*). Please provide an email address for the organization administrator.")
 
         email_to_check = admin_email or (admin_user.email if admin_user else "")
         if email_to_check:
@@ -1306,7 +1311,7 @@ class OrganizationAdminForm(forms.ModelForm):
                         self.add_error("admin_email", "This user does not belong to this organization.")
                 elif existing_user.is_superuser and not existing_user.organization_id:
                     self.add_error("admin_email", "This user does not belong to this organization.")
-                elif is_create:
+                elif is_create and not admin_user:
                     self.add_error("admin_email", "This user does not belong to this organization.")
 
         if admin_user:
@@ -1319,46 +1324,45 @@ class OrganizationAdminForm(forms.ModelForm):
         if len(provided_emails) != len(set(provided_emails)):
             self.add_error(None, "Admin, Procurement Manager, and Auditor must each have unique email addresses.")
 
+        # Visual warning highlights on form widgets when errors are present
+        for field_name in ["code", "name", "tax_identifier", "address", "admin_email"]:
+            if field_name in self.errors and field_name in self.fields:
+                widget = self.fields[field_name].widget
+                current_classes = widget.attrs.get("class", "form-control")
+                if "is-invalid" not in current_classes:
+                    widget.attrs["class"] = f"{current_classes} is-invalid"
+                widget.attrs["style"] = "border: 2px solid #dc3545 !important; background-color: #fff8f8 !important;"
+
         return cleaned_data
 
-
     def clean_code(self):
-
-
-
-        code = self.cleaned_data.get("code", "").strip().upper()
-
-
-
-        if not code:
-
-
-
-            raise forms.ValidationError("Organization code is required.")
-
-
+        raw_code = self.cleaned_data.get("code", "")
+        code = validate_org_code(raw_code)
 
         qs = Organization.objects.filter(code=code)
-
-
-
-        if self.instance and self.instance.pk:
-
-
-
+        if self.instance and self.instance.pk and not (getattr(self.instance, "_state", None) and self.instance._state.adding):
             qs = qs.exclude(pk=self.instance.pk)
-
-
-
         if qs.exists():
-
-
-
             raise forms.ValidationError(f"Organization code '{code}' already exists.")
-
-
-
         return code
+
+    def clean_name(self):
+        raw_name = self.cleaned_data.get("name", "")
+        return validate_org_name(raw_name)
+
+    def clean_tax_identifier(self):
+        raw_tax = self.cleaned_data.get("tax_identifier", "")
+        return validate_org_tax_identifier(raw_tax)
+
+    def clean_address(self):
+        raw_address = self.cleaned_data.get("address", "")
+        return validate_org_address(raw_address)
+
+    def clean_admin_email(self):
+        raw_email = (self.cleaned_data.get("admin_email") or "").strip()
+        admin_user_selected = self.cleaned_data.get("admin_user") or self.data.get("admin_user")
+        is_create = not self.instance or (getattr(self.instance, "_state", None) and self.instance._state.adding) or not self.instance.pk
+        return validate_org_admin_email(raw_email, is_create=is_create, admin_user=admin_user_selected)
 
 
 
@@ -2631,7 +2635,7 @@ class PolicyAdminForm(forms.ModelForm):
 
         dept_qs = Department.objects.select_related("organization").all().order_by("name")
         cc_qs = CostCenter.objects.select_related("department").all().order_by("code")
-        role_qs = Role.objects.all().order_by("name")
+        role_qs = Role.objects.exclude(code=Role.VENDOR_USER).order_by("name")
         user_qs = User.objects.filter(is_active=True).order_by("email")
 
         if scoped_org:
@@ -2889,36 +2893,43 @@ class LocationAdminForm(forms.ModelForm):
 
 
     def __init__(self, *args, request=None, **kwargs):
-
         self.request = request
-
         super().__init__(*args, **kwargs)
-
+        self.fields["name"].required = True
+        self.fields["code"].required = True
+        self.fields["city"].required = True
+        self.fields["city"].error_messages["required"] = "City is mandatory for location."
         scoped_org = _get_form_scoped_org(request)
-
         if scoped_org:
-
             self.fields["organization"].queryset = Organization.objects.filter(id=scoped_org.id)
-
             self.fields["organization"].initial = scoped_org
-
             self.fields["organization"].empty_label = None
-
         else:
-
             self.fields["organization"].queryset = Organization.objects.filter(is_active=True).order_by("name")
-
             self.fields["organization"].empty_label = "-- Select Organization --"
 
-
-
         if not self.instance.pk:
-
             self.fields["country"].initial = "India"
-
             self.fields["is_active"].initial = True
 
+    def clean_name(self):
+        name = (self.cleaned_data.get("name") or "").strip()
+        if not name:
+            raise forms.ValidationError("Location name is required.")
+        if len(name) < 2 or len(name) > 150:
+            raise forms.ValidationError("Location name must be between 2 and 150 characters.")
+        return name
 
+    def clean_city(self):
+        city = (self.cleaned_data.get("city") or "").strip()
+        if not city:
+            raise forms.ValidationError("City is mandatory for location.")
+        if len(city) < 2 or len(city) > 100:
+            raise forms.ValidationError("City must be between 2 and 100 characters.")
+        import re
+        if not re.match(r"^[A-Za-z0-9\s\.\-']+$", city):
+            raise forms.ValidationError("City contains invalid characters.")
+        return city
 
     def clean_code(self):
 

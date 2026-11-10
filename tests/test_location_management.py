@@ -141,3 +141,15 @@ def test_location_views_and_access(client, location_test_data):
     resp_del = client.post(reverse("superadmin:location_delete", args=[blr_loc.id]))
     assert resp_del.status_code == 302
     assert not Location.objects.filter(id=blr_loc.id).exists()
+
+    # City mandatory validation test
+    resp_no_city = client.post(reverse("superadmin:location_create"), {
+        "organization": str(org.id),
+        "name": "Location Without City",
+        "code": "LOC-NOCITY",
+        "city": "",
+        "country": "India",
+    })
+    assert resp_no_city.status_code == 200
+    assert "City is mandatory for location." in resp_no_city.content.decode()
+    assert not Location.objects.filter(code="LOC-NOCITY").exists()
