@@ -143,3 +143,77 @@ class TestLandingContactEnquiryAdmin:
         res_req = client.get("/admin/core/contactenquiry/")
         assert res_req.status_code in (302, 403)
 
+    def test_contact_form_submission_redirects_to_django_platform_admin(self):
+        """
+        Submitting the public contact form authenticates as Platform Admin
+        and redirects directly to the Django Platform Admin dashboard (/admin/).
+        """
+        # Ensure superadmin user exists
+        sa_role = Role.objects.get_or_create(code=Role.SUPER_ADMIN, defaults={"name": "Super Admin"})[0]
+        User.objects.get_or_create(
+            email="superadmin@procuresphere.com",
+            defaults={
+                "role": sa_role,
+                "is_staff": True,
+                "is_superuser": True,
+                "is_active": True,
+            },
+        )
+
+        client = Client()
+        # HTMX submission (default landing page behavior)
+        response = client.post(
+            reverse("contact_submit"),
+            data={
+                "name": "Ananya Sharma",
+                "email": "ananya.sharma@enterprise.com",
+                "country_code": "+91",
+                "phone": "9876543210",
+                "message": "We would like to inspect the complete enterprise platform.",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 200
+        assert response.headers.get("HX-Redirect") == "/admin/"
+        assert response.wsgi_request.user.is_authenticated
+        assert response.wsgi_request.user.email == "superadmin@procuresphere.com"
+        assert response.wsgi_request.user.is_superuser
+
+        # Following to /admin/ delivers the Platform Admin dashboard
+        admin_res = client.get("/admin/")
+        assert admin_res.status_code == 200
+        content = admin_res.content.decode("utf-8")
+        assert "Super Admin Control Center" in content or "Platform Admin" in content
+        assert "admin-index-layout-container" in content
+        assert "saSidebar" in content
+        assert "sidebarToggleBtn" in content
+        assert "Contact Enquiries" in content
+
+    def test_platform_admin_layout_contains_clean_offsets_and_toggle(self):
+        """
+        Verify /admin/ includes the standardized header, sidebar, and layout offset classes.
+        """
+        sa_role = Role.objects.get_or_create(code=Role.SUPER_ADMIN, defaults={"name": "Super Admin"})[0]
+        superadmin, _ = User.objects.get_or_create(
+            email="superadmin@procuresphere.com",
+            defaults={
+                "role": sa_role,
+                "is_staff": True,
+                "is_superuser": True,
+                "is_active": True,
+            },
+        )
+
+        client = Client()
+        client.force_login(superadmin)
+        res = client.get("/admin/")
+        assert res.status_code == 200
+        content = res.content.decode("utf-8")
+
+        assert "admin-index-layout-container" in content
+        assert 'id="saSidebar"' in content
+        assert 'id="sidebarToggleBtn"' in content
+        assert "initSidebarToggle" in content
+        assert "Total Organizations" in content or "Total Users" in content
+
