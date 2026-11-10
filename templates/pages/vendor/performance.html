@@ -31,7 +31,7 @@
     <div class="card glass-card border-0 shadow-sm mb-4">
         <div class="card-body p-4">
             <div class="row align-items-center g-4">
-                <div class="col-md-3 text-center border-end-md">
+                <div class="col-12 col-md-3 text-center border-bottom pb-3 pb-md-0 border-md-bottom-0 border-md-end">
                     <div class="text-uppercase small text-muted fw-bold mb-2">Latest Period ({{ latest_scorecard.evaluation_period }})</div>
                     <div class="display-4 fw-bold {% if latest_scorecard.composite_score >= 85 %}text-success{% elif latest_scorecard.composite_score >= 70 %}text-primary{% elif latest_scorecard.composite_score >= 50 %}text-warning{% else %}text-danger{% endif %}">
                         {{ latest_scorecard.composite_score|floatformat:1 }}<span class="fs-4 text-muted">/100</span>
@@ -44,7 +44,7 @@
                     </div>
                 </div>
 
-                <div class="col-md-9">
+                <div class="col-12 col-md-9">
                     <div class="row g-3">
                         <!-- Delivery Score (30%) -->
                         <div class="col-sm-6 col-lg-3">

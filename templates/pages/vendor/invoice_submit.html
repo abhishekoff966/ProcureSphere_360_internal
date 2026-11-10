@@ -93,11 +93,11 @@
                         </div>
 
                         <div class="row g-2 mb-3">
-                            <div class="col-6">
+                            <div class="col-12 col-sm-6 mb-2 mb-sm-0">
                                 <label class="form-label small fw-semibold text-secondary">Invoice Date <span class="text-danger">*</span></label>
                                 <input type="date" name="invoice_date" class="form-control" value="{{ today }}" required>
                             </div>
-                            <div class="col-6">
+                            <div class="col-12 col-sm-6">
                                 <label class="form-label small fw-semibold text-secondary">Payment Due Date <span class="text-danger">*</span></label>
                                 <input type="date" name="due_date" class="form-control" value="{{ default_due_date }}" required>
                             </div>
@@ -173,16 +173,16 @@
                     {% if selected_po and selected_po.lines.exists %}
                     <div class="card-footer bg-light p-4 border-0">
                         <div class="d-flex flex-column align-items-end">
-                            <div class="d-flex justify-content-between w-50 mb-1">
+                            <div class="d-flex justify-content-between w-100 w-md-50 mb-1">
                                 <span class="text-muted">Subtotal:</span>
                                 <span class="fw-bold text-dark" id="displaySubtotal">${{ selected_po.subtotal }}</span>
                             </div>
-                            <div class="d-flex justify-content-between w-50 mb-1">
+                            <div class="d-flex justify-content-between w-100 w-md-50 mb-1">
                                 <span class="text-muted">Est. Tax (10%):</span>
                                 <span class="fw-semibold text-secondary" id="displayTax">${{ selected_po.tax_amount }}</span>
                             </div>
-                            <hr class="w-50 my-2">
-                            <div class="d-flex justify-content-between w-50 mb-3">
+                            <hr class="w-100 w-md-50 my-2">
+                            <div class="d-flex justify-content-between w-100 w-md-50 mb-3">
                                 <span class="fw-bold fs-5 text-dark">Invoice Total:</span>
                                 <span class="fw-bold fs-5 text-success" id="displayTotal">${{ selected_po.total_amount }}</span>
                             </div>
@@ -196,9 +196,9 @@
                             </div>
                         </div>
 
-                        <div class="d-flex justify-content-end gap-2">
-                            <a href="{% url 'vendor_invoices' %}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
-                            <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow-sm">
+                        <div class="d-flex flex-column-reverse flex-sm-row justify-content-end gap-2">
+                            <a href="{% url 'vendor_invoices' %}" class="btn btn-outline-secondary rounded-pill px-4 text-center">Cancel</a>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4 px-sm-5 fw-bold shadow-sm">
                                 <i class="fa-solid fa-paper-plane me-2"></i> Submit Invoice for Matching
                             </button>
                         </div>

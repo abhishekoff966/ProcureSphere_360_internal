@@ -211,7 +211,7 @@
     </div>
 
     <!-- Quick Navigation Subtabs -->
-    <ul class="nav nav-pills mb-4 gap-2 border-bottom pb-3">
+    <ul class="nav nav-pills vendor-scrollable-pills flex-nowrap overflow-x-auto mb-4 gap-2 border-bottom pb-3">
         <li class="nav-item">
             <a class="nav-link active rounded-pill px-4 small fw-semibold" href="#company-info">Company Information</a>
         </li>
@@ -803,7 +803,7 @@
 
 <!-- Modal: Edit Profile -->
 <div class="modal fade" id="editProfileModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
         <div class="modal-content glass-card">
             <form method="POST" action="{% url 'vendor_profile' %}" id="vendorProfileForm">
                 {% csrf_token %}
@@ -894,7 +894,7 @@
 
 <!-- Modal: Upload KYC Compliance Documents (Mandatory PAN, TAX, BANK + Other) -->
 <div class="modal fade" id="uploadKycModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
         <div class="modal-content glass-card border-0 shadow-lg">
             <form method="POST" action="{% url 'vendor_profile' %}" enctype="multipart/form-data" id="mandatoryKycUploadForm">
                 {% csrf_token %}
@@ -1127,7 +1127,7 @@
 
 <!-- Modal: Add Contact -->
 <div class="modal fade" id="addContactModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content glass-card">
             <form method="POST" action="{% url 'vendor_profile' %}">
                 {% csrf_token %}
@@ -1196,7 +1196,7 @@
 {% for c in contacts %}
 <!-- Modal: Edit Contact {{ c.id }} -->
 <div class="modal fade" id="editContactModal{{ c.id }}" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content glass-card">
             <form method="POST" action="{% url 'vendor_profile' %}">
                 {% csrf_token %}

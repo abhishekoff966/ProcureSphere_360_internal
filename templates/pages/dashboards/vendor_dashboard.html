@@ -11,10 +11,10 @@
                 Vendor Portal Dashboard
             </h3>
             <p class="text-muted mb-0 small">
-                Welcome, <strong>{{ user.email }}</strong> &bull; Sourcing participation, sealed bids, and purchase order governance.
+                Welcome, <strong>{{ vendor.legal_name|default:user.email }}</strong> &bull; Sourcing participation, sealed bids, and purchase order governance.
             </p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2">
             <a href="/vendor/sourcing/?tab=active" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
                 <i class="fa-solid fa-gavel me-1"></i> Active Sourcing
             </a>
@@ -155,7 +155,7 @@
     <!-- 8 Summary Metric Cards (Real backend data) -->
     <div class="row g-3 mb-4">
         <!-- 1. Active Invitations -->
-        <div class="col-6 col-md-3">
+        <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card glass-card h-100 border-start border-4 border-primary">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <span class="text-muted small fw-semibold text-uppercase">Active Invitations</span>
@@ -171,7 +171,7 @@
         </div>
 
         <!-- 2. Bids in Draft -->
-        <div class="col-6 col-md-3">
+        <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card glass-card h-100 border-start border-4 border-info">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <span class="text-muted small fw-semibold text-uppercase">Bids in Draft</span>
@@ -187,7 +187,7 @@
         </div>
 
         <!-- 3. Submitted Bids -->
-        <div class="col-6 col-md-3">
+        <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card glass-card h-100 border-start border-4 border-success">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <span class="text-muted small fw-semibold text-uppercase">Submitted Bids</span>
@@ -203,7 +203,7 @@
         </div>
 
         <!-- 4. Upcoming Deadlines -->
-        <div class="col-6 col-md-3">
+        <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card glass-card h-100 border-start border-4 border-danger">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <span class="text-muted small fw-semibold text-uppercase">Upcoming Deadlines</span>
@@ -219,7 +219,7 @@
         </div>
 
         <!-- 5. Pending Clarifications -->
-        <div class="col-6 col-md-3">
+        <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card glass-card h-100 border-start border-4 border-warning">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <span class="text-muted small fw-semibold text-uppercase">Pending Questions</span>
@@ -235,7 +235,7 @@
         </div>
 
         <!-- 6. POs Requiring Acknowledgement -->
-        <div class="col-6 col-md-3">
+        <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card glass-card h-100" style="border: 4px solid #00b0b9 !important; background: linear-gradient(135deg, rgba(0,176,185,0.08) 0%, rgba(255,255,255,1) 100%);">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <span class="text-muted small fw-semibold text-uppercase">POs Requiring Ack</span>
@@ -250,10 +250,8 @@
             </div>
         </div>
 
-
-
         <!-- 7. Active Purchase Orders -->
-        <div class="col-6 col-md-3">
+        <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card glass-card h-100 border-start border-4 border-secondary">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <span class="text-muted small fw-semibold text-uppercase">Active Purchase Orders</span>
@@ -269,7 +267,7 @@
         </div>
 
         <!-- 8. KYC/Compliance Status -->
-        <div class="col-6 col-md-3">
+        <div class="col-12 col-sm-6 col-xl-3">
             <div class="stat-card glass-card h-100 border-start border-4 {% if metrics.kyc_compliance_status == 'ACTIVE' %}border-success{% elif metrics.kyc_compliance_status == 'SUSPENDED' or metrics.kyc_compliance_status == 'REJECTED' %}border-danger{% else %}border-warning{% endif %}">
                 <div class="d-flex align-items-center justify-content-between mb-2">
                     <span class="text-muted small fw-semibold text-uppercase">KYC Status</span>
@@ -305,7 +303,7 @@
 
             {% if latest_scorecard %}
             <div class="row align-items-center g-3 pt-2">
-                <div class="col-md-3 text-center border-end-md">
+                <div class="col-12 col-md-3 text-center border-bottom pb-3 pb-md-0 border-md-bottom-0 border-md-end">
                     <div class="text-uppercase small text-muted fw-bold mb-1">Period: {{ latest_scorecard.evaluation_period }}</div>
                     <div class="display-5 fw-bold {% if latest_scorecard.composite_score >= 85 %}text-success{% elif latest_scorecard.composite_score >= 70 %}text-primary{% elif latest_scorecard.composite_score >= 50 %}text-warning{% else %}text-danger{% endif %}">
                         {{ latest_scorecard.composite_score|floatformat:1 }}<span class="fs-6 text-muted">/100</span>
@@ -317,9 +315,9 @@
                         {% else %}High Risk / Deficient{% endif %}
                     </span>
                 </div>
-                <div class="col-md-9">
+                <div class="col-12 col-md-9">
                     <div class="row g-2">
-                        <div class="col-sm-6 col-lg-3">
+                        <div class="col-12 col-sm-6 col-lg-3">
                             <div class="p-2 bg-light rounded-3">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="small text-muted fw-semibold" style="font-size: 0.75rem;">Delivery</span>
