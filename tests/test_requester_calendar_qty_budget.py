@@ -228,3 +228,170 @@ def test_pr_create_and_edit_rejects_empty_line_items(client, pr_setup):
     assert valid_pr.lines.count() == 1
     assert valid_pr.lines.first().item_description == "Initial Item"
 
+
+@pytest.mark.django_db
+def test_estimated_unit_price_zero_or_negative_rejected_in_service(pr_setup):
+    """BUG-015: Unit price must be strictly greater than zero in service."""
+    future_date = timezone.now().date() + timezone.timedelta(days=10)
+
+    # Unit price = 0
+    with pytest.raises(ValidationError, match="must be greater than zero"):
+        create_purchase_requisition_service(
+            title="Zero Price PR",
+            justification="Testing zero unit price",
+            requester=pr_setup["requester"],
+            department=pr_setup["dept"],
+            cost_center=pr_setup["cc"],
+            requested_delivery_date=future_date,
+            line_items=[
+                {
+                    "item_description": "Free Item",
+                    "quantity": 1,
+                    "estimated_unit_price": Decimal("0.00"),
+                }
+            ],
+        )
+
+    # Unit price < 0
+    with pytest.raises(ValidationError, match="must be greater than zero"):
+        create_purchase_requisition_service(
+            title="Negative Price PR",
+            justification="Testing negative unit price",
+            requester=pr_setup["requester"],
+            department=pr_setup["dept"],
+            cost_center=pr_setup["cc"],
+            requested_delivery_date=future_date,
+            line_items=[
+                {
+                    "item_description": "Negative Item",
+                    "quantity": 1,
+                    "estimated_unit_price": Decimal("-50.00"),
+                }
+            ],
+        )
+
+
+@pytest.mark.django_db
+def test_estimated_unit_price_zero_rejected_in_views(client, pr_setup):
+    """BUG-015 & BUG-016: Unit price must be > 0 in create and edit views."""
+    client.force_login(pr_setup["requester"])
+    future_date = (timezone.now().date() + timezone.timedelta(days=10)).isoformat()
+
+    # 1. Create with zero unit price
+    resp = client.post(
+        "/requisitions/create/",
+        {
+            "title": "Zero Price PR",
+            "justification": "Test justification",
+            "department": pr_setup["dept"].id,
+            "cost_center": pr_setup["cc"].id,
+            "requested_delivery_date": future_date,
+            "item_description[]": ["Zero Price Item"],
+            "quantity[]": ["2"],
+            "unit_of_measure[]": ["EA"],
+            "estimated_unit_price[]": ["0.00"],
+            "action_type": "save_draft",
+        },
+        follow=True,
+    )
+    assert any("Estimated unit price for line item 'Zero Price Item' must be greater than zero." in str(m) for m in resp.context["messages"])
+    assert PurchaseRequisition.objects.filter(title="Zero Price PR").count() == 0
+
+    # 2. Valid PR to edit
+    pr = create_purchase_requisition_service(
+        title="Valid PR",
+        justification="Valid justification",
+        requester=pr_setup["requester"],
+        department=pr_setup["dept"],
+        cost_center=pr_setup["cc"],
+        requested_delivery_date=future_date,
+        line_items=[
+            {
+                "item_description": "Initial Item",
+                "quantity": 1,
+                "estimated_unit_price": Decimal("50.00"),
+            }
+        ],
+    )
+
+    # 3. Edit with negative price
+    edit_resp = client.post(
+        f"/requisitions/{pr.pk}/edit/",
+        {
+            "title": "Valid PR - Edited",
+            "justification": "Valid justification edited",
+            "department": pr_setup["dept"].id,
+            "cost_center": pr_setup["cc"].id,
+            "requested_delivery_date": future_date,
+            "item_description[]": ["Initial Item"],
+            "quantity[]": ["1"],
+            "unit_of_measure[]": ["EA"],
+            "estimated_unit_price[]": ["-10.00"],
+        },
+        follow=True,
+    )
+    assert any("Estimated unit price for line item 'Initial Item' must be greater than zero." in str(m) for m in edit_resp.context["messages"])
+    pr.refresh_from_db()
+    assert pr.lines.first().estimated_unit_price == Decimal("50.00")
+
+
+@pytest.mark.django_db
+def test_create_requisition_ui_elements_and_indicators(client, pr_setup):
+    """BUG-012, BUG-014, BUG-021: Verify red asterisks, placeholders, and UOM column width in HTML."""
+    client.force_login(pr_setup["requester"])
+    resp = client.get("/requisitions/create/")
+    assert resp.status_code == 200
+    content = resp.content.decode("utf-8")
+
+    # BUG-012/013: High-visibility red asterisks
+    assert 'Requisition Title <span class="text-danger">*</span>' in content
+    assert 'Business Justification <span class="text-danger">*</span>' in content
+    assert 'Department <span class="text-danger">*</span>' in content
+    assert 'Cost Center <span class="text-danger">*</span>' in content
+    assert 'Required Delivery Date <span class="text-danger">*</span>' in content
+
+    # BUG-021: Placeholder in item description
+    assert 'placeholder="e.g. Dell Latitude 5540 Laptop"' in content
+
+    # BUG-015: min="0.01" on unit price input
+    assert 'min="0.01"' in content
+
+    # BUG-014: UOM min-width styling
+    assert 'min-width: 125px;' in content
+    assert 'style="min-width: 115px;"' in content
+
+    # Mandatory Line Item Alert Pop-up Modal
+    assert 'id="mandatoryLineItemModal"' in content
+    assert 'Default Line Item Cannot Be Deleted' in content
+    assert 'one mandatory line item' in content
+
+
+@pytest.mark.django_db
+def test_edit_requisition_mandatory_line_item_modal(client, pr_setup):
+    """Verify mandatory line item pop-up modal is present in edit requisition view."""
+    client.force_login(pr_setup["requester"])
+    future_date = (timezone.now().date() + timezone.timedelta(days=10)).isoformat()
+    pr = create_purchase_requisition_service(
+        title="Sample PR for Edit Modal",
+        justification="Testing edit modal",
+        requester=pr_setup["requester"],
+        department=pr_setup["dept"],
+        cost_center=pr_setup["cc"],
+        requested_delivery_date=future_date,
+        line_items=[
+            {
+                "item_description": "Default Item",
+                "quantity": 1,
+                "estimated_unit_price": Decimal("75.00"),
+            }
+        ],
+    )
+    resp = client.get(f"/requisitions/{pr.pk}/edit/")
+    assert resp.status_code == 200
+    content = resp.content.decode("utf-8")
+    assert 'id="mandatoryLineItemModal"' in content
+    assert 'Default Line Item Cannot Be Deleted' in content
+    assert 'one mandatory line item' in content
+
+
+
