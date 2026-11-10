@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ProcureSphere 360
 
 > **Enterprise Procurement, Vendor & Contract Management ERP (Source-to-Pay + AP Workflow)**  
@@ -96,3 +97,6 @@ black --check .
 - [`docs/demo_scripts.md`](docs/demo_scripts.md): Day-90 Technical Acceptance Demonstrations
 - [`docs/architecture.md`](docs/architecture.md): Architecture & Data Model Topology
 - [`docs/PROGRESS.md`](docs/PROGRESS.md): Delivery Progress Tracker
+=======
+# ProcureSphere_360_internal
+>>>>>>> personal/main
