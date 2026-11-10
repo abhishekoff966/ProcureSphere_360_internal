@@ -149,6 +149,22 @@ class TestGovernancePages:
         assert 'id="gov-status"' in content_gov
         assert '<button type="submit" class="btn btn-sm btn-dark">Apply</button>' in content_gov
 
+    def test_proc_exec_sidebar_does_not_contain_immutable_audit_report(self, client, procurement_world):
+        """
+        Procurement Executive dashboard sidebar must NOT contain Immutable Audit Report,
+        while maintaining reports (PR Aging, Sourcing Cycle, PO Status).
+        """
+        w = procurement_world
+        client.force_login(w["exec"])
+        resp = client.get("/procurement/")
+        assert resp.status_code == 200
+        content = resp.content.decode()
+        assert "Immutable Audit Report" not in content
+        assert reverse("proc_exec_audit_report") not in content
+        assert "PR Aging" in content
+        assert "Sourcing Cycle" in content
+        assert "PO Status" in content
+
 
 class TestSearchFilterPagination:
     def _ids(self, response):
@@ -512,7 +528,7 @@ class TestDocumentsAndApiSecurity:
         api_client.force_authenticate(procurement_world["requester"])
         assert api_client.get("/api/v1/vendors/").status_code == 403
         assert api_client.get("/api/v1/sourcing-events/events/").status_code == 403
-        assert api_client.get("/api/v1/scorecards/").json()["count"] == 0
+        assert api_client.get("/api/v1/scorecards/").status_code == 403
 
     def test_governance_api_actions_and_structured_errors(self, api_client, procurement_world):
         w = procurement_world
