@@ -44,7 +44,7 @@
                     </p>
                 </div>
 
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex flex-wrap align-items-center gap-2">
                     <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
                         <i class="fa-solid fa-print me-1"></i> Print / Save PDF
                     </button>
@@ -116,7 +116,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
                             {% if can_deliver %}
                             <button type="button" class="btn btn-success btn-sm fw-bold px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#deliverGoodsModal">
                                 <i class="fa-solid fa-truck-fast me-1"></i> Deliver Goods
@@ -529,7 +529,7 @@
 
     <!-- Deliver Goods Pop-up Modal -->
     <div class="modal fade" id="deliverGoodsModal" tabindex="-1" aria-labelledby="deliverGoodsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-lg">
                 <form method="post" action="{% url 'vendor_purchase_order_deliver' po_id=po.id %}">
                     {% csrf_token %}
@@ -609,9 +609,9 @@
                             <i class="fa-solid fa-circle-info me-1"></i>Stores Receiver will inspect these delivered goods upon arrival at the receiving dock.
                         </div>
                     </div>
-                    <div class="modal-footer bg-light">
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success btn-sm fw-bold px-3 shadow-sm">
+                    <div class="modal-footer bg-light d-flex flex-column-reverse flex-sm-row justify-content-end gap-2">
+                        <button type="button" class="btn btn-secondary btn-sm w-100 w-sm-auto" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success btn-sm fw-bold px-3 shadow-sm w-100 w-sm-auto">
                             <i class="fa-solid fa-truck-fast me-1"></i> Confirm Dispatch & Deliver Goods
                         </button>
                     </div>

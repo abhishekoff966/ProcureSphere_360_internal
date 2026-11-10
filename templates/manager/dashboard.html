@@ -22,9 +22,6 @@
             </p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <button type="button" onclick="openDashboardGovModal()" class="btn btn-outline-dark btn-sm rounded-pill px-3 fw-semibold" title="Execute Vendor Suspension or Reinstatement">
-                <i class="fa-solid fa-scale-balanced me-1"></i> Governance Action
-            </button>
             <a href="/manager/vendor-risk/?tab=suspension" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold" title="Vendor Suspension Desk">
                 <i class="fa-solid fa-scale-balanced me-1 text-danger"></i> Suspension Desk
             </a>
@@ -420,8 +417,11 @@
                     `;
                 }
 
+                const isHighRisk = (v.current_risk_level === 'HIGH');
+                const rowBorderClass = isHighRisk ? 'border-start border-4 border-danger' : '';
+
                 return `
-                    <tr class="align-middle">
+                    <tr class="align-middle ${rowBorderClass}">
                         <td class="ps-3">
                             <a href="/vendors/${v.id}/" class="fw-bold text-dark text-decoration-none hover-primary">${v.legal_name}</a>
                             <div class="d-flex align-items-center gap-2 mt-1">

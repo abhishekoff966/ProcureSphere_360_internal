@@ -334,7 +334,7 @@
 {% if can_withdraw %}
 <!-- Modal: Confirm Bid Withdrawal -->
 <div class="modal fade" id="withdrawBidModal" tabindex="-1" aria-labelledby="withdrawBidModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow">
             <form method="POST" action="{% url 'vendor_bid_withdraw' bid_id=bid.id %}">
                 {% csrf_token %}

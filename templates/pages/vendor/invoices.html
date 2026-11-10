@@ -51,7 +51,7 @@
     {% include 'partials/messages.html' %}
 
     <!-- Filter Tabs -->
-    <ul class="nav nav-pills mb-4 gap-2">
+    <ul class="nav nav-pills vendor-scrollable-pills flex-nowrap overflow-x-auto mb-4 gap-2">
         <li class="nav-item">
             <a class="nav-link rounded-pill px-3 fw-semibold {% if tab == 'all' or not tab %}active{% else %}bg-light text-dark{% endif %}" href="?tab=all">
                 All Invoices <span class="badge bg-secondary ms-1 rounded-pill">{{ counts.all }}</span>
