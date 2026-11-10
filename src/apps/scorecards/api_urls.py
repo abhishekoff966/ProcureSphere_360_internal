@@ -26,12 +26,12 @@ class CanManageScorecards(permissions.BasePermission):
         role = getattr(request.user, "role_code", None) or (
             request.user.role.code if getattr(request.user, "role", None) else None
         )
-        if not request.user.is_superuser and role in [Role.REQUESTER, Role.DEPT_APPROVER, Role.LEGAL_MGR]:
+        if not request.user.is_superuser and role in [Role.REQUESTER, Role.DEPT_APPROVER]:
             return False
         if request.method in permissions.SAFE_METHODS:
             return True
         if view.action == "destroy":
-            return request.user.is_superuser or role == Role.SUPER_ADMIN
+            return request.user.is_superuser or role in [Role.SUPER_ADMIN, Role.PROC_MGR]
         return request.user.is_superuser or role in [Role.PROC_EXEC, Role.PROC_MGR, Role.SUPER_ADMIN]
 
 
@@ -88,7 +88,8 @@ class VendorScorecardSerializer(serializers.ModelSerializer):
         vendor = attrs.get("vendor", getattr(self.instance, "vendor", None))
         period = attrs.get("evaluation_period", getattr(self.instance, "evaluation_period", None))
         if vendor and period:
-            qs = VendorScorecard.objects.filter(vendor=vendor, evaluation_period=period)
+            vendor_id = getattr(vendor, "id", vendor)
+            qs = VendorScorecard.objects.filter(vendor_id=vendor_id, evaluation_period__iexact=str(period).strip())
             if self.instance:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():

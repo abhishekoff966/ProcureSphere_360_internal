@@ -287,7 +287,10 @@ def update_draft_sourcing_event_service(*, event: SourcingEvent, user: User, dat
     if event.requisition:
         from apps.requisitions.models import PurchaseRequisition
 
-        if event.requisition.status != PurchaseRequisition.STATUS_APPROVED:
+        if event.requisition.status not in [
+            PurchaseRequisition.STATUS_APPROVED,
+            PurchaseRequisition.STATUS_SOURCING,
+        ]:
             raise ValidationError(
                 f"Cannot link Purchase Requisition '{event.requisition.pr_number}' in status '{event.requisition.status}'. "
                 "Only APPROVED requisitions may be sourced."
@@ -444,6 +447,8 @@ def close_bid_window_service(*, event: SourcingEvent, user: User) -> SourcingEve
     at any time while the bid window is open, or automatically when the deadline passes.
     """
     _lock_and_refresh(event)
+    if event.status == SourcingEvent.STATUS_TECHNICAL_REVIEW:
+        return event
     if event.status != SourcingEvent.STATUS_BID_WINDOW:
         raise ValidationError(f"Bid window is not open (current: {event.status}).")
 

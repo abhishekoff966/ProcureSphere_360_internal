@@ -44,14 +44,30 @@ class CanManageSupplierInvoice(BasePermission):
             or role_code == Role.VENDOR_USER
         )
 
+        # Vendors cannot pay, run match, create line-item invoices via internal endpoint, or mutate exceptions
+        if is_vendor:
+            basename = getattr(view, "basename", "")
+            action = getattr(view, "action", "")
+            if "exception" in basename or "exception" in action:
+                return request.method in SAFE_METHODS
+            if action == "create_invoice":
+                return False
+            if action in ["pay_invoice", "pay", "run_match", "run_3_way_match"]:
+                return False
+            if request.method in SAFE_METHODS:
+                return True
+            if request.method == "POST" and basename == "invoice" and action in ["create", None]:
+                return True
+            return False
+
+        # Internal read-only roles on invoices
         if not request.user.is_superuser and role_code in [
             Role.DEPT_APPROVER,
             Role.LEGAL_MGR,
             Role.REQUESTER,
+            Role.STORES_RECEIVER,
+            Role.AUDITOR,
         ]:
-            return False
-
-        if role_code in [Role.STORES_RECEIVER, Role.AUDITOR]:
             return request.method in SAFE_METHODS
 
         if view.action in ["pay_invoice", "pay", "resolve_exception", "resolve"]:
@@ -62,26 +78,13 @@ class CanManageSupplierInvoice(BasePermission):
         if view.action in ["run_match", "run_3_way_match"]:
             return request.user.is_superuser or role_code in [Role.SUPER_ADMIN, Role.FINANCE_AP]
 
-        if is_vendor:
-            return request.method in SAFE_METHODS or request.method == "POST" or getattr(view, "action", None) == "create"
-
-        if request.method == "POST":
-            return request.user.is_superuser or role_code in [Role.FINANCE_AP, Role.SUPER_ADMIN]
-
-        role_code = getattr(request.user, "role_code", None) or (
-            request.user.role.code if getattr(request.user, "role", None) else None
-        )
-        if not request.user.is_superuser and role_code in [
-            Role.REQUESTER,
-            Role.DEPT_APPROVER,
-            Role.LEGAL_MGR,
-        ]:
-            return False
-
         if request.method in SAFE_METHODS:
             return True
 
-        return request.user.is_superuser or request.user.role_code in [
+        if request.method == "POST":
+            return request.user.is_superuser or role_code in [Role.FINANCE_AP, Role.SUPER_ADMIN, Role.PROC_MGR, Role.PROC_EXEC]
+
+        return request.user.is_superuser or role_code in [
             Role.SUPER_ADMIN,
             Role.FINANCE_AP,
             Role.PROC_MGR,
