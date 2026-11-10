@@ -182,8 +182,8 @@
             <span>Notifications</span>
         </a>
 
-        <!-- Reports & Audit Section -->
-        <div class="nav-section-label">Reports &amp; Audit</div>
+        <!-- Reports Section -->
+        <div class="nav-section-label">Reports</div>
         <a href="{% url 'proc_exec_pr_aging' %}" class="vendor-navlink proc-navlink {% if p == '/reports/pr-aging/' %}active-nav-item{% endif %}">
             <span>PR Aging</span>
         </a>
@@ -192,9 +192,6 @@
         </a>
         <a href="{% url 'proc_exec_po_status' %}" class="vendor-navlink proc-navlink {% if p == '/reports/po-status/' %}active-nav-item{% endif %}">
             <span>PO Status</span>
-        </a>
-        <a href="{% url 'proc_exec_audit_report' %}" class="vendor-navlink proc-navlink {% if p == '/reports/audit-trail/' %}active-nav-item{% endif %}">
-            <span>Immutable Audit Report</span>
         </a>
     </nav>
 </aside>
