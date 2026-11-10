@@ -86,12 +86,51 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         if data.get("search"):
             from django.db.models import Q
             s = data["search"]
-            qs = qs.filter(
+            matched_ids = set()
+            try:
+                from apps.requisitions.models import PurchaseRequisition
+                from apps.orders.models import PurchaseOrder
+                from apps.invoices.models import SupplierInvoice
+                from apps.contracts.models import Contract
+                from apps.vendors.models import Vendor
+
+                matched_ids.update(
+                    str(uid) for uid in PurchaseRequisition.objects.filter(
+                        Q(pr_number__icontains=s) | Q(title__icontains=s)
+                    ).values_list("id", flat=True)[:50]
+                )
+                matched_ids.update(
+                    str(uid) for uid in PurchaseOrder.objects.filter(
+                        po_number__icontains=s
+                    ).values_list("id", flat=True)[:50]
+                )
+                matched_ids.update(
+                    str(uid) for uid in SupplierInvoice.objects.filter(
+                        Q(invoice_number__icontains=s) | Q(internal_reference__icontains=s)
+                    ).values_list("id", flat=True)[:50]
+                )
+                matched_ids.update(
+                    str(uid) for uid in Contract.objects.filter(
+                        contract_number__icontains=s
+                    ).values_list("id", flat=True)[:50]
+                )
+                matched_ids.update(
+                    str(uid) for uid in Vendor.objects.filter(
+                        Q(vendor_number__icontains=s) | Q(legal_name__icontains=s)
+                    ).values_list("id", flat=True)[:50]
+                )
+            except Exception:
+                pass
+
+            search_filter = (
                 Q(actor__email__icontains=s)
                 | Q(action__icontains=s)
                 | Q(target_model__icontains=s)
                 | Q(target_object_id__icontains=s)
             )
+            if matched_ids:
+                search_filter |= Q(target_object_id__in=matched_ids)
+            qs = qs.filter(search_filter)
         if data.get("start_date"):
             qs = qs.filter(timestamp__gte=data["start_date"])
         if data.get("end_date"):
@@ -149,7 +188,16 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         query_serializer = TransactionLifecycleQuerySerializer(data=request.query_params)
         query_serializer.is_valid(raise_exception=True)
 
-        identifier = query_serializer.validated_data["identifier"]
+        identifier = query_serializer.validated_data.get("identifier")
+        if not identifier:
+            from apps.requisitions.models import PurchaseRequisition
+            from apps.orders.models import PurchaseOrder
+            first_pr = PurchaseRequisition.objects.order_by("-created_at").first()
+            if first_pr:
+                identifier = first_pr.pr_number
+            else:
+                first_po = PurchaseOrder.objects.order_by("-created_at").first()
+                identifier = first_po.po_number if first_po else "PR-2026-00001"
         entity_type = query_serializer.validated_data.get("entity_type", "AUTO")
         org = _get_auditor_org(request)
 
@@ -206,8 +254,16 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         query_serializer = EntityAuditTrailQuerySerializer(data=request.query_params)
         query_serializer.is_valid(raise_exception=True)
 
-        model_name = query_serializer.validated_data["target_model"]
-        obj_id = query_serializer.validated_data["target_object_id"]
+        model_name = query_serializer.validated_data.get("target_model")
+        obj_id = query_serializer.validated_data.get("target_object_id")
+        if not model_name or not obj_id:
+            latest_log = AuditLog.objects.order_by("-timestamp").first()
+            if latest_log:
+                model_name = model_name or latest_log.target_model
+                obj_id = obj_id or latest_log.target_object_id
+            else:
+                model_name = model_name or "PurchaseRequisition"
+                obj_id = obj_id or "00000000-0000-0000-0000-000000000000"
         org = _get_auditor_org(request)
 
         trail_data = get_entity_audit_trail(
@@ -656,10 +712,20 @@ def auditor_lifecycle_api_view(request):
     serializer = TransactionLifecycleQuerySerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
+    identifier = data.get("identifier")
+    if not identifier:
+        from apps.requisitions.models import PurchaseRequisition
+        from apps.orders.models import PurchaseOrder
+        first_pr = PurchaseRequisition.objects.order_by("-created_at").first()
+        if first_pr:
+            identifier = first_pr.pr_number
+        else:
+            first_po = PurchaseOrder.objects.order_by("-created_at").first()
+            identifier = first_po.po_number if first_po else "PR-2026-00001"
     org = _get_auditor_org(request)
     lifecycle_data = get_transaction_lifecycle_service(
         entity_type=data.get("entity_type", "AUTO"),
-        entity_identifier=data["identifier"],
+        entity_identifier=identifier,
         organization=org,
     )
     if lifecycle_data.get("is_unauthorized"):

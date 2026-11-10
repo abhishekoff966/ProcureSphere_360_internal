@@ -40,7 +40,7 @@
     <div class="col-sm-6 col-xl-4">
         <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-rose">
             <div class="text-muted small fw-bold text-uppercase">AMENDED PURCHASE ORDERS</div>
-            <div class="fs-3 fw-bold text-danger font-heading mt-1">{{ summary.amended_pos_count|default:0 }}</div>
+            <div class="fs-3 fw-bold text-danger font-heading mt-1">{{ summary.amended_pos_count|default:summary.total_amended_pos|default:0 }}</div>
             <div class="text-muted small mt-1">Multi-Version Amendments</div>
         </div>
     </div>
@@ -50,19 +50,45 @@
     <!-- Filter Bar -->
     <div class="card-header bg-white border-bottom p-3">
         <form method="get" action="/audit/po-changes/" class="row g-2 align-items-center">
-            <div class="col-md-9">
+            <div class="col-md-4">
                 <div class="input-group input-group-sm">
                     <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                    <input type="text" name="search" value="{{ search_query }}" class="form-control border-start-0" placeholder="Search PO number, vendor name, buyer...">
+                    <input type="text" name="search" value="{{ search_query }}" class="form-control border-start-0" placeholder="Search PO #, vendor, buyer, check...">
                 </div>
             </div>
             <div class="col-md-2">
+                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">All Statuses</option>
+                    <option value="ISSUED" {% if status_filter == 'ISSUED' %}selected{% endif %}>ISSUED</option>
+                    <option value="ACKNOWLEDGED" {% if status_filter == 'ACKNOWLEDGED' %}selected{% endif %}>ACKNOWLEDGED</option>
+                    <option value="PARTIAL_RECEIPT" {% if status_filter == 'PARTIAL_RECEIPT' %}selected{% endif %}>PARTIAL RECEIPT</option>
+                    <option value="COMPLETED" {% if status_filter == 'COMPLETED' %}selected{% endif %}>COMPLETED</option>
+                    <option value="CANCELLED" {% if status_filter == 'CANCELLED' %}selected{% endif %}>CANCELLED</option>
+                    <option value="DRAFT" {% if status_filter == 'DRAFT' %}selected{% endif %}>DRAFT</option>
+                    <option value="APPROVAL" {% if status_filter == 'APPROVAL' %}selected{% endif %}>APPROVAL</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="version" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">All Versions</option>
+                    <option value="amended" {% if version_filter == 'amended' or version_filter == '>1' %}selected{% endif %}>Amended (v > 1)</option>
+                    <option value="1" {% if version_filter == '1' or version_filter == 'original' %}selected{% endif %}>Original (v = 1)</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="compliance" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">All Compliance</option>
+                    <option value="AMENDMENT AUDITED" {% if compliance_filter == 'AMENDMENT AUDITED' %}selected{% endif %}>AMENDMENT AUDITED</option>
+                </select>
+            </div>
+            {% if sort_by %}<input type="hidden" name="sort" value="{{ sort_by }}">{% endif %}
+            <div class="col-md-1">
                 <button type="submit" class="btn btn-dark btn-sm rounded-pill w-100 fw-semibold">
                     <i class="fa-solid fa-filter text-cyan"></i> Filter
                 </button>
             </div>
             <div class="col-md-1">
-                <a href="/audit/po-changes/" class="btn btn-outline-secondary btn-sm rounded-pill w-100">
+                <a href="/audit/po-changes/" class="btn btn-outline-secondary btn-sm rounded-pill w-100 text-center">
                     Reset
                 </a>
             </div>
@@ -74,12 +100,52 @@
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light small text-uppercase text-muted">
                 <tr>
-                    <th class="ps-4">PO #</th>
-                    <th>Vendor</th>
-                    <th>Version</th>
-                    <th>Total Amount</th>
-                    <th>Status</th>
-                    <th class="text-end pe-4">Compliance Check</th>
+                    <th class="ps-4">
+                        <a href="?sort={% if sort_by == 'po_number' %}-po_number{% else %}po_number{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if version_filter %}&version={{ version_filter }}{% endif %}{% if compliance_filter %}&compliance={{ compliance_filter }}{% endif %}" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                            PO #
+                            {% if sort_by == 'po_number' %}<i class="fa-solid fa-arrow-up-short-wide text-cyan"></i>
+                            {% elif sort_by == '-po_number' %}<i class="fa-solid fa-arrow-down-wide-short text-cyan"></i>
+                            {% else %}<i class="fa-solid fa-sort text-secondary opacity-50"></i>{% endif %}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?sort={% if sort_by == 'vendor' %}-vendor{% else %}vendor{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if version_filter %}&version={{ version_filter }}{% endif %}{% if compliance_filter %}&compliance={{ compliance_filter }}{% endif %}" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                            Vendor
+                            {% if sort_by == 'vendor' %}<i class="fa-solid fa-arrow-up-short-wide text-cyan"></i>
+                            {% elif sort_by == '-vendor' %}<i class="fa-solid fa-arrow-down-wide-short text-cyan"></i>
+                            {% else %}<i class="fa-solid fa-sort text-secondary opacity-50"></i>{% endif %}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?sort={% if sort_by == 'version' %}-version{% else %}version{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if version_filter %}&version={{ version_filter }}{% endif %}{% if compliance_filter %}&compliance={{ compliance_filter }}{% endif %}" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                            Version
+                            {% if sort_by == 'version' %}<i class="fa-solid fa-arrow-up-short-wide text-cyan"></i>
+                            {% elif sort_by == '-version' %}<i class="fa-solid fa-arrow-down-wide-short text-cyan"></i>
+                            {% else %}<i class="fa-solid fa-sort text-secondary opacity-50"></i>{% endif %}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?sort={% if sort_by == 'total_amount' %}-total_amount{% else %}total_amount{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if version_filter %}&version={{ version_filter }}{% endif %}{% if compliance_filter %}&compliance={{ compliance_filter }}{% endif %}" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                            Total Amount
+                            {% if sort_by == 'total_amount' %}<i class="fa-solid fa-arrow-up-short-wide text-cyan"></i>
+                            {% elif sort_by == '-total_amount' %}<i class="fa-solid fa-arrow-down-wide-short text-cyan"></i>
+                            {% else %}<i class="fa-solid fa-sort text-secondary opacity-50"></i>{% endif %}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?sort={% if sort_by == 'status' %}-status{% else %}status{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if version_filter %}&version={{ version_filter }}{% endif %}{% if compliance_filter %}&compliance={{ compliance_filter }}{% endif %}" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                            Status
+                            {% if sort_by == 'status' %}<i class="fa-solid fa-arrow-up-short-wide text-cyan"></i>
+                            {% elif sort_by == '-status' %}<i class="fa-solid fa-arrow-down-wide-short text-cyan"></i>
+                            {% else %}<i class="fa-solid fa-sort text-secondary opacity-50"></i>{% endif %}
+                        </a>
+                    </th>
+                    <th class="text-end pe-4">
+                        <span class="d-inline-flex align-items-center gap-1">
+                            Compliance Check
+                            <i class="fa-solid fa-shield-halved text-cyan ms-1"></i>
+                        </span>
+                    </th>
                 </tr>
             </thead>
             <tbody>
@@ -93,7 +159,7 @@
                             <span class="badge bg-light text-dark border">{{ po.status|default:"ISSUED" }}</span>
                         </td>
                         <td class="text-end pe-4">
-                            <span class="badge bg-info-subtle text-info border">AMENDMENT AUDITED</span>
+                            <span class="badge bg-info-subtle text-info border">{{ po.compliance_check|default:"AMENDMENT AUDITED" }}</span>
                         </td>
                     </tr>
                 {% empty %}
@@ -115,12 +181,12 @@
         </div>
         <div class="d-flex gap-1">
             {% if current_page > 1 %}
-                <a href="?page={{ current_page|add:'-1' }}{% if search_query %}&search={{ search_query }}{% endif %}" class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                <a href="?page={{ current_page|add:'-1' }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if version_filter %}&version={{ version_filter }}{% endif %}{% if compliance_filter %}&compliance={{ compliance_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="btn btn-sm btn-outline-dark rounded-pill px-3">
                     &laquo; Previous
                 </a>
             {% endif %}
             {% if current_page < total_pages %}
-                <a href="?page={{ current_page|add:'1' }}{% if search_query %}&search={{ search_query }}{% endif %}" class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                <a href="?page={{ current_page|add:'1' }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if version_filter %}&version={{ version_filter }}{% endif %}{% if compliance_filter %}&compliance={{ compliance_filter }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" class="btn btn-sm btn-outline-dark rounded-pill px-3">
                     Next &raquo;
                 </a>
             {% endif %}

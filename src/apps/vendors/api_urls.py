@@ -760,6 +760,22 @@ class VendorCategoryViewSet(viewsets.ModelViewSet):
     serializer_class = VendorCategorySerializer
     permission_classes = [IsAuthenticated, VendorAccessPermission]
     http_method_names = ["get", "post", "put", "patch", "head", "options"]
+    search_fields = ["name", "code", "description"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        search_param = (
+            self.request.query_params.get("search", "").strip()
+            or self.request.query_params.get("q", "").strip()
+        )
+        if search_param:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(name__icontains=search_param)
+                | Q(code__icontains=search_param)
+                | Q(description__icontains=search_param)
+            )
+        return qs
 
 
 class VendorRiskRecordViewSet(viewsets.ModelViewSet):

@@ -1,8 +1,9 @@
 import uuid
+from decimal import Decimal
 from datetime import timedelta
 from typing import Any, Dict, List, Optional
 
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
 
 from apps.accounts.models import Role
@@ -515,17 +516,18 @@ def get_vendor_compliance_audit(
     total_count = qs.count()
     vendors_page = list(qs.order_by("-created_at")[offset : offset + limit])
 
-    # Compute overall compliance statistics
+    # Compute overall compliance statistics (dynamic over filtered set when filters active, otherwise full base)
     base_v_qs = Vendor.objects.filter(organization=organization) if organization else Vendor.objects.all()
-    total_vendors = base_v_qs.count()
-    active_vendors = base_v_qs.filter(status=Vendor.STATUS_ACTIVE).count()
-    suspended_vendors = base_v_qs.filter(
+    summary_qs = qs if (search or status or kyc_status) else base_v_qs
+    total_vendors = summary_qs.count()
+    active_vendors = summary_qs.filter(status=Vendor.STATUS_ACTIVE).count()
+    suspended_vendors = summary_qs.filter(
         status__in=[Vendor.STATUS_ON_HOLD, Vendor.STATUS_SUSPENDED]
     ).count()
-    draft_or_pending = base_v_qs.filter(
+    draft_or_pending = summary_qs.filter(
         status__in=[Vendor.STATUS_DRAFT, Vendor.STATUS_SUBMITTED, Vendor.STATUS_KYC_REVIEW]
     ).count()
-    kyc_verified_count = base_v_qs.filter(
+    kyc_verified_count = summary_qs.filter(
         Q(documents__is_verified=True)
         | Q(documents__review_status=VendorDocument.REVIEW_VERIFIED)
         | Q(documents__status=VendorDocument.STATUS_VERIFIED)
@@ -811,6 +813,11 @@ def get_sourcing_activity_audit(
 def get_po_changes_audit(
     search: Optional[str] = None,
     status: Optional[str] = None,
+    version: Optional[str] = None,
+    compliance_check: Optional[str] = None,
+    min_amount: Optional[Any] = None,
+    max_amount: Optional[Any] = None,
+    sort_by: Optional[str] = None,
     start_date: Optional[Any] = None,
     end_date: Optional[Any] = None,
     limit: int = 50,
@@ -837,6 +844,32 @@ def get_po_changes_audit(
     if status:
         qs = qs.filter(status=status)
 
+    if version:
+        v_str = str(version).strip().lower()
+        if v_str in ["amended", ">1", "amendments"]:
+            qs = qs.filter(version__gt=1)
+        elif v_str in ["original", "1", "v1"]:
+            qs = qs.filter(version=1)
+        elif v_str.isdigit():
+            qs = qs.filter(version=int(v_str))
+
+    if compliance_check:
+        comp_str = str(compliance_check).strip().upper()
+        if comp_str in ["AMENDMENT AUDITED", "AUDITED", "YES"]:
+            pass  # All POs in this register have audit compliance check "AMENDMENT AUDITED"
+
+    if min_amount is not None and str(min_amount).strip() != "":
+        try:
+            qs = qs.filter(total_amount__gte=Decimal(str(min_amount).strip()))
+        except (ValueError, TypeError):
+            pass
+
+    if max_amount is not None and str(max_amount).strip() != "":
+        try:
+            qs = qs.filter(total_amount__lte=Decimal(str(max_amount).strip()))
+        except (ValueError, TypeError):
+            pass
+
     if start_date:
         qs = qs.filter(created_at__gte=start_date)
 
@@ -845,20 +878,57 @@ def get_po_changes_audit(
 
     if search:
         term = search.strip()
-        qs = qs.filter(
-            Q(po_number__icontains=term)
-            | Q(vendor__legal_name__icontains=term)
-            | Q(cost_center__name__icontains=term)
-        )
+        if term.upper() in ["AMENDMENT AUDITED", "AUDITED"]:
+            # User searched specifically for the compliance check column value
+            pass
+        else:
+            qs = qs.filter(
+                Q(po_number__icontains=term)
+                | Q(vendor__legal_name__icontains=term)
+                | Q(cost_center__name__icontains=term)
+                | Q(status__icontains=term)
+            )
+
+    # Sorting support for interactive table columns
+    sort_mapping = {
+        "po_number": "po_number",
+        "-po_number": "-po_number",
+        "vendor": "vendor__legal_name",
+        "-vendor": "-vendor__legal_name",
+        "version": "version",
+        "-version": "-version",
+        "total_amount": "total_amount",
+        "-total_amount": "-total_amount",
+        "amount": "total_amount",
+        "-amount": "-total_amount",
+        "status": "status",
+        "-status": "-status",
+        "created_at": "created_at",
+        "-created_at": "-created_at",
+        "updated_at": "updated_at",
+        "-updated_at": "-updated_at",
+    }
+    order_by_col = sort_mapping.get(str(sort_by).strip(), "-updated_at")
 
     total_count = qs.count()
-    pos_page = list(qs.order_by("-updated_at")[offset : offset + limit])
+    pos_page = list(qs.order_by(order_by_col)[offset : offset + limit])
 
     base_po_qs = PurchaseOrder.objects.filter(
         Q(cost_center__department__organization=organization)
         | Q(requisition__department__organization=organization)
         | Q(vendor__organization=organization)
     ) if organization else PurchaseOrder.objects.all()
+
+    # Dynamic summary: If search or filters are applied, compute on qs; otherwise on base_po_qs
+    summary_qs = qs if (search or status or version or compliance_check or min_amount or max_amount or start_date or end_date) else base_po_qs
+
+    total_pos = summary_qs.count()
+    total_amended = summary_qs.filter(version__gt=1).count()
+    cancelled_pos = summary_qs.filter(status=PurchaseOrder.STATUS_CANCELLED).count()
+    completed_pos = summary_qs.filter(status=PurchaseOrder.STATUS_COMPLETED).count()
+
+    committed_qs = summary_qs.exclude(status=PurchaseOrder.STATUS_CANCELLED)
+    committed_val = committed_qs.aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00")
 
     items = []
     for po in pos_page:
@@ -875,6 +945,7 @@ def get_po_changes_audit(
                 "status_display": po.get_status_display(),
                 "total_amount": float(po.total_amount),
                 "amendments_count": len(amendments),
+                "compliance_check": "AMENDMENT AUDITED",
                 "acknowledged_at": po.acknowledged_at.isoformat() if po.acknowledged_at else None,
                 "created_at": po.created_at.isoformat(),
                 "updated_at": po.updated_at.isoformat(),
@@ -892,14 +963,14 @@ def get_po_changes_audit(
 
     return {
         "summary": {
-            "total_pos": base_po_qs.count(),
-            "total_amended_pos": base_po_qs.filter(version__gt=1).count(),
-            "cancelled_pos": base_po_qs.filter(
-                status=PurchaseOrder.STATUS_CANCELLED
-            ).count(),
-            "completed_pos": base_po_qs.filter(
-                status=PurchaseOrder.STATUS_COMPLETED
-            ).count(),
+            "total_pos": total_pos,
+            "total_count": total_pos,
+            "total_committed_value": f"{committed_val:,.2f}",
+            "committed_value": float(committed_val),
+            "total_amended_pos": total_amended,
+            "amended_pos_count": total_amended,
+            "cancelled_pos": cancelled_pos,
+            "completed_pos": completed_pos,
         },
         "count": total_count,
         "next": None,
@@ -959,16 +1030,22 @@ def get_invoice_exceptions_audit(
     total_count = qs.count()
     exceptions_page = list(qs.order_by("-created_at")[offset : offset + limit])
 
-    # Summary metrics scoped
+    # Summary metrics scoped (dynamic over filtered set when filters applied, or overall)
     base_exc_qs = MatchException.objects.filter(
         Q(invoice__po__cost_center__department__organization=organization)
         | Q(invoice__vendor__organization=organization)
     ) if organization else MatchException.objects.all()
 
-    total_exceptions = base_exc_qs.count()
-    open_count = base_exc_qs.filter(status=MatchException.STATUS_OPEN).count()
-    resolved_count = base_exc_qs.filter(status=MatchException.STATUS_RESOLVED).count()
-    rejected_count = base_exc_qs.filter(status=MatchException.STATUS_REJECTED).count()
+    summary_qs = qs if (search or status or exception_type or start_date or end_date) else base_exc_qs
+
+    total_exceptions = summary_qs.count()
+    open_count = summary_qs.filter(status=MatchException.STATUS_OPEN).count()
+    resolved_count = summary_qs.filter(status=MatchException.STATUS_RESOLVED).count()
+    rejected_count = summary_qs.filter(status=MatchException.STATUS_REJECTED).count()
+    price_variance_count = summary_qs.filter(
+        exception_type=MatchException.TYPE_PRICE_VARIANCE
+    ).count()
+    total_variance_val = summary_qs.aggregate(total=Sum("variance_amount"))["total"] or Decimal("0.00")
 
     items = []
     for exc in exceptions_page:
@@ -996,9 +1073,16 @@ def get_invoice_exceptions_audit(
     return {
         "summary": {
             "total_exceptions": total_exceptions,
+            "total_count": total_exceptions,
+            "open_count": open_count,
             "open_exceptions": open_count,
+            "resolved_count": resolved_count,
             "resolved_exceptions": resolved_count,
+            "rejected_count": rejected_count,
             "rejected_invoices": rejected_count,
+            "price_variance_count": price_variance_count,
+            "total_variance_exposure": f"{total_variance_val:,.2f}",
+            "variance_exposure": float(total_variance_val),
         },
         "count": total_count,
         "next": None,

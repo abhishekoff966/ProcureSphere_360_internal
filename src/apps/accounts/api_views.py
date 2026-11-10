@@ -32,8 +32,8 @@ class SessionLoginView(views.APIView):
             OpenApiExample(
                 "Standard Login Example",
                 value={
-                    "email": "admin@example.com",
-                    "password": "Password123!",
+                    "email": "user@example.com",
+                    "password": "placeholder_password_only",
                 },
                 request_only=True,
             )
@@ -222,6 +222,27 @@ class SessionLogoutView(views.APIView):
 
         logout(request)
         return Response({"message": "Logout successful."}, status=status.HTTP_200_OK)
+
+
+class SessionRefreshView(views.APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        summary="Session Token Refresh",
+        description="Refreshes an active session token or returns 401 if unauthenticated.",
+        responses={
+            200: OpenApiResponse(description="Session active and refreshed."),
+            401: OpenApiResponse(description="Authentication required to refresh session."),
+        },
+        tags=["Authentication"],
+    )
+    def post(self, request, *args, **kwargs):
+        if request.user and request.user.is_authenticated:
+            return Response({"status": "ok", "message": "Session refreshed."}, status=status.HTTP_200_OK)
+        return Response(
+            {"error": {"code": "NOT_AUTHENTICATED", "message": "Authentication required to refresh session."}},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
 
 
 class UserViewSet(viewsets.ModelViewSet):

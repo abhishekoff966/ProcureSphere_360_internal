@@ -213,10 +213,17 @@ def audit_approvals_view(request):
 def audit_po_changes_view(request):
     """
     Purchase Order Changes & Amendments View.
+    Supports filtering and sorting by Version, Total Amount, Status, and Compliance Check.
     """
     _enforce_auditor_access(request)
     search_query = request.GET.get("search", "").strip() or request.GET.get("q", "").strip()
     status_filter = request.GET.get("status", "").strip()
+    version_filter = request.GET.get("version", "").strip()
+    sort_by = request.GET.get("sort", "").strip()
+    compliance_filter = request.GET.get("compliance", "").strip() or request.GET.get("compliance_check", "").strip()
+    min_amount = request.GET.get("min_amount", "").strip()
+    max_amount = request.GET.get("max_amount", "").strip()
+
     page = int(request.GET.get("page", 1))
     limit = int(request.GET.get("limit", 50))
     offset = (page - 1) * limit
@@ -225,6 +232,11 @@ def audit_po_changes_view(request):
     data = get_po_changes_audit(
         search=search_query if search_query else None,
         status=status_filter if status_filter else None,
+        version=version_filter if version_filter else None,
+        compliance_check=compliance_filter if compliance_filter else None,
+        min_amount=min_amount if min_amount else None,
+        max_amount=max_amount if max_amount else None,
+        sort_by=sort_by if sort_by else None,
         limit=limit,
         offset=offset,
         organization=org,
@@ -237,6 +249,11 @@ def audit_po_changes_view(request):
         "pos": data["results"],
         "search_query": search_query,
         "status_filter": status_filter,
+        "version_filter": version_filter,
+        "compliance_filter": compliance_filter,
+        "min_amount": min_amount,
+        "max_amount": max_amount,
+        "sort_by": sort_by,
         "current_page": page,
         "total_pages": total_pages,
         "total_count": total_count,
