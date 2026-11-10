@@ -172,7 +172,7 @@
                         <span class="text-secondary small fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.05em;">AVAILABLE BUDGET</span>
                         <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary fw-semibold px-2.5 py-1" style="font-size: 0.7rem;">Cost Center</span>
                     </div>
-                    <div class="fw-bold mb-2" style="font-size: 2.1rem; color: #0D6EFD; line-height: 1.1;" title="${{ metrics.available_budget|floatformat:2 }}">${{ metrics.available_budget|floatformat:2 }}</div>
+                    <div class="fw-bold mb-2" style="font-size: 2.1rem; color: #0D6EFD; line-height: 1.1;" title="₹{{ metrics.available_budget|floatformat:2 }}">₹{{ metrics.available_budget|floatformat:2 }}</div>
                     <div class="mt-auto pt-2 border-top small text-secondary d-flex justify-content-between align-items-center" style="font-size: 0.8rem; border-color: #DEE2E6 !important;">
                         <span>Funds: <strong class="text-dark">{{ user_department.code|default:"Allocated" }}</strong></span>
                         <span class="fw-semibold text-primary">Details <i class="fa-solid fa-arrow-right ms-1"></i></span>
@@ -209,7 +209,7 @@
                             </div>
                         </div>
                         <div class="text-end flex-shrink-0">
-                            <div class="fw-bold font-monospace {% if pr.status == 'BUDGET_REVIEW' %}text-danger{% else %}text-dark{% endif %} fs-6">${{ pr.total_amount|floatformat:2 }}</div>
+                            <div class="fw-bold font-monospace {% if pr.status == 'BUDGET_REVIEW' %}text-danger{% else %}text-dark{% endif %} fs-6">₹{{ pr.total_amount|floatformat:2 }}</div>
                             {% if pr.status == 'BUDGET_REVIEW' %}
                                 <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2 py-0.5" style="font-size: 0.65rem;">
                                     <i class="fa-solid fa-scale-unbalanced me-1"></i>Over Budget
@@ -322,7 +322,7 @@
                                     <div class="fw-semibold text-dark small text-truncate" style="max-width: 150px;" title="{{ pr.requester.email }}">{{ pr.requester.email }}</div>
                                 </td>
                                 <td><span class="badge bg-light text-secondary border">{{ pr.department.name }}</span></td>
-                                <td class="fw-bold font-monospace text-end {% if pr.status == 'BUDGET_REVIEW' %}text-danger{% else %}text-dark{% endif %}">${{ pr.total_amount|floatformat:2 }}</td>
+                                <td class="fw-bold font-monospace text-end {% if pr.status == 'BUDGET_REVIEW' %}text-danger{% else %}text-dark{% endif %}">₹{{ pr.total_amount|floatformat:2 }}</td>
                                 <td class="text-center">
                                     {% if pr.status == 'BUDGET_REVIEW' %}
                                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2.5 py-1" title="PR budget exceeds allocation - Routed to Finance AP">

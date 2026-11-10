@@ -33,7 +33,7 @@
             <select name="requisition_id" class="form-select">
                 <option value="">Select Approved PR...</option>
                 {% for pr in requisitions %}
-                    <option value="{{ pr.id }}">{{ pr.pr_number }} — {{ pr.title }} (${{ pr.total_amount|floatformat:2 }})</option>
+                    <option value="{{ pr.id }}">{{ pr.pr_number }} — {{ pr.title }} (₹{{ pr.total_amount|floatformat:2 }})</option>
                 {% endfor %}
             </select>
         </div>

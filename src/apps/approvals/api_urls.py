@@ -75,10 +75,13 @@ class ApprovalActionFilter(django_filters.FilterSet):
     target_model = django_filters.CharFilter(
         field_name="target_model_name", lookup_expr="icontains"
     )
+    target_object_id = django_filters.CharFilter(
+        field_name="target_object_id", lookup_expr="exact"
+    )
 
     class Meta:
         model = ApprovalAction
-        fields = ["status", "action", "target_model_name"]
+        fields = ["status", "action", "target_model_name", "target_object_id"]
 
 
 class ApprovalPolicyViewSet(viewsets.ModelViewSet):

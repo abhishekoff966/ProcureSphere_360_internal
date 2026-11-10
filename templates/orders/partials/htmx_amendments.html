@@ -33,11 +33,11 @@
                 <td>{{ a.reason|truncatechars:100 }}</td>
                 <td>
                     {% if a.delta_amount > 0 %}
-                        <span class="text-success fw-semibold">+${{ a.delta_amount|floatformat:2 }}</span>
+                        <span class="text-success fw-semibold">+₹{{ a.delta_amount|floatformat:2 }}</span>
                     {% elif a.delta_amount < 0 %}
-                        <span class="text-danger fw-semibold">-${{ a.delta_amount|floatformat:2|slice:"1:" }}</span>
+                        <span class="text-danger fw-semibold">-₹{{ a.delta_amount|floatformat:2|slice:"1:" }}</span>
                     {% else %}
-                        <span class="text-muted">$0.00</span>
+                        <span class="text-muted">₹0.00</span>
                     {% endif %}
                 </td>
                 <td>{{ a.requested_by.email|default:"—" }}</td>
@@ -50,7 +50,7 @@
                 </td>
                 <td class="text-nowrap">{{ a.created_at|date:"Y-m-d H:i" }}</td>
                 <td class="text-end">
-                    <code class="small">V{{ a.previous_version_snapshot.version }} · ${{ a.previous_version_snapshot.total_amount }}</code>
+                    <code class="small">V{{ a.previous_version_snapshot.version }} · ₹{{ a.previous_version_snapshot.total_amount }}</code>
                 </td>
                 {% if role_code == "PROC_MGR" or role_code == "SUPER_ADMIN" %}
                 <td class="text-end">

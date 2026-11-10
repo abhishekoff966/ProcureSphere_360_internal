@@ -128,7 +128,7 @@
                     <h5 class="fw-bold text-dark mb-2"><i class="fa-solid fa-file-invoice-dollar text-primary me-2"></i> Purchase Requisition</h5>
                     <div class="small text-muted mb-2"><strong>Number:</strong> {{ lifecycle.requisition.pr_number }} &bull; <strong>Status:</strong> <span class="badge bg-secondary">{{ lifecycle.requisition.status }}</span></div>
                     <div class="small text-muted mb-2"><strong>Requester:</strong> {{ lifecycle.requisition.requester }} &bull; <strong>Dept:</strong> {{ lifecycle.requisition.department }}</div>
-                    <div class="small text-muted mb-2"><strong>Total Amount:</strong> <span class="fw-bold text-dark">${{ lifecycle.requisition.total_amount|floatformat:2 }}</span></div>
+                    <div class="small text-muted mb-2"><strong>Total Amount:</strong> <span class="fw-bold text-dark">₹{{ lifecycle.requisition.total_amount|floatformat:2 }}</span></div>
                     <div class="table-responsive mt-2">
                         <table class="table table-sm table-bordered small">
                             <thead class="table-light"><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
@@ -137,8 +137,8 @@
                                 <tr>
                                     <td>{{ line.item_description }}</td>
                                     <td>{{ line.quantity }} {{ line.unit_of_measure }}</td>
-                                    <td>${{ line.estimated_unit_price|floatformat:2 }}</td>
-                                    <td>${{ line.estimated_total|floatformat:2 }}</td>
+                                    <td>₹{{ line.estimated_unit_price|floatformat:2 }}</td>
+                                    <td>₹{{ line.estimated_total|floatformat:2 }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -193,7 +193,7 @@
                                 <span class="fw-bold text-dark">{{ po.po_number }} V{{ po.version }}</span>
                                 <span class="badge bg-secondary">{{ po.status }}</span>
                             </div>
-                            <div class="small text-muted">Vendor: <strong>{{ po.vendor }}</strong> &bull; Total: <strong>${{ po.total_amount|floatformat:2 }}</strong></div>
+                            <div class="small text-muted">Vendor: <strong>{{ po.vendor }}</strong> &bull; Total: <strong>₹{{ po.total_amount|floatformat:2 }}</strong></div>
                             <div class="small text-muted">Vendor Acknowledged: {% if po.is_acknowledged %}<span class="text-success fw-semibold">Yes ({{ po.acknowledged_at|slice:":10" }})</span>{% else %}<span class="text-warning fw-semibold">Pending</span>{% endif %}</div>
                         </div>
                     {% endfor %}
@@ -211,13 +211,13 @@
                                 <span class="fw-bold text-dark">{{ inv.invoice_number }}</span>
                                 <span class="badge {% if inv.status == 'PAID' %}bg-success{% elif inv.status == 'EXCEPTION' %}bg-danger{% else %}bg-info{% endif %}">{{ inv.status }}</span>
                             </div>
-                            <div class="small text-muted">Total: <strong>${{ inv.total_amount|floatformat:2 }}</strong> &bull; Match Status: <strong>{{ inv.match_status }}</strong></div>
+                            <div class="small text-muted">Total: <strong>₹{{ inv.total_amount|floatformat:2 }}</strong> &bull; Match Status: <strong>{{ inv.match_status }}</strong></div>
                             {% if inv.exceptions %}
                                 <div class="mt-2 p-2 bg-danger-subtle rounded border border-danger-subtle small text-danger">
                                     <strong>Match Exceptions:</strong>
                                     <ul class="mb-0 ps-3">
                                         {% for exc in inv.exceptions %}
-                                            <li>{{ exc.type }} (Variance: ${{ exc.variance_amount|floatformat:2 }}) &mdash; {{ exc.status }}</li>
+                                            <li>{{ exc.type }} (Variance: ₹{{ exc.variance_amount|floatformat:2 }}) &mdash; {{ exc.status }}</li>
                                         {% endfor %}
                                     </ul>
                                 </div>

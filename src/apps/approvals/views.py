@@ -77,7 +77,9 @@ def _get_approval_querysets(user, role_code):
 
     return (
         PurchaseRequisition.objects.filter(status__in=pending_statuses),
-        PurchaseRequisition.objects.filter(status__in=history_statuses),
+        PurchaseRequisition.objects.filter(
+            Q(status__in=history_statuses) | Q(id__in=user_approved_pr_ids)
+        ).distinct(),
     )
 
 
@@ -178,17 +180,47 @@ def approvals_inbox_view(request):
         pending_prs = pending_prs.filter(q_filter)
         history_prs = history_prs.filter(q_filter)
 
-    valid_pending_statuses = ["SUBMITTED", "MANAGER_REVIEW", "BUDGET_REVIEW"]
-    valid_history_statuses = ["APPROVED", "REJECTED", "SOURCING", "PO_ISSUED"]
+    valid_pending_statuses = [
+        "PENDING",
+        "SUBMITTED",
+        "MANAGER_REVIEW",
+        "BUDGET_REVIEW",
+    ]
+    valid_history_statuses = [
+        "APPROVED",
+        "REJECTED",
+        "PENDING",
+        "MANAGER_REVIEW",
+        "SUBMITTED",
+        "BUDGET_REVIEW",
+        "SOURCING",
+        "PO_ISSUED",
+    ]
 
     if status_filter:
         if tab == "history":
-            if status_filter in valid_history_statuses:
+            if status_filter == "PENDING":
+                history_prs = history_prs.filter(
+                    status__in=[
+                        PurchaseRequisition.STATUS_SUBMITTED,
+                        PurchaseRequisition.STATUS_MANAGER_REVIEW,
+                        PurchaseRequisition.STATUS_BUDGET_REVIEW,
+                    ]
+                )
+            elif status_filter in valid_history_statuses:
                 history_prs = history_prs.filter(status=status_filter)
             else:
                 status_filter = ""
         else:
-            if status_filter in valid_pending_statuses:
+            if status_filter == "PENDING":
+                pending_prs = pending_prs.filter(
+                    status__in=[
+                        PurchaseRequisition.STATUS_SUBMITTED,
+                        PurchaseRequisition.STATUS_MANAGER_REVIEW,
+                        PurchaseRequisition.STATUS_BUDGET_REVIEW,
+                    ]
+                )
+            elif status_filter in valid_pending_statuses:
                 pending_prs = pending_prs.filter(status=status_filter)
             else:
                 status_filter = ""

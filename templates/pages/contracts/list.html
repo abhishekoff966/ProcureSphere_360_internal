@@ -145,7 +145,7 @@
                         <div class="fw-bold text-dark">{{ item.title }}</div>
                         <div class="text-muted small"><i class="fa-solid fa-building me-1"></i>{{ item.vendor.legal_name }}</div>
                     </td>
-                    <td class="fw-bold text-success">${{ item.contract_value|floatformat:2 }}</td>
+                    <td class="fw-bold text-success">₹{{ item.contract_value|floatformat:2 }}</td>
                     <td class="small text-muted">
                         <div>{{ item.start_date|date:"M d, Y" }} &rarr; {{ item.end_date|date:"M d, Y" }}</div>
                         <div class="text-xs text-secondary">{{ item.renewal_notice_days }} days notice</div>

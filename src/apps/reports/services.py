@@ -57,7 +57,7 @@ def get_spend_analytics_report(user=None):
         SupplierInvoice.objects.select_related(
             "vendor", "vendor__category", "po", "po__cost_center", "po__requisition__department"
         )
-        .exclude(status="REJECTED")
+        .filter(status=SupplierInvoice.STATUS_PAID)
     )
     if user and not getattr(user, "is_superuser", False):
         org = getattr(user, "effective_organization", None)

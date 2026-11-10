@@ -33,7 +33,7 @@
     <div class="col-sm-6 col-xl-4">
         <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-indigo">
             <div class="text-muted small fw-bold text-uppercase">TOTAL CONTRACT VALUE</div>
-            <div class="fs-3 fw-bold text-indigo font-heading mt-1">${{ summary.total_contract_value|default:"0.00" }}</div>
+            <div class="fs-3 fw-bold text-indigo font-heading mt-1">₹{{ summary.total_contract_value|default:"0.00" }}</div>
             <div class="text-muted small mt-1">Active Financial Portfolio</div>
         </div>
     </div>
@@ -95,7 +95,7 @@
                                 {{ c.status|default:"ACTIVE" }}
                             </span>
                         </td>
-                        <td><strong>${{ c.contract_value|default:"0.00" }}</strong></td>
+                        <td><strong>₹{{ c.contract_value|default:"0.00" }}</strong></td>
                         <td class="text-muted small">{{ c.end_date|default:"N/A" }}</td>
                         <td class="text-end pe-4">
                             <span class="badge bg-success-subtle text-success border">COMPLIANT</span>

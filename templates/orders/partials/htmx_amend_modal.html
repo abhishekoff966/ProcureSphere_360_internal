@@ -9,7 +9,7 @@
     <div class="modal-body">
         <div class="alert alert-warning small">
             <i class="fa-solid fa-triangle-exclamation me-1"></i>
-            A JSON snapshot of V{{ po.version }} (total ${{ po.total_amount|floatformat:2 }}) is preserved
+            A JSON snapshot of V{{ po.version }} (total ₹{{ po.total_amount|floatformat:2 }}) is preserved
             immutably in <code>POAmendment</code> + <code>AuditLog</code>. The version increments on save.
         </div>
         {% if form.non_field_errors %}<div class="alert alert-danger small">{{ form.non_field_errors }}</div>{% endif %}
@@ -22,7 +22,7 @@
         {% for row in line_rows %}
         <div class="border rounded p-2 mb-2">
             <div class="fw-semibold small">{{ row.line.item_description }} <span class="text-muted fw-normal">({{ row.line.unit_of_measure }})</span></div>
-            <div class="text-muted small">Current: {{ row.line.quantity|floatformat:2 }} × ${{ row.line.unit_price|floatformat:2 }} = ${{ row.line.line_total|floatformat:2 }}</div>
+            <div class="text-muted small">Current: {{ row.line.quantity|floatformat:2 }} × ₹{{ row.line.unit_price|floatformat:2 }} = ₹{{ row.line.line_total|floatformat:2 }}</div>
             <div class="row g-2 mt-1">
                 <div class="col-6">
                     <label class="form-label small" for="{{ row.qty_field.id_for_label }}">Quantity</label>

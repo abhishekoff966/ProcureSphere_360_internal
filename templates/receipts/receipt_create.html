@@ -107,7 +107,7 @@
                             <td class="ps-3 text-muted small">{{ forloop.counter }}</td>
                             <td>
                                 <div class="fw-semibold text-dark">{{ line.item_description }}</div>
-                                <small class="text-muted">Unit Price: ${{ line.unit_price|floatformat:2 }}</small>
+                                <small class="text-muted">Unit Price: ₹{{ line.unit_price|floatformat:2 }}</small>
                             </td>
                             <td class="text-end fw-semibold text-dark">{{ line.quantity|floatformat:2 }}</td>
                             <td class="text-end text-muted">{{ line.quantity_received|floatformat:2 }}</td>

@@ -241,112 +241,6 @@ def acknowledge_purchase_order_service(
 
 
 @transaction.atomic
-def vendor_reject_purchase_order_service(
-    *,
-    po: PurchaseOrder,
-    vendor_user: User,
-    rejection_reason: str,
-) -> PurchaseOrder:
-    """
-    Vendor rejects an issued Purchase Order.
-    - Mandatory rejection reason.
-    - Vendor ownership authorization validation.
-    - Must be in ISSUED status.
-    - Transitions PO to CANCELLED with rejection note.
-    - Releases unfulfilled financial commitment back to budget.
-    - Emits AuditLog.ACTION_REJECT.
-    - Notifies Procurement Manager, Executive, and Requester.
-    """
-    from django.core.exceptions import PermissionDenied
-
-    if not rejection_reason or not str(rejection_reason).strip():
-        raise ValidationError("A rejection reason/justification is mandatory.")
-
-    if not vendor_user.is_superuser:
-        user_vendor = getattr(vendor_user, "vendor", None)
-        if not user_vendor or user_vendor.id != po.vendor_id:
-            raise PermissionDenied(
-                "Access Denied: You cannot reject a Purchase Order issued to another vendor."
-            )
-
-    if po.status != PurchaseOrder.STATUS_ISSUED:
-        raise ValidationError(
-            f"Cannot reject Purchase Order in status '{po.status}'. Only newly ISSUED orders can be rejected."
-        )
-
-    previous_status = po.status
-    reason_clean = str(rejection_reason).strip()
-    po.status = PurchaseOrder.STATUS_CANCELLED
-    po.acknowledgement_notes = f"REJECTED BY VENDOR: {reason_clean}"
-    po.vendor_rejection_reason = reason_clean
-    po.vendor_rejected_at = timezone.now()
-    po.save(
-        update_fields=[
-            "status",
-            "acknowledgement_notes",
-            "vendor_rejection_reason",
-            "vendor_rejected_at",
-            "updated_at",
-        ]
-    )
-
-    # Release financial commitment from budget
-    budget = (
-        Budget.objects.filter(cost_center=po.cost_center)
-        .order_by("-created_at")
-        .first()
-    )
-    if budget and po.total_amount > Decimal("0.00"):
-        budget.committed_amount = max(
-            Decimal("0.00"), budget.committed_amount - po.total_amount
-        )
-        budget.save(update_fields=["committed_amount", "updated_at"])
-
-        SpendLedger.objects.create(
-            budget=budget,
-            entry_type=SpendLedger.ENTRY_COMMITMENT,
-            amount=-po.total_amount,
-            reference_number=f"{po.po_number}-REJECT",
-            description=f"Commitment release on Vendor PO Rejection: {po.po_number} ({reason_clean})",
-        )
-
-    AuditLog.objects.create(
-        actor=vendor_user,
-        action=AuditLog.ACTION_REJECT,
-        target_model="PurchaseOrder",
-        target_object_id=str(po.id),
-        previous_state={"status": previous_status},
-        new_state={
-            "status": po.status,
-            "rejection_reason": reason_clean,
-            "rejected_by": vendor_user.email,
-        },
-    )
-
-    from apps.accounts.models import Role
-    from apps.notifications.services import notify_role_users
-
-    notify_role_users(
-        role_codes=[Role.PROC_EXEC, Role.PROC_MGR, Role.SUPER_ADMIN],
-        notification_type=Notification.TYPE_EXCEPTION_RAISED,
-        title=f"Purchase Order Rejected by Vendor: {po.po_number}",
-        message=f"Vendor '{po.vendor.legal_name}' has rejected PO {po.po_number}. Reason: {reason_clean}",
-        target_url=f"/orders/{po.id}/",
-    )
-
-    if po.requisition and po.requisition.requester:
-        Notification.objects.create(
-            recipient=po.requisition.requester,
-            notification_type=Notification.TYPE_EXCEPTION_RAISED,
-            title=f"PO {po.po_number} Rejected by Vendor",
-            message=f"Vendor '{po.vendor.legal_name}' has rejected Purchase Order {po.po_number}. Reason: {reason_clean}",
-            target_url=f"/orders/{po.id}/",
-        )
-
-    return po
-
-
-@transaction.atomic
 def request_po_amendment_service(
     *,
     po: PurchaseOrder,
@@ -1108,6 +1002,22 @@ def submit_purchase_order_for_approval_service(
         new_state={"status": po.status, "submitted_by": actor.email},
     )
 
+    try:
+        from apps.approvals.models import ApprovalAction
+        from apps.approvals.services import record_approval_action_service
+
+        record_approval_action_service(
+            target_object_id=po.id,
+            target_model_name="PurchaseOrder",
+            actor=actor,
+            action=ApprovalAction.ACTION_SUBMIT,
+            previous_state=previous_status,
+            new_state=po.status,
+            comments="PO submitted for approval.",
+        )
+    except Exception:
+        pass
+
     from apps.notifications.services import notify_role_users
 
     notify_role_users(
@@ -1212,6 +1122,22 @@ def approve_purchase_order_service(
         previous_state={"status": previous_status},
         new_state={"status": po.status, "comments": comments, "approved_by": approver.email},
     )
+
+    try:
+        from apps.approvals.models import ApprovalAction
+        from apps.approvals.services import record_approval_action_service
+
+        record_approval_action_service(
+            target_object_id=po.id,
+            target_model_name="PurchaseOrder",
+            actor=approver,
+            action=ApprovalAction.ACTION_APPROVE,
+            previous_state=previous_status,
+            new_state=po.status,
+            comments=comments or "PO approved.",
+        )
+    except Exception:
+        pass
 
     # Notify the submitter that their PO was approved and is ready to issue
     if po.submitted_by and po.submitted_by != approver:
@@ -1392,6 +1318,22 @@ def reject_purchase_order_service(
         new_state={"status": po.status, "rejection_reason": reason},
     )
 
+    try:
+        from apps.approvals.models import ApprovalAction
+        from apps.approvals.services import record_approval_action_service
+
+        record_approval_action_service(
+            target_object_id=po.id,
+            target_model_name="PurchaseOrder",
+            actor=approver,
+            action=ApprovalAction.ACTION_REJECT,
+            previous_state=previous_status,
+            new_state=po.status,
+            comments=reason,
+        )
+    except Exception:
+        pass
+
     if po.submitted_by and po.submitted_by != approver:
         Notification.objects.create(
             recipient=po.submitted_by,
@@ -1408,13 +1350,18 @@ def reject_purchase_order_service(
 
 @transaction.atomic
 def vendor_reject_purchase_order_service(
-    *, po: PurchaseOrder, vendor_user: User, reason: str
+    *,
+    po: PurchaseOrder,
+    vendor_user: User,
+    reason: str = None,
+    rejection_reason: str = None,
 ) -> PurchaseOrder:
     """
     Vendor rejects an issued PO (e.g. cannot fulfil scope/pricing).
     Transitions ISSUED -> APPROVED so the Procurement Executive can resolve
     and re-issue or cancel. Reason is mandatory and audited.
     """
+    reason = reason or rejection_reason
     if not reason or not str(reason).strip():
         raise ValidationError("A rejection reason is required.")
 

@@ -145,7 +145,7 @@
                             </td>
                             <td class="fw-semibold text-dark">{{ pr.title|truncatechars:45 }}</td>
                             <td class="text-secondary small">{{ pr.created_at|date:"M d, Y" }}</td>
-                            <td class="text-end fw-bold text-dark font-monospace">${{ pr.total_amount|floatformat:2 }}</td>
+                            <td class="text-end fw-bold text-dark font-monospace">₹{{ pr.total_amount|floatformat:2 }}</td>
                             <td class="text-center">
                                 {% if pr.status == 'PO_ISSUED' or pr.purchase_orders.exists %}
                                 <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold">
@@ -200,7 +200,7 @@
                             <div class="fw-bold text-dark fs-6 mt-1 text-truncate" title="{{ pr.title }}">{{ pr.title }}</div>
                         </div>
                         <div class="text-end flex-shrink-0">
-                            <div class="fw-bold text-dark font-monospace">${{ pr.total_amount|floatformat:2 }}</div>
+                            <div class="fw-bold text-dark font-monospace">₹{{ pr.total_amount|floatformat:2 }}</div>
                         </div>
                     </div>
                     

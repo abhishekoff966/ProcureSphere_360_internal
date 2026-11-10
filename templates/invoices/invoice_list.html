@@ -69,7 +69,7 @@
                         <td>
                             <span class="badge bg-light text-dark border"><code>{{ invoice.purchase_order.po_number }}</code></span>
                         </td>
-                        <td class="fw-bold text-navy">${{ invoice.total_amount|floatformat:2 }} {{ invoice.currency }}</td>
+                        <td class="fw-bold text-navy">₹{{ invoice.total_amount|floatformat:2 }} {{ invoice.currency }}</td>
                         <td>
                             {% if invoice.match_status == 'MATCHED' %}
                                 <span class="badge bg-success text-white rounded-pill px-3 py-1"><i class="fa-solid fa-check me-1"></i> MATCHED</span>

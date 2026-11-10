@@ -1,7 +1,8 @@
-from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models.deletion import ProtectedError
 import decimal
+
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import DataError
+from django.db.models.deletion import ProtectedError
 from django.http import Http404
 from rest_framework import status
 from rest_framework.exceptions import (
@@ -49,6 +50,19 @@ def custom_exception_handler(exc, context):
                     "code": "PROTECTED_ERROR",
                     "message": "Cannot delete record because it is referenced by other active entities.",
                     "details": {"protected_objects": protected_list},
+                }
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    from django.db import IntegrityError
+    if isinstance(exc, IntegrityError):
+        return Response(
+            {
+                "error": {
+                    "code": "INTEGRITY_ERROR",
+                    "message": "A record with this unique identifier or constrained attribute already exists.",
+                    "details": str(exc),
                 }
             },
             status=status.HTTP_400_BAD_REQUEST,
@@ -134,6 +148,7 @@ def custom_exception_handler(exc, context):
         return Response(custom_response_data, status=status_code)
 
     import logging
+
     from django.conf import settings
 
     logger = logging.getLogger(__name__)

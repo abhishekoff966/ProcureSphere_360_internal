@@ -73,6 +73,10 @@ def test_demo_5_invoice_3way_match_and_exception_resolution():
     )
     vendor.status = Vendor.STATUS_ACTIVE
     vendor.save(update_fields=["status"])
+    vendor_role, _ = Role.objects.get_or_create(code=Role.VENDOR_USER, defaults={"name": "Vendor User"})
+    vendor_user = User.objects.create_user(
+        email="vendor.d5@apex.com", password="password123", role=vendor_role, vendor=vendor
+    )
 
     pr = create_purchase_requisition_service(
         title="Server Racks Purchase",
@@ -102,7 +106,7 @@ def test_demo_5_invoice_3way_match_and_exception_resolution():
     )
     po.status = PurchaseOrder.STATUS_ISSUED
     po.save(update_fields=["status"])
-    acknowledge_purchase_order_service(po=po, vendor_user=requester)
+    acknowledge_purchase_order_service(po=po, vendor_user=vendor_user)
     po_line = po.lines.first()
 
     # 3. Record Goods Receipt (10 units accepted)

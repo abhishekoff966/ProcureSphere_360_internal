@@ -83,7 +83,7 @@
                 <div class="card h-100 shadow-sm rounded-4 p-3 hover-elevate transition-all" style="background-color: #FFFFFF; border: 2px solid #DC3545 !important; border-radius: 14px;">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <span class="text-muted small fw-semibold text-uppercase">PR Bottlenecks</span>
-                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill small fw-bold" id="kpiPRBottleneckValue">$0.00</span>
+                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill small fw-bold" id="kpiPRBottleneckValue">₹0.00</span>
                     </div>
                     <div class="d-flex align-items-baseline gap-2">
                         <div class="metric-value fs-3 fw-bold text-danger" id="kpiPRBottlenecks">0</div>
@@ -101,7 +101,7 @@
                 <div class="card h-100 shadow-sm rounded-4 p-3 hover-elevate transition-all" style="background-color: #FFFFFF; border: 2px solid #0D6EFD !important; border-radius: 14px;">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <span class="text-muted small fw-semibold text-uppercase">Active Orders (PO)</span>
-                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill small fw-bold" id="kpiActivePOValue">$0.00</span>
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill small fw-bold" id="kpiActivePOValue">₹0.00</span>
                     </div>
                     <div class="d-flex align-items-baseline gap-2">
                         <div class="metric-value fs-3 fw-bold text-primary" id="kpiActivePOs">0</div>
@@ -149,19 +149,19 @@
                     <div class="col-4">
                         <div class="p-2 bg-light rounded-3 border">
                             <span class="text-muted text-uppercase fw-semibold" style="font-size: 0.68rem;">Allocated</span>
-                            <div class="fw-bold text-dark mt-1" id="dashAllocatedBudget">$0.00</div>
+                            <div class="fw-bold text-dark mt-1" id="dashAllocatedBudget">₹0.00</div>
                         </div>
                     </div>
                     <div class="col-4">
                         <div class="p-2 bg-light rounded-3 border">
                             <span class="text-muted text-uppercase fw-semibold text-primary" style="font-size: 0.68rem;">Committed</span>
-                            <div class="fw-bold text-primary mt-1" id="dashCommittedSpend">$0.00</div>
+                            <div class="fw-bold text-primary mt-1" id="dashCommittedSpend">₹0.00</div>
                         </div>
                     </div>
                     <div class="col-4">
                         <div class="p-2 bg-light rounded-3 border">
                             <span class="text-muted text-uppercase fw-semibold text-success" style="font-size: 0.68rem;">Actual Spent</span>
-                            <div class="fw-bold text-success mt-1" id="dashActualSpend">$0.00</div>
+                            <div class="fw-bold text-success mt-1" id="dashActualSpend">₹0.00</div>
                         </div>
                     </div>
                 </div>
@@ -176,7 +176,7 @@
                         <div id="dashProgressBar" class="progress-bar bg-primary" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                 </div>
-                <div class="small text-muted text-end" id="dashAvailableBudget">Available: $0.00</div>
+                <div class="small text-muted text-end" id="dashAvailableBudget">Available: ₹0.00</div>
             </div>
         </div>
 
@@ -316,9 +316,9 @@
             // Bind KPI values
             document.getElementById('kpiPendingAwards').textContent = data.pending_awards_count || 0;
             document.getElementById('kpiPRBottlenecks').textContent = data.pr_bottlenecks_count || 0;
-            document.getElementById('kpiPRBottleneckValue').textContent = '$' + Number(data.pr_bottlenecks_value || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('kpiPRBottleneckValue').textContent = '₹' + Number(data.pr_bottlenecks_value || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
             document.getElementById('kpiActivePOs').textContent = data.active_pos_count || 0;
-            document.getElementById('kpiActivePOValue').textContent = '$' + Number(data.active_pos_value || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('kpiActivePOValue').textContent = '₹' + Number(data.active_pos_value || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
             document.getElementById('kpiHighRiskVendors').textContent = data.high_risk_vendors_count || 0;
             document.getElementById('kpiKYCReviews').textContent = (data.kyc_reviews_count || 0) + ' in KYC';
 
@@ -329,9 +329,9 @@
             const available = Number(data.available_budget || 0);
             const utilPct = Number(data.budget_utilization_pct || 0);
 
-            document.getElementById('dashAllocatedBudget').textContent = '$' + allocated.toLocaleString(undefined, {minimumFractionDigits: 2});
-            document.getElementById('dashCommittedSpend').textContent = '$' + committed.toLocaleString(undefined, {minimumFractionDigits: 2});
-            document.getElementById('dashActualSpend').textContent = '$' + actual.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('dashAllocatedBudget').textContent = '₹' + allocated.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('dashCommittedSpend').textContent = '₹' + committed.toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById('dashActualSpend').textContent = '₹' + actual.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('dashAvailableBudget').textContent = 'Available: $' + available.toLocaleString(undefined, {minimumFractionDigits: 2});
             document.getElementById('dashUtilizationPct').textContent = utilPct.toFixed(1) + '%';
             document.getElementById('dashProgressBar').style.width = Math.min(utilPct, 100) + '%';

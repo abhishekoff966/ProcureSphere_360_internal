@@ -78,7 +78,7 @@
             <div class="col-md-4">
                 <div class="glass-card p-4 h-100 shadow-sm text-center d-flex flex-column justify-content-center">
                     <div class="small text-muted fw-semibold uppercase">TOTAL ESTIMATED AMOUNT</div>
-                    <div class="display-5 fw-bold text-navy my-2">${{ pr.total_estimated_amount|floatformat:2 }}</div>
+                    <div class="display-5 fw-bold text-navy my-2">₹{{ pr.total_estimated_amount|floatformat:2 }}</div>
                     <div class="text-muted small">Currency: <strong>{{ pr.currency }}</strong></div>
                     <hr>
                     <div class="small text-muted"><i class="fa-solid fa-lock text-success me-1"></i> Budget Reservation Lock active upon approval.</div>
@@ -104,8 +104,8 @@
                             <tr>
                                 <td class="ps-3 fw-semibold text-dark">{{ line.item_name }}</td>
                                 <td><span class="badge bg-light text-dark border px-3 py-2">{{ line.quantity }}</span></td>
-                                <td>${{ line.unit_price|floatformat:2 }}</td>
-                                <td class="text-end pe-3 fw-bold text-navy">${{ line.estimated_subtotal|floatformat:2 }}</td>
+                                <td>₹{{ line.unit_price|floatformat:2 }}</td>
+                                <td class="text-end pe-3 fw-bold text-navy">₹{{ line.estimated_subtotal|floatformat:2 }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>

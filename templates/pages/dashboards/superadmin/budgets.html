@@ -114,15 +114,15 @@
                 <div class="row g-2 pt-2 border-top small text-center">
                     <div class="col-4">
                         <div class="text-muted" style="font-size: 0.72rem;">Allocated</div>
-                        <div class="fw-bold text-dark">${{ b.allocated_amount|floatformat:2 }}</div>
+                        <div class="fw-bold text-dark">₹{{ b.allocated_amount|floatformat:2 }}</div>
                     </div>
                     <div class="col-4">
                         <div class="text-muted" style="font-size: 0.72rem;">Actual Spend</div>
-                        <div class="fw-bold text-danger">${{ b.actual_amount|floatformat:2 }}</div>
+                        <div class="fw-bold text-danger">₹{{ b.actual_amount|floatformat:2 }}</div>
                     </div>
                     <div class="col-4">
                         <div class="text-muted" style="font-size: 0.72rem;">Available</div>
-                        <div class="fw-bold text-success">${{ b.available_amount|floatformat:2 }}</div>
+                        <div class="fw-bold text-success">₹{{ b.available_amount|floatformat:2 }}</div>
                     </div>
                 </div>
             </div>
@@ -151,11 +151,11 @@
                     <tr>
                         <td class="ps-4 fw-bold text-dark">{{ b.cost_center.code }} - {{ b.cost_center.name }}</td>
                         <td>{{ b.fiscal_period.name }}</td>
-                        <td class="text-end fw-bold">${{ b.allocated_amount|floatformat:2 }}</td>
-                        <td class="text-end text-warning">${{ b.reserved_amount|floatformat:2 }}</td>
-                        <td class="text-end text-primary">${{ b.committed_amount|floatformat:2 }}</td>
-                        <td class="text-end text-danger fw-bold">${{ b.actual_amount|floatformat:2 }}</td>
-                        <td class="text-end text-success fw-bold">${{ b.available_amount|floatformat:2 }}</td>
+                        <td class="text-end fw-bold">₹{{ b.allocated_amount|floatformat:2 }}</td>
+                        <td class="text-end text-warning">₹{{ b.reserved_amount|floatformat:2 }}</td>
+                        <td class="text-end text-primary">₹{{ b.committed_amount|floatformat:2 }}</td>
+                        <td class="text-end text-danger fw-bold">₹{{ b.actual_amount|floatformat:2 }}</td>
+                        <td class="text-end text-success fw-bold">₹{{ b.available_amount|floatformat:2 }}</td>
                         <td class="pe-4 text-end">
                             <button hx-get="/superadmin/budgets/{{ b.pk }}/edit/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-secondary rounded-pill px-3">Edit</button>
                         </td>

@@ -111,7 +111,7 @@
         <div class="col-6 col-lg-3">
             <div class="stat-card glass-card h-100 p-3">
                 <span class="text-muted small fw-semibold text-uppercase d-block mb-1" style="font-size: 0.7rem;">Total Quoted Bid</span>
-                <div class="fs-5 fs-sm-4 fs-md-3 fw-bold text-success text-break">${{ bid.total_bid_amount|floatformat:2 }}</div>
+                <div class="fs-5 fs-sm-4 fs-md-3 fw-bold text-success text-break">₹{{ bid.total_bid_amount|floatformat:2 }}</div>
                 <small class="text-muted d-none d-sm-block" style="font-size: 0.72rem;">Commercial envelope</small>
             </div>
         </div>
@@ -213,8 +213,8 @@
                                 <tr>
                                     <td class="fw-semibold text-dark text-break">{{ line.item_description }}</td>
                                     <td class="text-end font-monospace text-nowrap">{{ line.quantity }}</td>
-                                    <td class="text-end font-monospace text-nowrap">${{ line.quoted_unit_price|floatformat:2 }}</td>
-                                    <td class="text-end font-monospace fw-bold text-success text-nowrap">${{ line.quoted_total_price|floatformat:2 }}</td>
+                                    <td class="text-end font-monospace text-nowrap">₹{{ line.quoted_unit_price|floatformat:2 }}</td>
+                                    <td class="text-end font-monospace fw-bold text-success text-nowrap">₹{{ line.quoted_total_price|floatformat:2 }}</td>
                                 </tr>
                                 {% empty %}
                                 <tr>
@@ -225,7 +225,7 @@
                             <tfoot class="table-light">
                                 <tr>
                                     <th colspan="3" class="text-end fw-bold">Grand Total:</th>
-                                    <th class="text-end font-monospace fs-6 text-success fw-bold text-nowrap">${{ bid.total_bid_amount|floatformat:2 }}</th>
+                                    <th class="text-end font-monospace fs-6 text-success fw-bold text-nowrap">₹{{ bid.total_bid_amount|floatformat:2 }}</th>
                                 </tr>
                             </tfoot>
                         </table>
@@ -306,7 +306,7 @@
                                             {{ v.status }}
                                         </span>
                                     </td>
-                                    <td class="font-monospace fw-semibold text-dark text-nowrap">${{ v.total_bid_amount|floatformat:2 }}</td>
+                                    <td class="font-monospace fw-semibold text-dark text-nowrap">₹{{ v.total_bid_amount|floatformat:2 }}</td>
                                     <td class="small text-muted text-nowrap">{{ v.submitted_at|date:"M d, Y H:i"|default:"N/A" }}</td>
                                     <td class="small text-dark pe-3 pe-md-4 text-break">
                                         {% if v.amendment_reason %}

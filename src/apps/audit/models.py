@@ -43,6 +43,7 @@ class AuditLog(models.Model):
     ACTION_OVERRIDE = "OVERRIDE"
     ACTION_ACKNOWLEDGE = "ACKNOWLEDGE"
     ACTION_VERIFY = "VERIFY"
+    ACTION_LOGIN_FAILED = "LOGIN_FAILED"
 
     objects = AuditLogQuerySet.as_manager()
 
@@ -53,6 +54,7 @@ class AuditLog(models.Model):
         (ACTION_APPROVE, "Approve"),
         (ACTION_REJECT, "Reject"),
         (ACTION_LOGIN, "Login"),
+        (ACTION_LOGIN_FAILED, "Login Failed"),
         (ACTION_LOGOUT, "Logout"),
         (ACTION_EXPORT, "Export Data"),
         (ACTION_AMEND, "Amend / Version"),
@@ -176,6 +178,22 @@ class AuditLog(models.Model):
             raise PermissionError(
                 "AuditLog records are append-only and immutable. Edits are strictly prohibited."
             )
+        if not self.ip_address:
+            try:
+                from apps.core.middleware import get_client_ip
+                client_ip = get_client_ip()
+                if client_ip:
+                    self.ip_address = client_ip
+            except Exception:
+                pass
+        if not self.request_id:
+            try:
+                from apps.core.middleware import get_current_request_id
+                req_id = get_current_request_id()
+                if req_id:
+                    self.request_id = req_id
+            except Exception:
+                pass
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):

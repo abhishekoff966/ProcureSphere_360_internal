@@ -360,7 +360,7 @@
 
                 <span class="text-muted small fw-semibold text-uppercase d-block">Allocated Budget</span>
 
-                <span class="fs-4 fw-bold text-success">${{ allocated_budget|floatformat:2 }}</span>
+                <span class="fs-4 fw-bold text-success">₹{{ allocated_budget|floatformat:2 }}</span>
 
             </div>
 
@@ -368,7 +368,7 @@
 
                 <span class="text-muted small fw-semibold text-uppercase d-block">Actual Spend</span>
 
-                <span class="fs-4 fw-bold text-dark">${{ actual_budget|floatformat:2 }}</span>
+                <span class="fs-4 fw-bold text-dark">₹{{ actual_budget|floatformat:2 }}</span>
 
             </div>
 
@@ -376,7 +376,7 @@
 
                 <span class="text-muted small fw-semibold text-uppercase d-block">Committed / Reserved</span>
 
-                <span class="fs-4 fw-bold text-secondary">${{ committed_budget|add:reserved_budget|floatformat:2 }}</span>
+                <span class="fs-4 fw-bold text-secondary">₹{{ committed_budget|add:reserved_budget|floatformat:2 }}</span>
 
             </div>
 
@@ -384,7 +384,7 @@
 
                 <span class="text-muted small fw-semibold text-uppercase d-block">Available Remaining</span>
 
-                <span class="fs-4 fw-bold text-primary">${{ available_budget|floatformat:2 }}</span>
+                <span class="fs-4 fw-bold text-primary">₹{{ available_budget|floatformat:2 }}</span>
 
             </div>
 
@@ -1430,7 +1430,7 @@
 
                                     <td>{{ pr.department.name }}</td>
 
-                                    <td class="fw-bold text-dark">${{ pr.total_amount|floatformat:2 }}</td>
+                                    <td class="fw-bold text-dark">₹{{ pr.total_amount|floatformat:2 }}</td>
 
                                     <td>
 
@@ -1958,7 +1958,7 @@
 
                                     <td><span class="badge bg-light text-dark border">{{ po.cost_center.code }}</span></td>
 
-                                    <td class="fw-bold text-dark">${{ po.total_amount|floatformat:2 }}</td>
+                                    <td class="fw-bold text-dark">₹{{ po.total_amount|floatformat:2 }}</td>
 
                                     <td>
 
@@ -2136,15 +2136,15 @@
 
                                     <td><span class="badge bg-light text-dark border">{{ b.fiscal_period.name }}</span></td>
 
-                                    <td class="fw-bold text-success">${{ b.allocated_amount|floatformat:2 }}</td>
+                                    <td class="fw-bold text-success">₹{{ b.allocated_amount|floatformat:2 }}</td>
 
-                                    <td class="text-muted">${{ b.reserved_amount|floatformat:2 }}</td>
+                                    <td class="text-muted">₹{{ b.reserved_amount|floatformat:2 }}</td>
 
-                                    <td class="text-muted">${{ b.committed_amount|floatformat:2 }}</td>
+                                    <td class="text-muted">₹{{ b.committed_amount|floatformat:2 }}</td>
 
-                                    <td class="fw-bold text-dark">${{ b.actual_amount|floatformat:2 }}</td>
+                                    <td class="fw-bold text-dark">₹{{ b.actual_amount|floatformat:2 }}</td>
 
-                                    <td class="fw-bold text-primary">${{ b.available_amount|floatformat:2 }}</td>
+                                    <td class="fw-bold text-primary">₹{{ b.available_amount|floatformat:2 }}</td>
 
                                 </tr>
 
@@ -2208,7 +2208,7 @@
 
                                             <td class="small">{{ inv.vendor.legal_name }}</td>
 
-                                            <td class="fw-bold">${{ inv.total_amount|floatformat:2 }}</td>
+                                            <td class="fw-bold">₹{{ inv.total_amount|floatformat:2 }}</td>
 
                                             <td><span class="badge bg-light text-dark border">{{ inv.get_status_display }}</span></td>
 

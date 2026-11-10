@@ -94,15 +94,6 @@ class PurchaseRequisitionSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def validate(self, attrs):
-        if self.instance is None:
-            lines_data = self.initial_data.get("line_items", self.initial_data.get("lines", []))
-            if not lines_data or len(lines_data) == 0:
-                raise serializers.ValidationError(
-                    {"lines": ["Purchase Requisition must contain at least one line item."]}
-                )
-        return attrs
-
     def validate_requested_delivery_date(self, value):
         from django.utils import timezone
 
@@ -124,6 +115,13 @@ class PurchaseRequisitionSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        department = attrs.get("department") or getattr(self.instance, "department", None)
+        cost_center = attrs.get("cost_center") or getattr(self.instance, "cost_center", None)
+        if department and cost_center:
+            if cost_center.department_id != department.id:
+                raise serializers.ValidationError(
+                    {"cost_center": ["Cost center must belong to the selected department."]}
+                )
         if self.instance is None:
             lines_data = self.initial_data.get("line_items", self.initial_data.get("lines"))
             if lines_data is None or len(lines_data) == 0:

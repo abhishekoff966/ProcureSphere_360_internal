@@ -125,7 +125,7 @@
                         <i class="fa-solid fa-plus me-1"></i> Add Line Item
                     </button>
                     <div class="fs-6 fs-md-5 fw-bold text-dark">
-                        Amended Quoted Total: <span class="text-success" id="grandTotalDisplay">${{ bid.total_bid_amount|floatformat:2 }}</span>
+                        Amended Quoted Total: <span class="text-success" id="grandTotalDisplay">₹{{ bid.total_bid_amount|floatformat:2 }}</span>
                     </div>
                 </div>
             </div>
@@ -204,7 +204,7 @@ function recalcTotal() {
         const p = parseFloat(prices[i].value) || 0;
         total += (q * p);
     }
-    document.getElementById('grandTotalDisplay').innerText = '$' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('grandTotalDisplay').innerText = '₹' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 
 document.addEventListener('DOMContentLoaded', recalcTotal);

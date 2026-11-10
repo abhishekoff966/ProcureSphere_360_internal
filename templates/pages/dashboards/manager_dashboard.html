@@ -116,7 +116,7 @@
                                 <tr>
                                     <td class="ps-3 fw-semibold text-primary">{{ pr.pr_number }}</td>
                                     <td>{{ pr.title|truncatechars:30 }}</td>
-                                    <td><strong class="text-dark">${{ pr.total_amount|floatformat:2 }}</strong></td>
+                                    <td><strong class="text-dark">₹{{ pr.total_amount|floatformat:2 }}</strong></td>
                                     <td><span class="badge bg-warning text-dark">{{ pr.status }}</span></td>
                                     <td class="text-end pe-3">
                                         <a href="/requisitions/{{ pr.id }}/" class="btn btn-sm btn-outline-primary">Review</a>
