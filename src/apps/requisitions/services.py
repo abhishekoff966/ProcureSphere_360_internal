@@ -99,9 +99,9 @@ def create_purchase_requisition_service(
             raise ValidationError(
                 f"Quantity for line item '{item.get('item_description', '')}' must be a whole number (no decimal points allowed)."
             )
-        if unit_price < Decimal("0.00"):
+        if unit_price <= Decimal("0.00"):
             raise ValidationError(
-                f"Estimated unit price for line item '{item.get('item_description', '')}' cannot be negative."
+                f"Estimated unit price for line item '{item.get('item_description', '')}' must be greater than zero."
             )
         line = PRLine.objects.create(
             requisition=pr,
