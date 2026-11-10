@@ -14,6 +14,24 @@
       </p>
     </div>
 
+    <!-- Mobile-Only Scroll Indicator Guide (Positioned ABOVE the comparison table box) -->
+    <div class="benefits-mobile-scroll-guide">
+      <div class="benefits-scroll-hint-pill">
+        <svg class="benefits-swipe-arrow left" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+        <span>Swipe horizontally to view full comparison</span>
+        <svg class="benefits-swipe-arrow right" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m9 18 6-6-6-6"/>
+        </svg>
+      </div>
+      <div class="benefits-scroll-indicator-bar" aria-label="Horizontal scroll position">
+        <div class="benefits-scroll-track">
+          <div class="benefits-scroll-thumb" id="benefitsScrollThumb"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="benefits-table-wrapper animate-on-scroll" style="background:#ffffff;border:2px solid #cbd5e1;border-radius:24px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;box-shadow:0 20px 48px rgba(15,27,45,0.12),0 6px 16px rgba(15,27,45,0.06);">
       <div class="benefits-table-card" style="width:100%;min-width:880px;">
         <!-- Table Header -->
@@ -45,24 +63,6 @@
           </div>
         </div>
         {% endfor %}
-      </div>
-    </div>
-
-    <!-- Mobile-Only Scroll Indicator Guide -->
-    <div class="benefits-mobile-scroll-guide">
-      <div class="benefits-scroll-hint-pill">
-        <svg class="benefits-swipe-arrow left" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="m15 18-6-6 6-6"/>
-        </svg>
-        <span>Swipe horizontally to view full comparison</span>
-        <svg class="benefits-swipe-arrow right" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="m9 18 6-6-6-6"/>
-        </svg>
-      </div>
-      <div class="benefits-scroll-indicator-bar" aria-label="Horizontal scroll position">
-        <div class="benefits-scroll-track">
-          <div class="benefits-scroll-thumb" id="benefitsScrollThumb"></div>
-        </div>
       </div>
     </div>
   </div>
@@ -99,7 +99,8 @@
       flex-direction: column !important;
       align-items: center !important;
       gap: 10px !important;
-      margin-top: 14px !important;
+      margin-top: 0 !important;
+      margin-bottom: 18px !important;
       width: 100% !important;
       box-sizing: border-box !important;
     }

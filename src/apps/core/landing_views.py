@@ -167,7 +167,7 @@ def landing_home(request):
             {'question': 'How does the approval policy engine work?', 'answer': 'It routes decisions automatically based on custom rules like department, budget thresholds, or risk categories, ensuring the right owner reviews the request at the exact right time.'},
         ],
         'trust_cards': [
-            {'icon': 'building', 'stat': '500+', 'label': 'Global Enterprises', 'desc': 'Across global supply chains', 'color': '#3b82f6', 'tag': 'GLOBAL SCALE'},
+            {'icon': 'building', 'stat': '13,000+', 'label': 'Global Enterprises', 'desc': 'Across global supply chains', 'color': '#3b82f6', 'tag': 'GLOBAL SCALE'},
             {'icon': 'chart', 'stat': '$2.5B+', 'label': 'Spend Managed', 'desc': 'Annually across all modules', 'color': '#10b981', 'tag': 'SPEND VOLUME'},
             {'icon': 'receipt', 'stat': '10M+', 'label': 'Monthly Transactions', 'desc': 'Instant POs & invoices', 'color': '#f59e0b', 'tag': 'HIGH VELOCITY'},
             {'icon': 'savings', 'stat': '₹120Cr+', 'label': 'Savings Generated', 'desc': 'Through automated negotiations', 'color': '#8b5cf6', 'tag': 'COST SAVINGS'},
