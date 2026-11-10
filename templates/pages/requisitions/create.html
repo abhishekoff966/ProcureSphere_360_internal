@@ -33,18 +33,20 @@
                 </div>
                 <div class="card-body p-4">
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-secondary small">Requisition Title *</label>
+                        <label class="form-label fw-bold text-secondary small">Requisition Title <span class="text-danger">*</span></label>
                         <input type="text" name="title" class="form-control form-control-lg bg-light border-0" required placeholder="E.g., Office Supplies for Q4">
+                        <div class="invalid-feedback">Please enter a requisition title.</div>
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-secondary small">Business Justification *</label>
+                        <label class="form-label fw-bold text-secondary small">Business Justification <span class="text-danger">*</span></label>
                         <textarea name="justification" class="form-control bg-light border-0" rows="3" required placeholder="Why is this purchase necessary?"></textarea>
+                        <div class="invalid-feedback">Please provide a business justification.</div>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold text-secondary small">Department *</label>
+                            <label class="form-label fw-bold text-secondary small">Department <span class="text-danger">*</span></label>
                             <select name="department" class="form-select bg-light border-0" required>
                                 {% if departments|length != 1 %}
                                 <option value="" disabled selected>Select Department...</option>
@@ -53,19 +55,21 @@
                                 <option value="{{ dept.id }}" {% if departments|length == 1 %}selected{% endif %}>{{ dept.name }}</option>
                                 {% endfor %}
                             </select>
+                            <div class="invalid-feedback">Please select a department.</div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold text-secondary small">Cost Center *</label>
-                            <select name="cost_center" id="cost_center_select" class="form-select bg-light border-0" required onchange="updateBudgetNotice()">
+                            <label class="form-label fw-bold text-secondary small">Cost Center <span class="text-danger">*</span></label>
+                            <select name="cost_center" id="cost_center_select" class="form-select bg-light border-0 text-truncate" style="max-width: 100%;" required onchange="updateBudgetNotice()">
                                 {% if cost_centers|length != 1 %}
                                 <option value="" disabled selected>Select Cost Center...</option>
                                 {% endif %}
                                 {% for cc in cost_centers %}
-                                <option value="{{ cc.id }}" data-budget="{% if cc.available_budget != None %}{{ cc.available_budget|floatformat:2 }}{% else %}N/A{% endif %}" {% if cost_centers|length == 1 %}selected{% endif %}>
+                                <option value="{{ cc.id }}" title="{{ cc.code }} - {{ cc.name }}" data-budget="{% if cc.available_budget != None %}{{ cc.available_budget|floatformat:2 }}{% else %}N/A{% endif %}" {% if cost_centers|length == 1 %}selected{% endif %}>
                                     {{ cc.code }} - {{ cc.name }}
                                 </option>
                                 {% endfor %}
                             </select>
+                            <div class="invalid-feedback">Please select a cost center.</div>
                             {% if user_assigned_cost_center %}
                             <div class="form-text text-success small mt-1">
                                 <i class="fa-solid fa-lock me-1"></i> Designated Cost Center: <strong>{{ user_assigned_cost_center.code }}</strong>
@@ -103,23 +107,23 @@
                         <table class="table align-middle" id="line-items-table">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width: 40%">Description *</th>
-                                    <th style="width: 15%">Qty *</th>
-                                    <th style="width: 15%">UOM *</th>
-                                    <th style="width: 20%">Est. Unit Price *</th>
+                                    <th style="width: 35%">Description <span class="text-danger">*</span></th>
+                                    <th style="width: 15%">Qty <span class="text-danger">*</span></th>
+                                    <th style="width: 18%; min-width: 125px;">UOM <span class="text-danger">*</span></th>
+                                    <th style="width: 22%">Est. Unit Price <span class="text-danger">*</span></th>
                                     <th style="width: 10%"></th>
                                 </tr>
                             </thead>
                             <tbody id="line-items-body">
                                 <tr>
                                     <td>
-                                        <input type="text" name="item_description[]" class="form-control form-control-sm bg-light border-0" required>
+                                        <input type="text" name="item_description[]" class="form-control form-control-sm bg-light border-0" required placeholder="e.g. Dell Latitude 5540 Laptop">
                                     </td>
                                     <td>
                                         <input type="number" name="quantity[]" class="form-control form-control-sm bg-light border-0 item-qty" step="1" min="1" required oninput="validateQuantityInput(this); calculateTotalAmount();" onkeypress="return event.charCode >= 48 && event.charCode <= 57">
                                     </td>
                                     <td>
-                                        <select name="unit_of_measure[]" class="form-select form-select-sm bg-light border-0">
+                                        <select name="unit_of_measure[]" class="form-select form-select-sm bg-light border-0" style="min-width: 115px;">
                                             <option value="EA">EA (Each)</option>
                                             <option value="HR">HR (Hour)</option>
                                             <option value="BOX">BOX</option>
@@ -128,8 +132,8 @@
                                     </td>
                                     <td>
                                         <div class="input-group input-group-sm">
-                                            <span class="input-group-text bg-light border-0">$</span>
-                                            <input type="number" name="estimated_unit_price[]" class="form-control bg-light border-0 item-price" step="0.01" min="0" required oninput="calculateTotalAmount()">
+                                            <span class="input-group-text bg-light border-0">₹</span>
+                                            <input type="number" name="estimated_unit_price[]" class="form-control bg-light border-0 item-price" step="0.01" min="0.01" required placeholder="0.00" oninput="calculateTotalAmount()">
                                         </div>
                                     </td>
                                     <td class="text-center">
@@ -193,8 +197,9 @@
                 </div>
                 <div class="card-body p-4">
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-secondary small">Required Delivery Date *</label>
+                        <label class="form-label fw-bold text-secondary small">Required Delivery Date <span class="text-danger">*</span></label>
                         <input type="date" name="requested_delivery_date" id="requested_delivery_date" class="form-control bg-light border-0" required min="{{ today }}">
+                        <div class="invalid-feedback">Please select a valid required delivery date.</div>
                     </div>
                     <hr>
                     <div class="d-grid gap-2">
@@ -250,6 +255,34 @@
     </div>
 </div>
 
+<!-- User-Friendly Mandatory Line Item Alert Modal -->
+<div class="modal fade" id="mandatoryLineItemModal" tabindex="-1" aria-labelledby="mandatoryLineItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom-0 bg-warning text-dark rounded-top-4 p-4">
+                <h5 class="modal-title fw-bold" id="mandatoryLineItemModalLabel">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i> Line Item Required
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="bg-warning-subtle text-warning rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 64px; height: 64px;">
+                    <i class="fa-solid fa-list-check fs-2 text-dark"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-2">Default Line Item Cannot Be Deleted</h5>
+                <p class="text-muted mb-0">
+                    A purchase requisition requires at least <strong>one mandatory line item</strong>. If you do not need this specific item, you can edit its description or modify its quantity and unit price, but the row cannot be deleted.
+                </p>
+            </div>
+            <div class="modal-footer border-top-0 p-4 justify-content-center bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-check me-1"></i> Understood
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     window.forceSubmitForm = function(btn) {
         const modalEl = document.getElementById('budgetExceededModal');
@@ -284,10 +317,18 @@
     function validateBudgetOnSubmit(e) {
         const rows = document.querySelectorAll('#line-items-body tr');
         let hasValidItem = false;
+        let hasInvalidPrice = false;
         rows.forEach(tr => {
             const desc = tr.querySelector('input[name="item_description[]"]');
+            const price = tr.querySelector('input[name="estimated_unit_price[]"]');
             if (desc && desc.value.trim() !== '') {
                 hasValidItem = true;
+                if (!price || parseFloat(price.value) <= 0 || isNaN(parseFloat(price.value))) {
+                    hasInvalidPrice = true;
+                    if (price) price.classList.add('is-invalid');
+                } else {
+                    if (price) price.classList.remove('is-invalid');
+                }
             }
         });
         if (!hasValidItem || rows.length === 0) {
@@ -305,6 +346,21 @@
             }
             const firstDesc = document.querySelector('input[name="item_description[]"]');
             if (firstDesc) firstDesc.focus();
+            return;
+        }
+
+        if (hasInvalidPrice) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            window.PSToast('Estimated Unit Price must be greater than zero for all line items.', 'danger', 'Invalid Unit Price');
+            const form = document.getElementById('pr_create_form');
+            if (form) {
+                delete form.dataset.submitting;
+                const draftBtn = form.querySelector('button[name="submit_action"]');
+                if (draftBtn && window.resetButtonLoading) window.resetButtonLoading(draftBtn);
+            }
+            const firstInvalidPrice = document.querySelector('input[name="estimated_unit_price[]"].is-invalid');
+            if (firstInvalidPrice) firstInvalidPrice.focus();
             return;
         }
 
@@ -344,13 +400,13 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>
-                <input type="text" name="item_description[]" class="form-control form-control-sm bg-light border-0" required>
+                <input type="text" name="item_description[]" class="form-control form-control-sm bg-light border-0" required placeholder="e.g. Dell Latitude 5540 Laptop">
             </td>
             <td>
                 <input type="number" name="quantity[]" class="form-control form-control-sm bg-light border-0 item-qty" step="1" min="1" required oninput="validateQuantityInput(this); calculateTotalAmount();" onkeypress="return event.charCode >= 48 && event.charCode <= 57">
             </td>
             <td>
-                <select name="unit_of_measure[]" class="form-select form-select-sm bg-light border-0">
+                <select name="unit_of_measure[]" class="form-select form-select-sm bg-light border-0" style="min-width: 115px;">
                     <option value="EA">EA (Each)</option>
                     <option value="HR">HR (Hour)</option>
                     <option value="BOX">BOX</option>
@@ -359,8 +415,8 @@
             </td>
             <td>
                 <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-light border-0">$</span>
-                    <input type="number" name="estimated_unit_price[]" class="form-control bg-light border-0 item-price" step="0.01" min="0" required oninput="calculateTotalAmount()">
+                    <span class="input-group-text bg-light border-0">₹</span>
+                    <input type="number" name="estimated_unit_price[]" class="form-control bg-light border-0 item-price" step="0.01" min="0.01" required placeholder="0.00" oninput="calculateTotalAmount()">
                 </div>
             </td>
             <td class="text-center">
@@ -376,18 +432,15 @@
         if (!tbody) return;
         const rows = tbody.querySelectorAll('tr');
         if (rows.length <= 1) {
-            // Cannot remove the only row: clear its inputs instead to maintain at least one row
-            const tr = btn.closest('tr');
-            if (tr) {
-                const desc = tr.querySelector('input[name="item_description[]"]');
-                const qty = tr.querySelector('input[name="quantity[]"]');
-                const price = tr.querySelector('input[name="estimated_unit_price[]"]');
-                const uom = tr.querySelector('select[name="unit_of_measure[]"]');
-                if (desc) desc.value = '';
-                if (qty) qty.value = '1';
-                if (price) price.value = '';
-                if (uom) uom.value = 'EA';
-                calculateTotalAmount();
+            // Show user-friendly modal pop-up explaining that one line item is mandatory and cannot be deleted
+            const modalEl = document.getElementById('mandatoryLineItemModal');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            } else if (typeof window.PSToast === 'function') {
+                window.PSToast('One line item is mandatory and cannot be deleted.', 'warning', 'Line Item Required');
+            } else {
+                alert('One line item is mandatory and cannot be deleted.');
             }
             return;
         }

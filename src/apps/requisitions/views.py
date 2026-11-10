@@ -274,6 +274,20 @@ def create_view(request):
                     messages.error(request, f"Invalid quantity for line item '{desc}'.")
                     return redirect("requisition_create")
 
+                try:
+                    price_num = Decimal(str(unit_prices[i]))
+                    if price_num <= Decimal("0"):
+                        messages.error(
+                            request,
+                            f"Estimated unit price for line item '{desc}' must be greater than zero.",
+                        )
+                        return redirect("requisition_create")
+                except Exception:
+                    messages.error(
+                        request, f"Invalid estimated unit price for line item '{desc}'."
+                    )
+                    return redirect("requisition_create")
+
                 line_items.append(
                     {
                         "item_description": desc,
@@ -435,46 +449,72 @@ def edit_view(request, pk):
                 messages.error(request, "Please add at least one line item.")
                 return redirect("requisition_edit", pk=pr.pk)
 
-            with transaction.atomic():
-                if item_descriptions:
-                    # Delete existing lines and recreate if new line items provided
-                    pr.lines.all().delete()
+            # Validate all line items first before mutating database
+            parsed_lines = []
+            for i in range(len(item_descriptions)):
+                desc = item_descriptions[i].strip()
+                if not desc:
+                    continue
 
-                    total_amount = Decimal("0.00")
-                    for i in range(len(item_descriptions)):
-                        desc = item_descriptions[i].strip()
-                        if not desc:
-                            continue
-
-                        try:
-                            qty_val = Decimal(str(quantities[i]))
-                            if qty_val <= Decimal("0"):
-                                messages.error(
-                                    request,
-                                    f"Quantity for line item '{desc}' must be greater than zero.",
-                                )
-                                return redirect("requisition_edit", pk=pr.pk)
-                            if qty_val % 1 != 0:
-                                messages.error(
-                                    request,
-                                    f"Quantity for line item '{desc}' must be a whole number (no decimal points allowed).",
-                                )
-                                return redirect("requisition_edit", pk=pr.pk)
-                        except Exception:
-                            messages.error(request, f"Invalid quantity for line item '{desc}'.")
-                            return redirect("requisition_edit", pk=pr.pk)
-
-                        price = Decimal(str(unit_prices[i]))
-                        uom = uoms[i] if i < len(uoms) else "EA"
-
-                        PRLine.objects.create(
-                            requisition=pr,
-                            item_description=desc,
-                            quantity=qty_val,
-                            unit_of_measure=uom,
-                            estimated_unit_price=price,
+                try:
+                    qty_val = Decimal(str(quantities[i]))
+                    if qty_val <= Decimal("0"):
+                        messages.error(
+                            request,
+                            f"Quantity for line item '{desc}' must be greater than zero.",
                         )
-                        total_amount += qty_val * price
+                        return redirect("requisition_edit", pk=pr.pk)
+                    if qty_val % 1 != 0:
+                        messages.error(
+                            request,
+                            f"Quantity for line item '{desc}' must be a whole number (no decimal points allowed).",
+                        )
+                        return redirect("requisition_edit", pk=pr.pk)
+                except Exception:
+                    messages.error(request, f"Invalid quantity for line item '{desc}'.")
+                    return redirect("requisition_edit", pk=pr.pk)
+
+                try:
+                    price = Decimal(str(unit_prices[i]))
+                    if price <= Decimal("0"):
+                        messages.error(
+                            request,
+                            f"Estimated unit price for line item '{desc}' must be greater than zero.",
+                        )
+                        return redirect("requisition_edit", pk=pr.pk)
+                except Exception:
+                    messages.error(
+                        request, f"Invalid estimated unit price for line item '{desc}'."
+                    )
+                    return redirect("requisition_edit", pk=pr.pk)
+
+                uom = uoms[i] if i < len(uoms) else "EA"
+                parsed_lines.append(
+                    {
+                        "item_description": desc,
+                        "quantity": qty_val,
+                        "unit_of_measure": uom,
+                        "estimated_unit_price": price,
+                    }
+                )
+
+            if not parsed_lines:
+                messages.error(request, "Please add at least one line item.")
+                return redirect("requisition_edit", pk=pr.pk)
+
+            with transaction.atomic():
+                # Delete existing lines and recreate only when all inputs are verified
+                pr.lines.all().delete()
+                total_amount = Decimal("0.00")
+                for pl in parsed_lines:
+                    PRLine.objects.create(
+                        requisition=pr,
+                        item_description=pl["item_description"],
+                        quantity=pl["quantity"],
+                        unit_of_measure=pl["unit_of_measure"],
+                        estimated_unit_price=pl["estimated_unit_price"],
+                    )
+                    total_amount += pl["quantity"] * pl["estimated_unit_price"]
 
                     # Validate budget before saving PR total
                     validate_budget_availability_service(
