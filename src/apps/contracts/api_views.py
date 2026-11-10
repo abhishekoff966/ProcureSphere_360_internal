@@ -190,6 +190,16 @@ class ContractViewSet(viewsets.ModelViewSet):
     )
     def amend(self, request, pk=None):
         contract = self.get_object()
+        if contract.status in [Contract.STATUS_DRAFT, Contract.STATUS_TERMINATED, Contract.STATUS_EXPIRED]:
+            return Response(
+                {
+                    "error": {
+                        "code": "INVALID_AMENDMENT",
+                        "message": f"Contracts in status '{contract.status}' cannot be amended.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         summary = request.data.get("amendment_summary")
         value = request.data.get("contract_value")
         start_date = request.data.get("start_date")
@@ -234,6 +244,16 @@ class ContractViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="add-milestone")
     def add_milestone(self, request, pk=None):
         contract = self.get_object()
+        if contract.status in [Contract.STATUS_TERMINATED, Contract.STATUS_EXPIRED]:
+            return Response(
+                {
+                    "error": {
+                        "code": "INVALID_MILESTONE",
+                        "message": f"Cannot add milestones to a {contract.status.lower()} contract.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         title = request.data.get("title")
         due_date = request.data.get("due_date")
         amount = request.data.get("amount", 0)

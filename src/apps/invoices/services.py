@@ -246,6 +246,9 @@ def run_3_way_match_service(
     price_tolerance_amount = policy.price_tolerance_amount
     qty_tolerance_amount = policy.qty_tolerance_amount
 
+    if invoice.status == SupplierInvoice.STATUS_PAID:
+        raise ValidationError("Cannot run 3-way match on an invoice that has already been PAID.")
+
     invoice.status = SupplierInvoice.STATUS_MATCHING
     invoice.save(update_fields=["status", "updated_at"])
 

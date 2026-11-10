@@ -106,6 +106,13 @@ class SessionLoginView(views.APIView):
 
         user = authenticate(request, username=email, password=password)
         if user is None:
+            try:
+                from axes.handlers.proxy import AxesProxyHandler
+
+                AxesProxyHandler.user_login_failed(request, credentials={"username": email, "email": email})
+            except Exception:
+                pass
+
             # Audit failed login attempt (DEF-018)
             try:
                 from django.contrib.auth import get_user_model

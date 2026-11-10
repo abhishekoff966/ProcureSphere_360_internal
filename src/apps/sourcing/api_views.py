@@ -163,6 +163,8 @@ class SourcingEventViewSet(
     def close_bidding(self, request, pk=None):
         _require_manage(request)
         event = self.get_object()
+        if event.status == SourcingEvent.STATUS_TECHNICAL_REVIEW:
+            return self._ok(event)
         if event.status != SourcingEvent.STATUS_BID_WINDOW:
             return Response(
                 {

@@ -539,9 +539,15 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
         role_code = getattr(user, "role_code", None) or (
             user.role.code if hasattr(user, "role") and user.role else None
         )
-        if not (user.is_superuser or role_code == Role.SUPER_ADMIN):
+        is_admin = user.is_superuser or role_code == Role.SUPER_ADMIN
+        is_owner_draft = (
+            role_code == Role.REQUESTER
+            and pr.requester_id == user.id
+            and pr.status == PurchaseRequisition.STATUS_DRAFT
+        )
+        if not (is_admin or is_owner_draft):
             raise permissions.exceptions.PermissionDenied(
-                "Permission Denied: Requisition deletion is strictly restricted to Super Admin."
+                "Permission Denied: Requisition deletion is strictly restricted to Super Admin, or the requester for draft requisitions."
             )
         # Soft-cancel instead of hard delete to preserve audit history (PR-02)
         previous_status = pr.status
