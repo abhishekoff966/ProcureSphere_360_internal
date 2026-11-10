@@ -652,8 +652,10 @@ def test_scoped_tenant_admin_ui_and_permissions(client, db_roles):
     assert "Manage Departments" not in content
     assert "Manage Cost Centers" not in content
 
-    # In Legal Entities action column: 'View' is present, 'Edit' is removed
-    assert f"/superadmin/organizations/{tenant_org.pk}/view/" in content
+    # Legal Entities card is removed in Departments & Cost Centers view
+    assert "Legal Entities" not in content
+    assert "Departments" in content
+    assert "Cost Centers" in content
     assert f"/superadmin/organizations/{tenant_org.pk}/edit/" not in content
 
     # 2. Home dashboard does not list every organization

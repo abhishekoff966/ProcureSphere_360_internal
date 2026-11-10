@@ -4,11 +4,15 @@
 {% block title %}{% block sa_title %}Admin Control Center{% endblock %} — ProcureSphere 360{% endblock %}
 
 {% block navbar %}
+<<<<<<< Updated upstream
 {% if request.user.is_superuser and not request.user.effective_organization %}
 {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/admin/' profile_dropdown_id='saProfileDropdown' %}
 {% else %}
 {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' profile_dropdown_id='saProfileDropdown' %}
 {% endif %}
+=======
+{% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' profile_dropdown_id='saProfileDropdown' notification_url='/superadmin/notifications/' %}
+>>>>>>> Stashed changes
 {% endblock navbar %}
 
 {% block layout %}
@@ -281,7 +285,7 @@
     }
 
     /* Inputs in Admin & Modals */
-    input[type="text"], input[type="password"], input[type="email"], input[type="url"], input[type="number"], input[type="tel"], textarea, select, .form-control, .form-select, .modal input, .modal textarea, .modal select {
+    input[type="text"], input[type="password"], input[type="email"], input[type="url"], input[type="number"], input[type="tel"], textarea, .form-control, .modal input, .modal textarea {
         background-color: #ffffff !important;
         background: #ffffff !important;
         color: #1e293b !important;
@@ -289,8 +293,36 @@
         border: 1px solid #cbd5e1 !important;
     }
 
-    input:focus, textarea:focus, select:focus, .form-control:focus, .form-select:focus {
+    /* Dropdown Select Controls across whole Super Admin & Admin dashboards with persistent dropdown arrow */
+    select, .form-select, .modal select {
         background-color: #ffffff !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 0.85rem center !important;
+        background-size: 16px 12px !important;
+        padding-right: 2.25rem !important;
+        color: #1e293b !important;
+        -webkit-text-fill-color: #1e293b !important;
+        border: 1px solid #cbd5e1 !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+    }
+
+    input:focus, textarea:focus, .form-control:focus {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15) !important;
+    }
+
+    select:focus, .form-select:focus, .modal select:focus {
+        background-color: #ffffff !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%231677FF' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 0.85rem center !important;
+        background-size: 16px 12px !important;
+        padding-right: 2.25rem !important;
         color: #0f172a !important;
         border-color: #3b82f6 !important;
         box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15) !important;
@@ -328,8 +360,12 @@
                 <span>Admin Workspace</span>
             </div>
 
+<<<<<<< Updated upstream
             {% if request.user.is_superuser and not request.user.effective_organization %}
             <a href="/admin/" class="sa-nav-link {% if request.path == '/admin/' or request.path == '/admin/dashboard/' %}active{% endif %}">
+=======
+            <a href="/superadmin/" class="sa-nav-link {% if request.path == '/superadmin/' or request.path == '/superadmin/dashboard/' or request.path == '/admin/dashboard/' or request.path == '/' %}active{% endif %}">
+>>>>>>> Stashed changes
                 <span>Dashboard</span>
             </a>
             {% else %}
@@ -344,6 +380,9 @@
             <a href="/superadmin/organizations/" class="sa-nav-link {% if '/superadmin/organizations/' in request.path %}active{% endif %}">
                 <span>Organizations</span>
             </a>
+            <a href="/superadmin/users/" class="sa-nav-link {% if '/superadmin/users/' in request.path %}active{% endif %}">
+                <span>Manage Users &amp; Roles</span>
+            </a>
             {% else %}
             <div class="sa-nav-separator"></div>
             <div class="sa-nav-label">Organization &amp; Masters</div>
@@ -356,7 +395,7 @@
             <a href="/superadmin/users/" class="sa-nav-link {% if '/superadmin/users/' in request.path %}active{% endif %}">
                 <span>Manage Users &amp; Roles</span>
             </a>
-            <a href="/vendors/" class="sa-nav-link {% if '/vendors/' in request.path %}active{% endif %}">
+            <a href="/superadmin/vendors/" class="sa-nav-link {% if '/vendors/' in request.path or '/superadmin/vendors/' in request.path %}active{% endif %}">
                 <span>Vendor Management</span>
             </a>
 
@@ -368,16 +407,16 @@
             <a href="/superadmin/budgets/" class="sa-nav-link {% if '/superadmin/budgets/' in request.path or '/budgets/' in request.path %}active{% endif %}">
                 <span>Budget Configuration</span>
             </a>
-            <a href="/invoices/settings/tolerances/" class="sa-nav-link {% if '/invoices/settings/' in request.path %}active{% endif %}">
+            <a href="/superadmin/rules/" class="sa-nav-link {% if '/invoices/settings/' in request.path or '/superadmin/rules/' in request.path or '/superadmin/business-rules/' in request.path %}active{% endif %}">
                 <span>Business Rules</span>
             </a>
 
             <div class="sa-nav-separator"></div>
             <div class="sa-nav-label">Oversight &amp; Audit</div>
-            <a href="/notifications/" class="sa-nav-link {% if '/notifications/' in request.path %}active{% endif %}">
+            <a href="/superadmin/notifications/" class="sa-nav-link {% if 'notifications' in request.path %}active{% endif %}">
                 <span>Notifications &amp; Alerts</span>
             </a>
-            <a href="/reports/hub/" class="sa-nav-link {% if '/reports/' in request.path %}active{% endif %}">
+            <a href="/superadmin/reports/" class="sa-nav-link {% if 'reports' in request.path %}active{% endif %}">
                 <span>Reports &amp; Analytics</span>
             </a>
             <a href="/superadmin/audit/" class="sa-nav-link {% if '/superadmin/audit/' in request.path or '/audit/' in request.path %}active{% endif %}">

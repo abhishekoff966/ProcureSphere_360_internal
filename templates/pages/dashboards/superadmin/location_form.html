@@ -27,7 +27,7 @@
                 {% if form.organization.errors %}<div class="text-danger small mt-1">{{ form.organization.errors }}</div>{% endif %}
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">City</label>
+                <label class="form-label fw-semibold text-secondary small">City <span class="text-danger">*</span></label>
                 {{ form.city }}
                 {% if form.city.errors %}<div class="text-danger small mt-1">{{ form.city.errors }}</div>{% endif %}
             </div>
