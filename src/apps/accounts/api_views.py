@@ -106,6 +106,32 @@ class SessionLoginView(views.APIView):
 
         user = authenticate(request, username=email, password=password)
         if user is None:
+            # Audit failed login attempt (DEF-018)
+            try:
+                from django.contrib.auth import get_user_model
+
+                from apps.audit.models import AuditLog
+                from apps.core.middleware import get_client_ip, get_current_request_id
+
+                UserModel = get_user_model()
+                matched_user = UserModel.objects.filter(email__iexact=str(email).strip()).first()
+                AuditLog.objects.create(
+                    actor=matched_user,
+                    action=AuditLog.ACTION_LOGIN_FAILED,
+                    target_model="User",
+                    target_object_id=str(matched_user.id if matched_user else email),
+                    new_state={
+                        "event": "LOGIN_FAILED",
+                        "email": str(email).strip().lower(),
+                        "reason": "Account locked" if getattr(request, "axes_locked_out", False) else "Invalid credentials",
+                    },
+                    ip_address=get_client_ip() or getattr(request, "axes_ip_address", None),
+                    request_id=get_current_request_id() or getattr(request, "request_id", "") or "",
+                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                )
+            except Exception:
+                pass
+
             if getattr(request, "axes_locked_out", False):
                 return Response(
                     {

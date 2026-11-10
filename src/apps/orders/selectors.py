@@ -32,14 +32,15 @@ def scope_purchase_orders_queryset(qs, user):
     # Requester scoping (department-level)
     if role_code == Role.REQUESTER:
         if getattr(user, "department_id", None):
-            return qs.filter(cost_center__department_id=user.department_id)
-        return qs.none()
+            return qs.filter(Q(created_by=user) | Q(cost_center__department_id=user.department_id))
+        return qs.filter(created_by=user)
 
     # Organization-level scoping for internal roles (Auditor, Procurement Manager, etc.)
     scoped_org = getattr(user, "effective_organization", None)
     if scoped_org:
         return qs.filter(
-            Q(cost_center__department__organization=scoped_org)
+            Q(created_by=user)
+            | Q(cost_center__department__organization=scoped_org)
             | Q(requisition__department__organization=scoped_org)
             | Q(cost_center__isnull=True, requisition__isnull=True)
         )

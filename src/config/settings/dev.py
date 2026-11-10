@@ -30,6 +30,6 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 
-# Development Axes settings (prevent development test lockouts)
-AXES_FAILURE_LIMIT = 20
-AXES_COOLOFF_TIME = 0.01
+# Development Axes settings - align with base 5 failures and 3-minute cooloff
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 0.05

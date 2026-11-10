@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from apps.accounts.models import Role, User
 from apps.audit.models import AuditLog
+from apps.notifications.models import Notification
 from apps.orders.models import POLine, PurchaseOrder
 
 from .models import (
@@ -156,6 +157,7 @@ def create_goods_receipt_service(
     receipt_items: list,
     delivery_note_number: str = "",
     remarks: str = "",
+    grn_number: str = None,
 ) -> GoodsReceipt:
     """
     Records a Goods Receipt Note (GRN) against a Purchase Order.
@@ -180,10 +182,13 @@ def create_goods_receipt_service(
     ]:
         raise ValidationError(f"Cannot record goods receipt against PO in status '{po.status}'.")
 
-    from apps.core.services import generate_document_number
-    from apps.notifications.models import Notification
-
-    grn_number = generate_document_number(GoodsReceipt, "grn_number", "GRN")
+    if grn_number and str(grn_number).strip():
+        grn_number = str(grn_number).strip()
+        if GoodsReceipt.objects.filter(grn_number=grn_number).exists():
+            raise ValidationError(f"Goods receipt with GRN number '{grn_number}' already exists.")
+    else:
+        from apps.core.services import generate_document_number
+        grn_number = generate_document_number(GoodsReceipt, "grn_number", "GRN")
 
     receipt = GoodsReceipt.objects.create(
         grn_number=grn_number,
@@ -216,9 +221,19 @@ def create_goods_receipt_service(
         },
     )
 
+    recipient = None
     if po.requisition and po.requisition.requester:
+        recipient = po.requisition.requester
+    elif getattr(po, "issued_by", None):
+        recipient = po.issued_by
+    elif getattr(po, "submitted_by", None):
+        recipient = po.submitted_by
+    elif getattr(po, "approved_by", None):
+        recipient = po.approved_by
+
+    if recipient:
         Notification.objects.create(
-            recipient=po.requisition.requester,
+            recipient=recipient,
             notification_type=Notification.TYPE_GOODS_RECEIVED,
             title=f"Goods Receipt Recorded: {receipt.grn_number}",
             message=f"Goods/services have been received under receipt {receipt.grn_number} for PO {po.po_number}.",
@@ -236,6 +251,7 @@ def vendor_dispatch_delivery_service(
     delivery_note_number: str = "",
     remarks: str = "",
     delivery_items: list,
+    grn_number: str = None,
 ) -> GoodsReceipt:
     """
     Records a delivery dispatch initiated by the vendor from the Vendor Dashboard.
@@ -277,10 +293,13 @@ def vendor_dispatch_delivery_service(
     if not stores_user:
         stores_user = User.objects.filter(is_superuser=True, is_active=True).first() or vendor_user
 
-    from apps.core.services import generate_document_number
-    from apps.notifications.models import Notification
-
-    grn_number = generate_document_number(GoodsReceipt, "grn_number", "GRN")
+    if grn_number and str(grn_number).strip():
+        grn_number = str(grn_number).strip()
+        if GoodsReceipt.objects.filter(grn_number=grn_number).exists():
+            raise ValidationError(f"Goods receipt with GRN number '{grn_number}' already exists.")
+    else:
+        from apps.core.services import generate_document_number
+        grn_number = generate_document_number(GoodsReceipt, "grn_number", "GRN")
 
     receipt = GoodsReceipt.objects.create(
         grn_number=grn_number,
