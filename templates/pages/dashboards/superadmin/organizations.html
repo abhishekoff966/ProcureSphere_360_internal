@@ -6,8 +6,8 @@
 <div class="row mb-4">
     <div class="col-12 d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3">
         <div>
-            <h3 class="fw-bold text-dark mb-1"><i class="fa-solid fa-sitemap text-primary me-2"></i> Master Data: Organizations</h3>
-            <p class="text-muted mb-0">{% if scoped_org %}View organization details, departments, and cost centers for {{ scoped_org.name }}.{% else %}Manage all tenant legal entities and multi-tenant organizations.{% endif %}</p>
+            <h3 class="fw-bold text-dark mb-1"><i class="fa-solid fa-sitemap text-primary me-2"></i> {% if scoped_org %}Departments &amp; Cost Centers{% else %}Master Data: Organizations{% endif %}</h3>
+            <p class="text-muted mb-0">{% if scoped_org %}Operational units and functional divisions for {{ scoped_org.name }}.{% else %}Manage all tenant legal entities and multi-tenant organizations.{% endif %}</p>
         </div>
         {% if is_superuser and not scoped_org %}
         <button hx-get="/superadmin/organizations/create/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-primary text-white fw-bold rounded-pill px-4 shadow-sm w-100 w-sm-auto text-nowrap">
@@ -19,6 +19,7 @@
 
 <div class="row g-4">
     <div class="col-lg-12">
+        {% if not scoped_org %}
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-header bg-white pt-4 pb-0 px-4 border-bottom-0">
                 <h5 class="fw-bold text-dark">Legal Entities</h5>
@@ -139,6 +140,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         {% if scoped_org %}
         <div class="card border-0 shadow-sm rounded-4 mb-4">

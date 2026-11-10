@@ -1,4 +1,5 @@
 from typing import Optional, Tuple
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
@@ -9,6 +10,13 @@ from apps.audit.services import create_audit_log_service
 from apps.notifications.email_service import send_user_welcome_email
 
 from .models import CostCenter, Department, FiscalPeriod, Location, Organization
+from .validators import (
+    validate_org_address,
+    validate_org_admin_email,
+    validate_org_code,
+    validate_org_name,
+    validate_org_tax_identifier,
+)
 
 
 @transaction.atomic
@@ -18,11 +26,16 @@ def create_organization_service(
     """
     Service layer function to create an Organization entity inside a database transaction.
     """
+    clean_code = validate_org_code(code)
+    clean_name = validate_org_name(name)
+    clean_tax = validate_org_tax_identifier(tax_identifier)
+    clean_address = validate_org_address(address)
+
     org = Organization.objects.create(
-        name=name.strip(),
-        code=code.strip().upper(),
-        tax_identifier=tax_identifier.strip(),
-        address=address.strip(),
+        name=clean_name,
+        code=clean_code,
+        tax_identifier=clean_tax,
+        address=clean_address,
         is_active=is_active,
     )
     return org
@@ -68,7 +81,7 @@ def create_organization_with_admin_service(
     raw_password = None
 
     if admin_email and admin_email.strip():
-        norm_email = admin_email.strip().lower()
+        norm_email = validate_org_admin_email(admin_email, is_create=True)
         role, _ = Role.objects.get_or_create(
             code=Role.SUPER_ADMIN,
             defaults={"name": "Super Admin", "description": "System and Organization Administrator"},
@@ -168,9 +181,7 @@ def create_organization_with_admin_service(
             defaults={"name": "Procurement Manager", "description": "Dedicated Procurement Manager"},
         )
         proc_mgr_user = User.objects.filter(email__iexact=norm_pm_email).first()
-        is_new_pm = False
         if not proc_mgr_user:
-            is_new_pm = True
             raw_pm_pwd = (
                 proc_mgr_password.strip()
                 if proc_mgr_password and proc_mgr_password.strip()
@@ -222,9 +233,7 @@ def create_organization_with_admin_service(
             defaults={"name": "Compliance Auditor", "description": "Dedicated Compliance Auditor"},
         )
         auditor_user = User.objects.filter(email__iexact=norm_aud_email).first()
-        is_new_aud = False
         if not auditor_user:
-            is_new_aud = True
             raw_aud_pwd = (
                 auditor_password.strip()
                 if auditor_password and auditor_password.strip()
@@ -425,11 +434,14 @@ def create_location_service(
     Service layer function to create an Organization Location inside a database transaction.
     """
     norm_code = code.strip().upper()
+    city_clean = (city or "").strip()
+    if not city_clean:
+        raise ValidationError("City is mandatory for location.")
     loc = Location.objects.create(
         organization=organization,
         name=name.strip(),
         code=norm_code,
-        city=city.strip(),
+        city=city_clean,
         country=country.strip() or "India",
         address=address.strip(),
         is_active=is_active,
@@ -476,9 +488,12 @@ def update_location_service(
         "address": location.address,
         "is_active": location.is_active,
     }
+    city_clean = (city or "").strip()
+    if not city_clean:
+        raise ValidationError("City is mandatory for location.")
     location.name = name.strip()
     location.code = code.strip().upper()
-    location.city = city.strip()
+    location.city = city_clean
     location.country = country.strip() or "India"
     location.address = address.strip()
     location.is_active = is_active

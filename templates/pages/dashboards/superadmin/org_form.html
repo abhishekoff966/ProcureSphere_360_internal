@@ -20,6 +20,21 @@
         -webkit-text-fill-color: #1e293b !important;
         border: 1px solid #cbd5e1 !important;
     }
+    #modal-content-body .form-control.is-invalid,
+    #modal-content-body input.is-invalid,
+    #modal-content-body textarea.is-invalid,
+    #modal-content-body select.is-invalid,
+    #modal-content-body .is-invalid {
+        border: 2px solid #dc3545 !important;
+        background-color: #fff8f8 !important;
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.2) !important;
+    }
+    #modal-content-body .form-control.is-invalid:focus,
+    #modal-content-body input.is-invalid:focus,
+    #modal-content-body textarea.is-invalid:focus {
+        border-color: #dc3545 !important;
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.3) !important;
+    }
     #modal-content-body .form-control:focus,
     #modal-content-body input:focus,
     #modal-content-body textarea:focus {
@@ -63,7 +78,23 @@
         {% if form.errors %}
         <div class="alert alert-danger py-2 px-3 small rounded-3 mb-3 d-flex align-items-center gap-2 shadow-sm">
             <i class="fa-solid fa-triangle-exclamation text-danger fs-6"></i>
-            <span class="fw-semibold">{% if form.admin_email.errors %}{{ form.admin_email.errors|striptags }}{% elif form.admin_user.errors %}{{ form.admin_user.errors|striptags }}{% else %}This user does not belong to this organization.{% endif %}</span>
+            <span class="fw-semibold">
+                {% if form.admin_email.errors %}
+                    {{ form.admin_email.errors|striptags }}
+                {% elif form.code.errors %}
+                    {{ form.code.errors|striptags }}
+                {% elif form.name.errors %}
+                    {{ form.name.errors|striptags }}
+                {% elif form.tax_identifier.errors %}
+                    {{ form.tax_identifier.errors|striptags }}
+                {% elif form.address.errors %}
+                    {{ form.address.errors|striptags }}
+                {% elif form.admin_user.errors %}
+                    {{ form.admin_user.errors|striptags }}
+                {% else %}
+                    Please correct the highlighted errors below before saving.
+                {% endif %}
+            </span>
         </div>
         {% endif %}
         {% if form.non_field_errors %}
@@ -71,19 +102,19 @@
         {% endif %}
         <div class="row g-3">
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Code *</label>
+                <label class="form-label fw-semibold text-secondary small">Code <span class="text-danger fw-bold">*</span></label>
                 {{ form.code }}
-                {% if form.code.errors %}<div class="text-danger small">{{ form.code.errors }}</div>{% endif %}
+                {% if form.code.errors %}<div class="text-danger small mt-1 fw-semibold"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.code.errors|striptags }}</div>{% endif %}
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Name *</label>
+                <label class="form-label fw-semibold text-secondary small">Name <span class="text-danger fw-bold">*</span></label>
                 {{ form.name }}
-                {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors }}</div>{% endif %}
+                {% if form.name.errors %}<div class="text-danger small mt-1 fw-semibold"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.name.errors|striptags }}</div>{% endif %}
             </div>
             <div class="col-md-6">
                 <label class="form-label fw-semibold text-secondary small">Tax Identifier</label>
                 {{ form.tax_identifier }}
-                {% if form.tax_identifier.errors %}<div class="text-danger small">{{ form.tax_identifier.errors }}</div>{% endif %}
+                {% if form.tax_identifier.errors %}<div class="text-danger small mt-1 fw-semibold"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.tax_identifier.errors|striptags }}</div>{% endif %}
             </div>
             <div class="col-md-6">
                 <label class="form-label fw-semibold text-secondary small">Status (Activate / Deactivate)</label>
@@ -109,7 +140,7 @@
             <div class="col-12">
                 <label class="form-label fw-semibold text-secondary small">Registered Address</label>
                 {{ form.address }}
-                {% if form.address.errors %}<div class="text-danger small">{{ form.address.errors }}</div>{% endif %}
+                {% if form.address.errors %}<div class="text-danger small mt-1 fw-semibold"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.address.errors|striptags }}</div>{% endif %}
             </div>
 
             <!-- Organization Administrator Provisioning -->
@@ -123,10 +154,23 @@
                         Enter administrator details. Login credentials (email &amp; password) will be dispatched directly to the admin user via Brevo.
                     </p>
                     <div class="row g-2">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary small">Admin Email *</label>
-                            {{ form.admin_email }}
-                            {% if form.admin_email.errors %}<div class="text-danger small">{{ form.admin_email.errors }}</div>{% endif %}
+                        <div class="col-md-6" id="admin_email_container">
+                            <label class="form-label fw-semibold text-secondary small">Admin Email <span class="text-danger fw-bold">*</span></label>
+                            <div class="position-relative">
+                                {{ form.admin_email }}
+                                <div id="admin_email_warning_icon" class="position-absolute end-0 top-50 translate-middle-y me-3 text-danger {% if not form.admin_email.errors %}d-none{% endif %}" style="pointer-events: none;">
+                                    <i class="fa-solid fa-circle-exclamation fs-6"></i>
+                                </div>
+                            </div>
+                            {% if form.admin_email.errors %}
+                            <div class="text-danger small mt-1 fw-semibold d-flex align-items-center gap-1" id="admin_email_server_error">
+                                <i class="fa-solid fa-triangle-exclamation text-danger"></i>
+                                <span>{{ form.admin_email.errors|striptags }}</span>
+                            </div>
+                            {% endif %}
+                            <div class="invalid-feedback d-none fw-semibold text-danger small mt-1" id="admin_email_client_error">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i>Admin Email is mandatory (*). Please enter a valid administrator email.
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold text-secondary small">Temporary Password</label>
@@ -188,7 +232,21 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold text-secondary small">Temporary Password <span class="text-muted fw-normal">(Optional)</span></label>
-                            {{ form.proc_mgr_password }}
+                            <div class="input-group">
+                                {{ form.proc_mgr_password }}
+                                <button class="btn btn-outline-secondary" type="button" id="toggleProcMgrPasswordBtn" title="Show / Hide Password">
+                                    <i class="fa-solid fa-eye" id="toggleProcMgrPasswordIcon"></i>
+                                </button>
+                                <button class="btn btn-outline-primary" type="button" id="generateProcMgrPasswordBtn" title="Generate Secure Password">
+                                    <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Generate
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" id="copyProcMgrPasswordBtn" title="Copy Password">
+                                    <i class="fa-solid fa-copy me-1"></i> Copy
+                                </button>
+                            </div>
+                            <div id="copyProcMgrFeedback" class="text-success small mt-1" style="display:none;">
+                                <i class="fa-solid fa-circle-check me-1"></i>Password copied to clipboard!
+                            </div>
                             {% if form.proc_mgr_password.errors %}<div class="text-danger small">{{ form.proc_mgr_password.errors }}</div>{% endif %}
                             <div class="form-text small text-muted">Leave blank to auto-generate.</div>
                         </div>
@@ -227,7 +285,21 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold text-secondary small">Temporary Password <span class="text-muted fw-normal">(Optional)</span></label>
-                            {{ form.auditor_password }}
+                            <div class="input-group">
+                                {{ form.auditor_password }}
+                                <button class="btn btn-outline-secondary" type="button" id="toggleAuditorPasswordBtn" title="Show / Hide Password">
+                                    <i class="fa-solid fa-eye" id="toggleAuditorPasswordIcon"></i>
+                                </button>
+                                <button class="btn btn-outline-primary" type="button" id="generateAuditorPasswordBtn" title="Generate Secure Password">
+                                    <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Generate
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" id="copyAuditorPasswordBtn" title="Copy Password">
+                                    <i class="fa-solid fa-copy me-1"></i> Copy
+                                </button>
+                            </div>
+                            <div id="copyAuditorFeedback" class="text-success small mt-1" style="display:none;">
+                                <i class="fa-solid fa-circle-check me-1"></i>Password copied to clipboard!
+                            </div>
                             {% if form.auditor_password.errors %}<div class="text-danger small">{{ form.auditor_password.errors }}</div>{% endif %}
                             <div class="form-text small text-muted">Leave blank to auto-generate.</div>
                         </div>
@@ -269,65 +341,73 @@ window.updateOrgStatusLabel = function(el) {
     var activeCheck = document.getElementById("id_is_active");
     if (activeCheck) window.updateOrgStatusLabel(activeCheck);
 
-    // Password Elements
-    var pwdInput = document.getElementById("id_admin_password");
-    var toggleBtn = document.getElementById("toggleAdminPasswordBtn");
-    var toggleIcon = document.getElementById("toggleAdminPasswordIcon");
-    var genBtn = document.getElementById("generateAdminPasswordBtn");
-    var copyBtn = document.getElementById("copyAdminPasswordBtn");
-    var copyFeedback = document.getElementById("copyAdminFeedback");
+    // Setup Show/Hide Toggle, Generate & Copy Password controls for all role temporary passwords
+    function setupPasswordControls(inputId, toggleBtnId, toggleIconId, genBtnId, copyBtnId, copyFeedbackId) {
+        var pwdInput = document.getElementById(inputId);
+        var toggleBtn = document.getElementById(toggleBtnId);
+        var toggleIcon = document.getElementById(toggleIconId);
+        var genBtn = document.getElementById(genBtnId);
+        var copyBtn = document.getElementById(copyBtnId);
+        var copyFeedback = document.getElementById(copyFeedbackId);
+
+        if (toggleBtn && pwdInput) {
+            toggleBtn.onclick = function(e) {
+                e.preventDefault();
+                if (pwdInput.type === "password") {
+                    pwdInput.type = "text";
+                    if (toggleIcon) toggleIcon.className = "fa-solid fa-eye-slash";
+                } else {
+                    pwdInput.type = "password";
+                    if (toggleIcon) toggleIcon.className = "fa-solid fa-eye";
+                }
+            };
+        }
+
+        if (genBtn && pwdInput) {
+            genBtn.onclick = function(e) {
+                e.preventDefault();
+                var chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*";
+                var generated = "";
+                for (var i = 0; i < 14; i++) {
+                    generated += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                pwdInput.value = generated;
+                pwdInput.type = "text";
+                pwdInput.setAttribute("data-user-typed", "true");
+                if (toggleIcon) toggleIcon.className = "fa-solid fa-eye-slash";
+            };
+        }
+
+        if (copyBtn && pwdInput) {
+            copyBtn.onclick = function(e) {
+                e.preventDefault();
+                if (!pwdInput.value) return;
+                navigator.clipboard.writeText(pwdInput.value).then(function() {
+                    if (copyFeedback) {
+                        copyFeedback.style.display = "block";
+                        setTimeout(function() { copyFeedback.style.display = "none"; }, 2500);
+                    }
+                });
+            };
+        }
+    }
+
+    setupPasswordControls("id_admin_password", "toggleAdminPasswordBtn", "toggleAdminPasswordIcon", "generateAdminPasswordBtn", "copyAdminPasswordBtn", "copyAdminFeedback");
+    setupPasswordControls("id_proc_mgr_password", "toggleProcMgrPasswordBtn", "toggleProcMgrPasswordIcon", "generateProcMgrPasswordBtn", "copyProcMgrPasswordBtn", "copyProcMgrFeedback");
+    setupPasswordControls("id_auditor_password", "toggleAuditorPasswordBtn", "toggleAuditorPasswordIcon", "generateAuditorPasswordBtn", "copyAuditorPasswordBtn", "copyAuditorFeedback");
 
     window.toggleOrgAdminPassword = function() {
-        if (!pwdInput) return;
-        if (pwdInput.type === "password") {
-            pwdInput.type = "text";
-            if (toggleIcon) {
-                toggleIcon.className = "fa-solid fa-eye-slash";
-            }
+        var input = document.getElementById("id_admin_password");
+        var icon = document.getElementById("toggleAdminPasswordIcon");
+        if (!input) return;
+        if (input.type === "password") {
+            input.type = "text";
+            if (icon) icon.className = "fa-solid fa-eye-slash";
         } else {
-            pwdInput.type = "password";
-            if (toggleIcon) {
-                toggleIcon.className = "fa-solid fa-eye";
-            }
+            input.type = "password";
+            if (icon) icon.className = "fa-solid fa-eye";
         }
     };
-
-    if (toggleBtn) {
-        toggleBtn.onclick = function(e) {
-            e.preventDefault();
-            window.toggleOrgAdminPassword();
-        };
-    }
-
-    if (genBtn && pwdInput) {
-        genBtn.onclick = function(e) {
-            e.preventDefault();
-            var chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*";
-            var generated = "";
-            for (var i = 0; i < 14; i++) {
-                generated += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            pwdInput.value = generated;
-            pwdInput.type = "text";
-            pwdInput.setAttribute("data-user-typed", "true");
-            if (toggleIcon) {
-                toggleIcon.className = "fa-solid fa-eye-slash";
-            }
-        };
-    }
-
-    if (copyBtn && pwdInput) {
-        copyBtn.onclick = function(e) {
-            e.preventDefault();
-            if (!pwdInput.value) return;
-            navigator.clipboard.writeText(pwdInput.value).then(function() {
-                if (copyFeedback) {
-                    copyFeedback.style.display = "block";
-                    setTimeout(function() { copyFeedback.style.display = "none"; }, 2500);
-                }
-            });
-        };
-    }
 })();
 {% if not is_edit %}
 (function() {
@@ -370,4 +450,77 @@ window.updateOrgStatusLabel = function(el) {
 {% endif %}
 
 
+(function() {
+    var formEl = document.querySelector("form[hx-post]");
+    var emailEl = document.getElementById("id_admin_email");
+    var warningIcon = document.getElementById("admin_email_warning_icon");
+    var clientErr = document.getElementById("admin_email_client_error");
+    var serverErr = document.getElementById("admin_email_server_error");
+    var isEdit = {% if is_edit %}true{% else %}false{% endif %};
+    var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    function showAdminEmailWarning(msg) {
+        if (emailEl) {
+            emailEl.classList.add("is-invalid");
+            emailEl.style.setProperty("border", "2px solid #dc3545", "important");
+            emailEl.style.setProperty("background-color", "#fff8f8", "important");
+            emailEl.focus();
+        }
+        if (warningIcon) warningIcon.classList.remove("d-none");
+        if (serverErr) serverErr.style.display = "none";
+        if (clientErr) {
+            clientErr.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i>' + msg;
+            clientErr.classList.remove("d-none");
+            clientErr.classList.add("d-block");
+        }
+    }
+
+    function clearAdminEmailWarning() {
+        if (emailEl) {
+            emailEl.classList.remove("is-invalid");
+            emailEl.style.removeProperty("border");
+            emailEl.style.removeProperty("background-color");
+        }
+        if (warningIcon) warningIcon.classList.add("d-none");
+        if (clientErr) {
+            clientErr.classList.remove("d-block");
+            clientErr.classList.add("d-none");
+        }
+    }
+
+    if (emailEl) {
+        {% if form.admin_email.errors %}
+        showAdminEmailWarning("{{ form.admin_email.errors|striptags|escapejs }}");
+        {% endif %}
+
+        emailEl.addEventListener("input", function() {
+            if (this.value.trim().length > 0) {
+                clearAdminEmailWarning();
+            }
+        });
+    }
+
+    if (formEl) {
+        formEl.addEventListener("submit", function(e) {
+            var val = (emailEl ? emailEl.value : "").trim();
+            var hasErr = false;
+            var msg = "";
+
+            if (!isEdit && !val) {
+                hasErr = true;
+                msg = "Admin Email is mandatory (*). Please enter an administrator email address.";
+            } else if (val && !emailRegex.test(val)) {
+                hasErr = true;
+                msg = "Please enter a valid email address (e.g. admin@organization.com).";
+            }
+
+            if (hasErr) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                showAdminEmailWarning(msg);
+                return false;
+            }
+        }, true);
+    }
+})();
 </script>

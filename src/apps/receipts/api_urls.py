@@ -31,6 +31,9 @@ class CanManageGoodsReceipt(BasePermission):
             or getattr(request.user, "role_code", None) == Role.VENDOR_USER
         )
         if is_vendor:
+            # Vendors can list their own PO receipts (GRN-010) but cannot inspect internal GRN detail (GRN-036)
+            if getattr(view, "action", None) == "retrieve":
+                return False
             return request.method in SAFE_METHODS
 
         if getattr(request.user, "role_code", None) == Role.REQUESTER:
@@ -190,6 +193,11 @@ class GoodsReceiptPermission(IsAuthenticated):
         )
 
         if request.method in SAFE_METHODS:
+            if role_code == Role.VENDOR_USER:
+                # Vendors can list their own PO receipts (GRN-010) but cannot inspect internal GRN detail (GRN-036)
+                if getattr(view, "action", None) == "retrieve":
+                    return False
+                return True
             return role_code in [
                 Role.STORES_RECEIVER,
                 Role.SUPER_ADMIN,
@@ -197,7 +205,6 @@ class GoodsReceiptPermission(IsAuthenticated):
                 Role.PROC_EXEC,
                 Role.PROC_MGR,
                 Role.FINANCE_AP,
-                Role.VENDOR_USER,
             ]
 
         if role_code == Role.VENDOR_USER:

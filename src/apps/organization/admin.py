@@ -1,131 +1,108 @@
 from django import forms
-
 from django.contrib import admin, messages
 from django.shortcuts import redirect
-
 from django.db.models import Q
-
 from django.utils.html import format_html
-
-
 
 from apps.accounts.models import Role, User
 
-
-
 from .models import CostCenter, Department, FiscalPeriod, Location, Organization
-
 from .services import create_organization_with_admin_service
-
-
-
+from .validators import (
+    validate_org_address,
+    validate_org_admin_email,
+    validate_org_code,
+    validate_org_name,
+    validate_org_tax_identifier,
+)
 
 
 class OrganizationDjangoAdminForm(forms.ModelForm):
-
     admin_email = forms.EmailField(
-
         label="Admin Email",
-
+        max_length=254,
         required=False,
-
-        help_text="Email address for the initial Organization Administrator. Required when creating a new organization.",
-
+        help_text="Email address for the initial Organization Administrator. Mandatory (*) when registering a new organization without an existing administrator.",
     )
-
     admin_first_name = forms.CharField(
-
         label="Admin First Name",
-
         max_length=150,
-
         required=False,
-
     )
-
     admin_last_name = forms.CharField(
-
         label="Admin Last Name",
-
         max_length=150,
-
         required=False,
-
     )
-
     admin_password = forms.CharField(
-
         label="Admin Temporary Password",
-
         widget=forms.PasswordInput(render_value=False),
-
         required=False,
-
         help_text="Leave blank to auto-generate a secure temporary password.",
-
     )
-
     send_welcome_email = forms.BooleanField(
-
         label="Send Welcome Email",
-
         initial=True,
-
         required=False,
-
         help_text="Dispatch welcome email with login details to the Administrator.",
-
     )
-
-
 
     class Meta:
-
         model = Organization
-
         fields = "__all__"
 
-
-
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
-
-        is_create = not self.instance or not self.instance.pk
-
+        is_create = not self.instance or (getattr(self.instance, "_state", None) and self.instance._state.adding) or not self.instance.pk
         if "admin_user" in self.fields:
-
             self.fields["admin_user"].required = False
-
             self.fields["admin_user"].empty_label = "-- Select Existing Admin (Optional) --"
-
             self.fields["admin_user"].queryset = User.objects.filter(
-
                 Q(role__code=Role.SUPER_ADMIN) | Q(is_superuser=True), is_active=True
-
             ).order_by("email")
-
         if is_create:
-
+            self.fields["admin_email"].label = "Admin Email *"
             self.fields["admin_email"].required = False
-
         else:
-
             self.fields["admin_email"].help_text = (
-
                 "Leave blank if you do not wish to re-assign or change the admin user."
-
             )
 
+    def clean_code(self):
+        raw_code = self.cleaned_data.get("code", "")
+        code = validate_org_code(raw_code)
+        qs = Organization.objects.filter(code=code)
+        if self.instance and self.instance.pk and not (getattr(self.instance, "_state", None) and self.instance._state.adding):
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError(f"Organization code '{code}' already exists.")
+        return code
 
+    def clean_name(self):
+        raw_name = self.cleaned_data.get("name", "")
+        return validate_org_name(raw_name)
+
+    def clean_tax_identifier(self):
+        raw_tax = self.cleaned_data.get("tax_identifier", "")
+        return validate_org_tax_identifier(raw_tax)
+
+    def clean_address(self):
+        raw_address = self.cleaned_data.get("address", "")
+        return validate_org_address(raw_address)
+
+    def clean_admin_email(self):
+        raw_email = (self.cleaned_data.get("admin_email") or "").strip()
+        admin_user_selected = self.cleaned_data.get("admin_user") or self.data.get("admin_user")
+        is_create = not self.instance or (getattr(self.instance, "_state", None) and self.instance._state.adding) or not self.instance.pk
+        return validate_org_admin_email(raw_email, is_create=is_create, admin_user=admin_user_selected)
 
     def clean(self):
         cleaned_data = super().clean()
         admin_user = cleaned_data.get("admin_user")
         admin_email = (cleaned_data.get("admin_email") or "").strip().lower()
-        is_create = not self.instance or not self.instance.pk
+        is_create = not self.instance or (getattr(self.instance, "_state", None) and self.instance._state.adding) or not self.instance.pk
         if is_create and not admin_user and not admin_email:
-            self.add_error("admin_email", "Please provide an Admin Email or select an Assigned Admin User.")
+            self.add_error("admin_email", "Admin Email is mandatory (*). Please provide an email or select an Assigned Admin User.")
 
         if admin_email:
             existing_user = User.objects.filter(email__iexact=admin_email).first()
@@ -136,7 +113,7 @@ class OrganizationDjangoAdminForm(forms.ModelForm):
                         self.add_error("admin_email", "This user does not belong to this organization.")
                 elif existing_user.is_superuser and not existing_user.organization_id:
                     self.add_error("admin_email", "This user does not belong to this organization.")
-                elif is_create:
+                elif is_create and not admin_user:
                     self.add_error("admin_email", "This user does not belong to this organization.")
 
         if admin_user:
@@ -145,6 +122,11 @@ class OrganizationDjangoAdminForm(forms.ModelForm):
                 self.add_error("admin_user", "This user does not belong to this organization.")
             elif not getattr(admin_user, "organization_id", None) and (admin_user.is_superuser or admin_user.is_staff):
                 self.add_error("admin_user", "This user does not belong to this organization.")
+
+        # Visual warning highlights on form fields in Django Admin
+        for field_name in ["code", "name", "tax_identifier", "address", "admin_email"]:
+            if field_name in self.errors and field_name in self.fields:
+                self.fields[field_name].widget.attrs["style"] = "border: 2px solid #ba2121 !important; background-color: #fff8f8 !important;"
 
         return cleaned_data
 
@@ -903,27 +885,16 @@ def _admin_index(request, extra_context=None):
 
 
     try:
-
         from decimal import Decimal
 
-
-
         from django.db.models import Sum
-
         from django.utils import timezone
 
-
-
         from apps.accounts.models import User
-
         from apps.audit.models import AuditLog
-
         from apps.budgets.models import Budget
-
         from apps.invoices.models import MatchException
-
         from apps.organization.models import CostCenter, Department
-
         from apps.requisitions.models import PurchaseRequisition
 
 

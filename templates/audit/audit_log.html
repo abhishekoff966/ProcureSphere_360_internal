@@ -66,8 +66,11 @@
         overflow-y: auto;
         border: 1px solid #e2e8f0;
         border-radius: 12px;
+        background: #ffffff;
     }
     .audit-log-table-wrap table {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
         margin-bottom: 0;
     }
     .audit-log-table-wrap thead th {
@@ -75,7 +78,15 @@
         top: 0;
         z-index: 10;
         background: #f8fafc !important;
+        border-bottom: 2px solid #cbd5e1 !important;
         box-shadow: 0 2px 2px -1px rgba(0,0,0,0.08);
+    }
+    .audit-log-table-wrap tbody td {
+        background-color: #ffffff !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+    .audit-log-table-wrap tbody tr:hover td {
+        background-color: #f1f5f9 !important;
     }
 </style>
 <div class="glass-card shadow-sm overflow-hidden">

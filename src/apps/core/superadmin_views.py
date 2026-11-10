@@ -1,7 +1,5 @@
 import csv
-
 import json
-
 from functools import wraps
 
 import openpyxl
@@ -194,7 +192,7 @@ def user_list_view(request):
 
     users = users.order_by("-date_joined")
 
-    roles = Role.objects.all().order_by("name")
+    roles = Role.objects.exclude(code=Role.VENDOR_USER).order_by("name")
 
 
 
@@ -1673,7 +1671,7 @@ def org_dashboard_view(request, org_id):
 
     # Roles and depts for user filtering
 
-    roles = Role.objects.all().order_by("name")
+    roles = Role.objects.exclude(code=Role.VENDOR_USER).order_by("name")
 
 
 

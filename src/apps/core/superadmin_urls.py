@@ -1,12 +1,31 @@
 
 from django.urls import path
 
+from apps.invoices.views import tolerance_settings_view
+from apps.notifications.views import notification_list_view
+from apps.reports.views import reports_hub_view
+from apps.vendors.views import vendor_list_view
+
 from . import superadmin_views
 
 app_name = "superadmin"
 
 urlpatterns = [
     path("", superadmin_views.superadmin_home_view, name="home"),
+    path("dashboard/", superadmin_views.superadmin_home_view, name="dashboard"),
+
+    # Notifications & Alerts
+    path("notifications/", notification_list_view, name="notifications"),
+
+    # Reports & Analytics
+    path("reports/", reports_hub_view, name="reports"),
+
+    # Vendor Management
+    path("vendors/", vendor_list_view, name="vendors"),
+
+    # Business Rules
+    path("rules/", tolerance_settings_view, name="rules"),
+    path("business-rules/", tolerance_settings_view, name="business_rules"),
 
     # User management
     path("users/", superadmin_views.user_list_view, name="users"),
