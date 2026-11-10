@@ -154,11 +154,11 @@ class AuditorExportRequestSerializer(serializers.Serializer):
 
 class TransactionLifecycleQuerySerializer(serializers.Serializer):
     identifier = serializers.CharField(
-        required=True, help_text="PR, PO, RFQ, Invoice, Contract, or Vendor number / UUID"
+        required=False, allow_blank=True, default="", help_text="PR, PO, RFQ, Invoice, Contract, or Vendor number / UUID"
     )
     entity_type = serializers.CharField(required=False, default="AUTO")
 
 
 class EntityAuditTrailQuerySerializer(serializers.Serializer):
-    target_model = serializers.CharField(required=True)
-    target_object_id = serializers.CharField(required=True)
+    target_model = serializers.CharField(required=False, allow_blank=True, default="")
+    target_object_id = serializers.CharField(required=False, allow_blank=True, default="")

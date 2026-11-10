@@ -26,7 +26,7 @@
     <div class="col-sm-6 col-xl-3">
         <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-rose">
             <div class="text-muted small fw-bold text-uppercase">OPEN EXCEPTIONS</div>
-            <div class="fs-3 fw-bold text-danger font-heading mt-1">{{ summary.open_count|default:0 }}</div>
+            <div class="fs-3 fw-bold text-danger font-heading mt-1">{{ summary.open_count|default:summary.open_exceptions|default:0 }}</div>
             <div class="text-muted small mt-1">Pending Resolution</div>
         </div>
     </div>
@@ -40,7 +40,7 @@
     <div class="col-sm-6 col-xl-3">
         <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-emerald">
             <div class="text-muted small fw-bold text-uppercase">RESOLVED EXCEPTIONS</div>
-            <div class="fs-3 fw-bold text-success font-heading mt-1">{{ summary.resolved_count|default:0 }}</div>
+            <div class="fs-3 fw-bold text-success font-heading mt-1">{{ summary.resolved_count|default:summary.resolved_exceptions|default:0 }}</div>
             <div class="text-muted small mt-1">Audited and Approved</div>
         </div>
     </div>

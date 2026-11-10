@@ -114,6 +114,19 @@ class SecurityHeadersMiddleware:
             response["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         if "Permissions-Policy" not in response:
             response["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+
+        # Enforce secure cookies on HTTPS/TLS reverse proxies (DEF-007)
+        if request.is_secure() or request.headers.get("X-Forwarded-Proto") == "https":
+            if "sessionid" in response.cookies:
+                response.cookies["sessionid"]["secure"] = True
+
+        # Prevent DEBUG mode information leakage on 404 responses (DEF-006)
+        if response.status_code == 404 and not request.path.startswith("/api/"):
+            content = getattr(response, "content", b"")
+            if b"Page not found at" in content or b"DEBUG = True" in content or b"URLconf" in content:
+                from apps.core.views import custom_404_view
+                return custom_404_view(request)
+
         return response
 
 

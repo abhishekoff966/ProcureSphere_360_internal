@@ -252,10 +252,10 @@ def create_view(request):
                 )
                 return redirect("requisition_create")
 
-            item_descriptions = request.POST.getlist("item_description[]")
-            quantities = request.POST.getlist("quantity[]")
-            unit_prices = request.POST.getlist("estimated_unit_price[]")
-            uoms = request.POST.getlist("unit_of_measure[]")
+            item_descriptions = request.POST.getlist("item_description[]") or request.POST.getlist("item_description")
+            quantities = request.POST.getlist("quantity[]") or request.POST.getlist("quantity")
+            unit_prices = request.POST.getlist("estimated_unit_price[]") or request.POST.getlist("estimated_unit_price")
+            uoms = request.POST.getlist("unit_of_measure[]") or request.POST.getlist("unit_of_measure")
 
             line_items = []
             for i in range(len(item_descriptions)):
@@ -291,53 +291,6 @@ def create_view(request):
             if not line_items:
                 messages.error(request, "Please add at least one line item.")
                 return redirect("requisition_create")
-
-            # Prevent duplicate draft saves from repeated clicks or slow network on Render
-            from django.core.cache import cache
-
-            lock_key = f"pr_create_lock_{user.id}_{hash((title, department_id, cost_center_id, requested_delivery_date))}"
-            if not cache.add(lock_key, True, timeout=15):
-                recent_duplicate = (
-                    PurchaseRequisition.objects.filter(
-                        requester=user,
-                        title=title,
-                        department=department,
-                        cost_center=cost_center,
-                        created_at__gte=timezone.now() - timezone.timedelta(seconds=30),
-                    )
-                    .order_by("-created_at")
-                    .first()
-                )
-                if recent_duplicate:
-                    messages.info(
-                        request,
-                        f"Purchase Requisition {recent_duplicate.pr_number} was already created.",
-                    )
-                    return redirect("requisition_detail", pk=recent_duplicate.pk)
-                else:
-                    messages.info(
-                        request,
-                        "Your requisition request is already being processed. Please wait...",
-                    )
-                    return redirect("requisitions_list")
-
-            recent_duplicate = (
-                PurchaseRequisition.objects.filter(
-                    requester=user,
-                    title=title,
-                    department=department,
-                    cost_center=cost_center,
-                    created_at__gte=timezone.now() - timezone.timedelta(seconds=15),
-                )
-                .order_by("-created_at")
-                .first()
-            )
-            if recent_duplicate:
-                messages.info(
-                    request,
-                    f"Purchase Requisition {recent_duplicate.pr_number} was already created.",
-                )
-                return redirect("requisition_detail", pk=recent_duplicate.pk)
 
             pr = create_purchase_requisition_service(
                 title=title,
@@ -585,21 +538,30 @@ def detail_view(request, pk):
     role_code = getattr(user, "role_code", None) or (
         user.role.code if hasattr(user, "role") and user.role else Role.SUPER_ADMIN
     )
-    pr = get_object_or_404(
-        PurchaseRequisition.objects.select_related(
-            "requester", "department", "cost_center"
-        ).prefetch_related("lines", "attachments", "purchase_orders", "sourcing_events"),
-        pk=pk,
-    )
+    if role_code == Role.REQUESTER and not user.is_superuser:
+        pr = get_object_or_404(
+            PurchaseRequisition.objects.filter(requester=user).select_related(
+                "requester", "department", "cost_center"
+            ).prefetch_related("lines", "attachments", "purchase_orders", "sourcing_events"),
+            pk=pk,
+        )
+    else:
+        pr = get_object_or_404(
+            PurchaseRequisition.objects.select_related(
+                "requester", "department", "cost_center"
+            ).prefetch_related("lines", "attachments", "purchase_orders", "sourcing_events"),
+            pk=pk,
+        )
 
     if role_code == Role.VENDOR_USER and not user.is_superuser:
         from django.core.exceptions import PermissionDenied
 
         raise PermissionDenied("Vendors are not permitted to view internal Purchase Requisitions.")
 
-    if role_code == Role.REQUESTER and pr.requester != user:
-        messages.error(request, "You do not have permission to view this requisition.")
-        return redirect("requisitions_list")
+    if role_code == Role.REQUESTER and pr.requester != user and not user.is_superuser:
+        from django.http import Http404
+
+        raise Http404("Purchase requisition not found.")
 
     # Enforce strict multi-tenant boundary for detail view
     user_org = getattr(user, "effective_organization", None) or getattr(user, "organization", None)

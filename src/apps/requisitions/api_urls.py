@@ -114,8 +114,17 @@ class PurchaseRequisitionSerializer(serializers.ModelSerializer):
                     )
         return value
 
+    def validate(self, attrs):
+        if self.instance is None:
+            lines_data = self.initial_data.get("line_items", self.initial_data.get("lines"))
+            if lines_data is None or len(lines_data) == 0:
+                raise serializers.ValidationError({"lines": ["At least one line item is required."]})
+        return attrs
+
     def create(self, validated_data):
         lines_data = self.initial_data.get("line_items", self.initial_data.get("lines", []))
+        if not lines_data:
+            raise serializers.ValidationError({"lines": ["At least one line item is required."]})
         validated_data.pop("lines", None)
 
         if not validated_data.get("pr_number"):
@@ -376,7 +385,19 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
         pr = self.get_object()
         from apps.requisitions.services import submit_purchase_requisition_service
 
-        updated_pr = submit_purchase_requisition_service(requisition=pr, user=request.user)
+        try:
+            updated_pr = submit_purchase_requisition_service(requisition=pr, user=request.user)
+        except Exception as e:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": str(e),
+                        "details": e.messages if hasattr(e, "messages") else str(e),
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         return Response(self.get_serializer(updated_pr).data, status=status.HTTP_200_OK)
 
     @extend_schema(
@@ -413,9 +434,21 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
         from apps.requisitions.services import approve_purchase_requisition_service
 
         comments = request.data.get("comments", "")
-        updated_pr = approve_purchase_requisition_service(
-            requisition=pr, approver=user, comments=comments
-        )
+        try:
+            updated_pr = approve_purchase_requisition_service(
+                requisition=pr, approver=user, comments=comments
+            )
+        except Exception as e:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": str(e),
+                        "details": e.messages if hasattr(e, "messages") else str(e),
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         return Response(self.get_serializer(updated_pr).data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"], url_path="reject")

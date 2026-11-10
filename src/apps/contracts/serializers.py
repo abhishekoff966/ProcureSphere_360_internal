@@ -72,3 +72,20 @@ class ContractSerializer(serializers.ModelSerializer):
             "updated_at",
             "contract_owner",
         )
+
+    def validate(self, attrs):
+        title = attrs.get("title", getattr(self.instance, "title", None))
+        vendor = attrs.get("vendor", getattr(self.instance, "vendor", None))
+        start_date = attrs.get("start_date", getattr(self.instance, "start_date", None))
+        end_date = attrs.get("end_date", getattr(self.instance, "end_date", None))
+        if self.instance is None and title and vendor and start_date and end_date:
+            if Contract.objects.filter(
+                vendor=vendor,
+                title__iexact=str(title).strip(),
+                start_date=start_date,
+                end_date=end_date,
+            ).exists():
+                raise serializers.ValidationError(
+                    {"title": ["A contract with the same title, vendor, and term dates already exists."]}
+                )
+        return attrs
