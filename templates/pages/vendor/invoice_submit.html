@@ -51,7 +51,7 @@
                                 <option value="" disabled {% if not selected_po %}selected{% endif %}>-- Select an Authorized PO --</option>
                                 {% for p in eligible_pos %}
                                 <option value="{{ p.id }}" {% if selected_po and selected_po.id == p.id %}selected{% endif %}>
-                                    {{ p.po_number }} &bull; ${{ p.total_amount }} ({{ p.get_status_display }})
+                                    {{ p.po_number }} &bull; ₹{{ p.total_amount }} ({{ p.get_status_display }})
                                 </option>
                                 {% endfor %}
                             </select>
@@ -70,7 +70,7 @@
                             </div>
                             <div class="d-flex justify-content-between mb-1">
                                 <span class="text-muted small">PO Total Amount:</span>
-                                <span class="fw-bold text-success">${{ selected_po.total_amount }}</span>
+                                <span class="fw-bold text-success">₹{{ selected_po.total_amount }}</span>
                             </div>
                             <div class="d-flex justify-content-between">
                                 <span class="text-muted small">Current Status:</span>
@@ -156,7 +156,7 @@
                                                    oninput="recalcTotals()">
                                         </td>
                                         <td class="pe-4 text-end fw-bold text-dark" id="total_{{ line.id }}">
-                                            ${{ line.line_total }}
+                                            ₹{{ line.line_total }}
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -175,16 +175,16 @@
                         <div class="d-flex flex-column align-items-end">
                             <div class="d-flex justify-content-between w-100 w-md-50 mb-1">
                                 <span class="text-muted">Subtotal:</span>
-                                <span class="fw-bold text-dark" id="displaySubtotal">${{ selected_po.subtotal }}</span>
+                                <span class="fw-bold text-dark" id="displaySubtotal">₹{{ selected_po.subtotal }}</span>
                             </div>
                             <div class="d-flex justify-content-between w-100 w-md-50 mb-1">
                                 <span class="text-muted">Est. Tax (10%):</span>
-                                <span class="fw-semibold text-secondary" id="displayTax">${{ selected_po.tax_amount }}</span>
+                                <span class="fw-semibold text-secondary" id="displayTax">₹{{ selected_po.tax_amount }}</span>
                             </div>
                             <hr class="w-100 w-md-50 my-2">
                             <div class="d-flex justify-content-between w-100 w-md-50 mb-3">
                                 <span class="fw-bold fs-5 text-dark">Invoice Total:</span>
-                                <span class="fw-bold fs-5 text-success" id="displayTotal">${{ selected_po.total_amount }}</span>
+                                <span class="fw-bold fs-5 text-success" id="displayTotal">₹{{ selected_po.total_amount }}</span>
                             </div>
                         </div>
 
@@ -228,7 +228,7 @@ function recalcTotals() {
             const qty = parseFloat(input.value) || 0.0;
             const price = parseFloat(priceInput.value) || 0.0;
             const lineTotal = qty * price;
-            totalCell.textContent = '$' + lineTotal.toFixed(2);
+            totalCell.textContent = '₹' + lineTotal.toFixed(2);
             subtotal += lineTotal;
         }
     });
@@ -240,9 +240,9 @@ function recalcTotals() {
     const taxEl = document.getElementById('displayTax');
     const totEl = document.getElementById('displayTotal');
 
-    if (subEl) subEl.textContent = '$' + subtotal.toFixed(2);
-    if (taxEl) taxEl.textContent = '$' + tax.toFixed(2);
-    if (totEl) totEl.textContent = '$' + total.toFixed(2);
+    if (subEl) subEl.textContent = '₹' + subtotal.toFixed(2);
+    if (taxEl) taxEl.textContent = '₹' + tax.toFixed(2);
+    if (totEl) totEl.textContent = '₹' + total.toFixed(2);
 }
 
 // Submit guard: disable button and show spinner on form submit to prevent duplicate submissions

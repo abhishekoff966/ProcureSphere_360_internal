@@ -13,7 +13,7 @@
                 <select name="po_id" class="form-select" required>
                     <option value="">Select Issued / Acknowledged PO...</option>
                     {% for po in purchase_orders %}
-                        <option value="{{ po.id }}">{{ po.po_number }} — {{ po.vendor.legal_name }} (${{ po.total_amount|floatformat:2 }})</option>
+                        <option value="{{ po.id }}">{{ po.po_number }} — {{ po.vendor.legal_name }} (₹{{ po.total_amount|floatformat:2 }})</option>
                     {% endfor %}
                 </select>
             </div>

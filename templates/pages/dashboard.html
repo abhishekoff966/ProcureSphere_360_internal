@@ -110,19 +110,19 @@
                 <div class="col-md-4">
                     <div class="p-3 bg-light rounded-3 border">
                         <div class="small text-muted fw-semibold">TOTAL ALLOCATED BUDGET</div>
-                        <div class="h3 fw-bold text-primary mb-0">${{ metrics.allocated_budget|floatformat:2 }}</div>
+                        <div class="h3 fw-bold text-primary mb-0">₹{{ metrics.allocated_budget|floatformat:2 }}</div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="p-3 bg-light rounded-3 border">
                         <div class="small text-muted fw-semibold">COMMITTED SPEND (POs)</div>
-                        <div class="h3 fw-bold text-warning mb-0">${{ metrics.committed_spend|floatformat:2 }}</div>
+                        <div class="h3 fw-bold text-warning mb-0">₹{{ metrics.committed_spend|floatformat:2 }}</div>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="p-3 bg-light rounded-3 border">
                         <div class="small text-muted fw-semibold">ACTUAL SPEND (PAID)</div>
-                        <div class="h3 fw-bold text-success mb-0">${{ metrics.actual_spend|floatformat:2 }}</div>
+                        <div class="h3 fw-bold text-success mb-0">₹{{ metrics.actual_spend|floatformat:2 }}</div>
                     </div>
                 </div>
             </div>

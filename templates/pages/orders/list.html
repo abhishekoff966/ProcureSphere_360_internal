@@ -103,7 +103,7 @@
                                 <span class="badge bg-secondary rounded-pill px-3">{{ item.get_status_display|default:item.status }}</span>
                             {% endif %}
                         </td>
-                        <td class="text-end fw-bold text-dark">${{ item.total_amount|floatformat:2 }}</td>
+                        <td class="text-end fw-bold text-dark">₹{{ item.total_amount|floatformat:2 }}</td>
                         <td class="text-center text-muted small">{{ item.created_at|date:"M d, Y" }}</td>
                         <td class="pe-4 text-end">
                             <a href="{% url 'order_detail' item.pk %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold">

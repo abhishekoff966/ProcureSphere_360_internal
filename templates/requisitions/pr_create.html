@@ -90,7 +90,7 @@
                             <td><input type="text" class="form-control form-control-sm" name="item_name" placeholder="Item name..." required></td>
                             <td><input type="number" step="1" min="1" class="form-control form-control-sm qty-input" name="quantity" value="1" oninput="calculateTotal()" required></td>
                             <td><input type="number" step="0.01" min="0.01" class="form-control form-control-sm price-input" name="unit_price" placeholder="0.00" oninput="calculateTotal()" required></td>
-                            <td class="fw-bold text-navy subtotal-cell">$0.00</td>
+                            <td class="fw-bold text-navy subtotal-cell">₹0.00</td>
                             <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLineItem(this)"><i class="fa-solid fa-trash"></i></button></td>
                         </tr>
                     </tbody>
@@ -99,7 +99,7 @@
 
             <div class="d-flex align-items-center justify-content-between bg-light p-3 rounded-3 border mb-4">
                 <span class="fw-bold text-dark">Total Requisition Estimated Amount:</span>
-                <span class="h3 fw-bold text-primary mb-0" id="grandTotalDisplay">$0.00</span>
+                <span class="h3 fw-bold text-primary mb-0" id="grandTotalDisplay">₹0.00</span>
             </div>
 
             <div class="text-end">
@@ -119,7 +119,7 @@ function addLineItem() {
         <td><input type="text" class="form-control form-control-sm" name="item_name" placeholder="Item name..." required></td>
         <td><input type="number" step="1" min="1" class="form-control form-control-sm qty-input" name="quantity" value="1" oninput="calculateTotal()" required></td>
         <td><input type="number" step="0.01" min="0.01" class="form-control form-control-sm price-input" name="unit_price" placeholder="0.00" oninput="calculateTotal()" required></td>
-        <td class="fw-bold text-navy subtotal-cell">$0.00</td>
+        <td class="fw-bold text-navy subtotal-cell">₹0.00</td>
         <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLineItem(this)"><i class="fa-solid fa-trash"></i></button></td>
     `;
     tbody.appendChild(tr);
@@ -140,10 +140,10 @@ function calculateTotal() {
         const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
         const price = parseFloat(row.querySelector('.price-input').value) || 0;
         const subtotal = qty * price;
-        row.querySelector('.subtotal-cell').textContent = '$' + subtotal.toFixed(2);
+        row.querySelector('.subtotal-cell').textContent = '₹' + subtotal.toFixed(2);
         grandTotal += subtotal;
     });
-    document.getElementById('grandTotalDisplay').textContent = '$' + grandTotal.toFixed(2);
+    document.getElementById('grandTotalDisplay').textContent = '₹' + grandTotal.toFixed(2);
 }
 </script>
 {% endblock %}

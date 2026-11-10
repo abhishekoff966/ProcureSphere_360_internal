@@ -347,7 +347,7 @@ function recalcTotal() {
         const p = parseFloat(prices[i].value) || 0;
         total += (q * p);
     }
-    document.getElementById('grandTotalDisplay').innerText = '$' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('grandTotalDisplay').innerText = '₹' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 
 document.addEventListener('DOMContentLoaded', recalcTotal);

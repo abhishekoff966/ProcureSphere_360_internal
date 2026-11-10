@@ -42,7 +42,7 @@
                 <tr>
                     <td class="ps-4" data-label="{{ exception.get_exception_type_display }}"><span class="badge bg-warning text-dark">{{ exception.get_exception_type_display }}</span></td>
                     <td data-label="{{ exception.invoice.invoice_number }}">{{ exception.invoice.invoice_number }}</td>
-                    <td class="text-danger fw-bold" data-label="Variance Amount">+${{ exception.variance_amount|floatformat:2 }}</td>
+                    <td class="text-danger fw-bold" data-label="Variance Amount">+₹{{ exception.variance_amount|floatformat:2 }}</td>
                     <td class="text-muted" data-label="Date Flagged">{{ exception.created_at|date:"M d, Y" }}</td>
                     <td class="pe-4 text-end" data-label="Actions">
                         <a href="{% url 'exception_detail' exception.id %}" class="btn btn-sm btn-primary rounded-pill px-3">Review</a>

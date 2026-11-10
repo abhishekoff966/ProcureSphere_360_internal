@@ -58,7 +58,7 @@
                         <option value="">Select PO...</option>
                         {% for po in pos %}
                             <option value="{{ po.id }}" {% if form_data.po_id == po.id|stringformat:"s" %}selected{% endif %}>
-                                {{ po.po_number }} - {{ po.vendor.legal_name }} (${{ po.total_amount }})
+                                {{ po.po_number }} - {{ po.vendor.legal_name }} (₹{{ po.total_amount }})
                             </option>
                         {% endfor %}
                     </select>
@@ -128,7 +128,7 @@
                         </div>
                     </div>
                     <div class="form-text small text-muted mt-1">
-                        <i class="fa-solid fa-shield-halved text-success me-1"></i> Negative pricing prohibited: Value must be ≥ $0.00.
+                        <i class="fa-solid fa-shield-halved text-success me-1"></i> Negative pricing prohibited: Value must be ≥ ₹0.00.
                     </div>
                 </div>
 
@@ -137,15 +137,15 @@
                     <div class="p-3 bg-light rounded-3 border d-flex flex-wrap justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-3">
                             <span class="text-secondary fw-semibold small text-uppercase">Line Subtotal:</span>
-                            <span class="fw-bold fs-5 text-dark" id="previewSubtotal">$0.00</span>
+                            <span class="fw-bold fs-5 text-dark" id="previewSubtotal">₹0.00</span>
                         </div>
                         <div class="d-flex align-items-center gap-3">
                             <span class="text-secondary fw-semibold small text-uppercase">Estimated Tax (10%):</span>
-                            <span class="text-muted fw-bold" id="previewTax">$0.00</span>
+                            <span class="text-muted fw-bold" id="previewTax">₹0.00</span>
                         </div>
                         <div class="d-flex align-items-center gap-3">
                             <span class="text-secondary fw-semibold small text-uppercase">Total Amount:</span>
-                            <span class="fw-bold fs-5 text-success" id="previewTotal">$0.00</span>
+                            <span class="fw-bold fs-5 text-success" id="previewTotal">₹0.00</span>
                         </div>
                     </div>
                 </div>
@@ -213,9 +213,9 @@ function validateCountsAndCalculate() {
     const tax = subtotal * 0.10;
     const total = subtotal + tax;
 
-    document.getElementById('previewSubtotal').textContent = '$' + subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('previewTax').textContent = '$' + tax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('previewTotal').textContent = '$' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('previewSubtotal').textContent = '₹' + subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('previewTax').textContent = '₹' + tax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('previewTotal').textContent = '₹' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     return isValid;
 }

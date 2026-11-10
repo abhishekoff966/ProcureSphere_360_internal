@@ -521,7 +521,7 @@
                                     <td>
                                         <span class="small text-muted">{{ bid.event.event_number }}</span>
                                     </td>
-                                    <td class="fw-semibold text-dark">${{ bid.total_bid_amount|floatformat:2 }}</td>
+                                    <td class="fw-semibold text-dark">₹{{ bid.total_bid_amount|floatformat:2 }}</td>
                                     <td><span class="badge bg-secondary">V{{ bid.version }}</span></td>
                                     <td>
                                         <span class="badge {% if bid.status == 'SUBMITTED' %}bg-success{% elif bid.status == 'AMENDED' %}bg-info text-dark{% else %}bg-warning text-dark{% endif %}">
@@ -628,7 +628,7 @@
                                         </a>
                                     </td>
                                     <td class="small text-muted">{{ po.created_at|date:"M d, Y" }}</td>
-                                    <td class="fw-bold text-dark">${{ po.total_amount|floatformat:2 }}</td>
+                                    <td class="fw-bold text-dark">₹{{ po.total_amount|floatformat:2 }}</td>
                                     <td>
                                         <span class="badge {% if po.status == 'ACKNOWLEDGED' %}bg-success{% elif po.status == 'ISSUED' %}bg-warning text-dark{% elif po.status == 'COMPLETED' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
                                             {{ po.status }}

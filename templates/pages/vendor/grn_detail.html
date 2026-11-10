@@ -115,7 +115,7 @@
                         <tr>
                             <td class="ps-4 py-3">
                                 <div class="fw-bold text-dark">{{ line.po_line.item_description }}</div>
-                                <small class="text-muted font-monospace">${{ line.po_line.unit_price|floatformat:2 }} / unit</small>
+                                <small class="text-muted font-monospace">₹{{ line.po_line.unit_price|floatformat:2 }} / unit</small>
                             </td>
                             <td class="text-center">
                                 <span class="badge bg-light text-dark border">{{ line.po_line.unit_of_measure }}</span>

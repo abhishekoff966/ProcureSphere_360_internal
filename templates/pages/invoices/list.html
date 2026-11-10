@@ -96,7 +96,7 @@
                                 {% endif %}
                             </td>
                             <td class="py-3 text-end fw-bold text-dark font-monospace" data-label="Total Amount">
-                                ${{ inv.total_amount|floatformat:2 }}
+                                ₹{{ inv.total_amount|floatformat:2 }}
                             </td>
                             <td class="py-3 small text-muted" data-label="Invoice Date">
                                 {{ inv.invoice_date|date:"M d, Y" }}

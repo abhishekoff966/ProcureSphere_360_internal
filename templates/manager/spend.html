@@ -83,7 +83,7 @@
                     <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Allocated Budget</span>
                     <i class="fa-solid fa-vault text-primary"></i>
                 </div>
-                <h3 class="fw-bold text-dark mb-0 font-heading" id="spendAllocatedBudget">$0.00</h3>
+                <h3 class="fw-bold text-dark mb-0 font-heading" id="spendAllocatedBudget">₹0.00</h3>
                 <span class="text-muted small">Authorized baseline limit</span>
             </div>
         </div>
@@ -94,7 +94,7 @@
                     <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Reserved Amount (PRs)</span>
                     <i class="fa-solid fa-lock text-warning"></i>
                 </div>
-                <h3 class="fw-bold text-dark mb-0 font-heading" id="spendReservedAmount">$0.00</h3>
+                <h3 class="fw-bold text-dark mb-0 font-heading" id="spendReservedAmount">₹0.00</h3>
                 <span class="text-muted small">Requisitions in approval</span>
             </div>
         </div>
@@ -105,7 +105,7 @@
                     <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Committed Spend</span>
                     <i class="fa-solid fa-file-contract text-indigo"></i>
                 </div>
-                <h3 class="fw-bold text-indigo mb-0 font-heading" id="spendCommittedAmount">$0.00</h3>
+                <h3 class="fw-bold text-indigo mb-0 font-heading" id="spendCommittedAmount">₹0.00</h3>
                 <span class="text-muted small" id="spendCommitmentRatio">Issued purchase orders</span>
             </div>
         </div>
@@ -116,7 +116,7 @@
                     <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Actual Spend</span>
                     <i class="fa-solid fa-receipt text-emerald"></i>
                 </div>
-                <h3 class="fw-bold text-emerald mb-0 font-heading" id="spendActualAmount">$0.00</h3>
+                <h3 class="fw-bold text-emerald mb-0 font-heading" id="spendActualAmount">₹0.00</h3>
                 <span class="text-muted small">Invoiced & realized spend</span>
             </div>
         </div>
@@ -128,7 +128,7 @@
                     <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Available Balance</span>
                     <i class="fa-solid fa-scale-balanced text-cyan"></i>
                 </div>
-                <h3 class="fw-bold text-dark mb-0 font-heading" id="spendAvailableBalance">$0.00</h3>
+                <h3 class="fw-bold text-dark mb-0 font-heading" id="spendAvailableBalance">₹0.00</h3>
                 <span class="text-muted small">Uncommitted funds</span>
             </div>
         </div>
@@ -424,11 +424,11 @@
             const available = Number(s.available_balance || 0);
             const util = Number(s.utilization_rate || 0);
 
-            document.getElementById('spendAllocatedBudget').textContent = '$' + allocated.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('spendReservedAmount').textContent = '$' + reserved.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('spendCommittedAmount').textContent = '$' + committed.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('spendActualAmount').textContent = '$' + actual.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('spendAvailableBalance').textContent = '$' + available.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('spendAllocatedBudget').textContent = '₹' + allocated.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('spendReservedAmount').textContent = '₹' + reserved.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('spendCommittedAmount').textContent = '₹' + committed.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('spendActualAmount').textContent = '₹' + actual.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('spendAvailableBalance').textContent = '₹' + available.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
             document.getElementById('spendUtilizationRate').textContent = util.toFixed(1) + '%';
             
             const bar = document.getElementById('spendUtilizationBar');

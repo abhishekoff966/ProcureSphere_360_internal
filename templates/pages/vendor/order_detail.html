@@ -263,8 +263,8 @@
                                     </td>
                                     <td><span class="badge bg-light text-dark border">{{ line.unit_of_measure }}</span></td>
                                     <td class="text-end fw-semibold text-dark">{{ line.quantity|floatformat:2 }}</td>
-                                    <td class="text-end text-muted">${{ line.unit_price|floatformat:2 }}</td>
-                                    <td class="text-end fw-bold text-dark">${{ line.line_total|floatformat:2 }}</td>
+                                    <td class="text-end text-muted">₹{{ line.unit_price|floatformat:2 }}</td>
+                                    <td class="text-end fw-bold text-dark">₹{{ line.line_total|floatformat:2 }}</td>
                                     <td class="text-end pe-4">
                                         <span class="fw-semibold {% if line.quantity_received >= line.quantity %}text-success{% elif line.quantity_received > 0 %}text-warning{% else %}text-muted{% endif %}">
                                             {{ line.quantity_received|floatformat:2 }}
@@ -293,15 +293,15 @@
                     <ul class="list-group list-group-flush small">
                         <li class="list-group-item d-flex justify-content-between px-0">
                             <span class="text-muted">Subtotal:</span>
-                            <span class="fw-semibold text-dark">${{ po.subtotal|floatformat:2 }}</span>
+                            <span class="fw-semibold text-dark">₹{{ po.subtotal|floatformat:2 }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between px-0">
                             <span class="text-muted">Tax Amount:</span>
-                            <span class="fw-semibold text-dark">${{ po.tax_amount|floatformat:2 }}</span>
+                            <span class="fw-semibold text-dark">₹{{ po.tax_amount|floatformat:2 }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between px-0 bg-light rounded px-2 py-2 mt-2">
                             <span class="fw-bold text-dark fs-6">Total Amount:</span>
-                            <span class="fw-bold text-primary fs-5">${{ po.total_amount|floatformat:2 }}</span>
+                            <span class="fw-bold text-primary fs-5">₹{{ po.total_amount|floatformat:2 }}</span>
                         </li>
                     </ul>
                 </div>
@@ -590,7 +590,7 @@
                                     <tr>
                                         <td class="ps-3">
                                             <div class="fw-semibold text-dark small">{{ line.item_description }}</div>
-                                            <small class="text-muted">{{ line.unit_of_measure }} &bull; ${{ line.unit_price|floatformat:2 }}/unit</small>
+                                            <small class="text-muted">{{ line.unit_of_measure }} &bull; ₹{{ line.unit_price|floatformat:2 }}/unit</small>
                                         </td>
                                         <td class="text-center small text-muted">{{ line.quantity|floatformat:2 }}</td>
                                         <td class="text-center small text-muted">{{ line.quantity_received|default:"0.00"|floatformat:2 }}</td>

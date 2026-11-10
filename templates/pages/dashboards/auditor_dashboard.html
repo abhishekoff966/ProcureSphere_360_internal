@@ -145,7 +145,7 @@
                             <div class="text-muted small mb-1 text-truncate">{{ exc.invoice.vendor.legal_name }}</div>
                             <div class="d-flex align-items-center justify-content-between text-muted small">
                                 <span>Variance</span>
-                                <span class="fw-bold text-danger fs-6">${{ exc.variance_amount|floatformat:2 }}</span>
+                                <span class="fw-bold text-danger fs-6">₹{{ exc.variance_amount|floatformat:2 }}</span>
                             </div>
                         </div>
                     {% empty %}
@@ -170,7 +170,7 @@
                                     <td class="ps-3 text-nowrap"><strong class="text-dark font-monospace">{{ exc.invoice.invoice_number }}</strong></td>
                                     <td class="text-muted small text-truncate" style="max-width: 140px;" title="{{ exc.invoice.vendor.legal_name }}">{{ exc.invoice.vendor.legal_name|truncatechars:20 }}</td>
                                     <td class="text-nowrap"><span class="badge bg-light text-dark border">{{ exc.get_exception_type_display }}</span></td>
-                                    <td class="text-end pe-3 fw-bold text-danger text-nowrap">${{ exc.variance_amount|floatformat:2 }}</td>
+                                    <td class="text-end pe-3 fw-bold text-danger text-nowrap">₹{{ exc.variance_amount|floatformat:2 }}</td>
                                 </tr>
                             {% empty %}
                                 <tr>
@@ -276,7 +276,7 @@
                             <div class="fw-semibold text-dark mb-1 text-truncate">{{ po.vendor_name|default:"Vendor" }}</div>
                             <div class="d-flex align-items-center justify-content-between text-muted small">
                                 <span>Order Amount</span>
-                                <span class="fw-bold text-dark fs-6">${{ po.total_amount|floatformat:2|default:"0.00" }}</span>
+                                <span class="fw-bold text-dark fs-6">₹{{ po.total_amount|floatformat:2|default:"0.00" }}</span>
                             </div>
                         </div>
                     {% empty %}
@@ -301,7 +301,7 @@
                                     <td class="ps-3 text-nowrap"><span class="badge bg-dark text-white font-monospace fw-bold">{{ po.po_number|default:po.id }}</span></td>
                                     <td class="text-dark fw-medium small text-truncate" style="max-width: 150px;" title="{{ po.vendor_name }}">{{ po.vendor_name|default:"Vendor" }}</td>
                                     <td class="text-nowrap"><span class="badge bg-light text-dark border">{{ po.status|default:"ISSUED" }}</span></td>
-                                    <td class="text-end pe-3 fw-bold text-dark text-nowrap">${{ po.total_amount|floatformat:2|default:"0.00" }}</td>
+                                    <td class="text-end pe-3 fw-bold text-dark text-nowrap">₹{{ po.total_amount|floatformat:2|default:"0.00" }}</td>
                                 </tr>
                             {% empty %}
                                 <tr>
@@ -339,7 +339,7 @@
                             <div class="fw-semibold text-dark mb-1 text-truncate" title="{{ c.title }}">{{ c.title|default:"Master Agreement" }}</div>
                             <div class="d-flex align-items-center justify-content-between text-muted small">
                                 <span>Contract Value</span>
-                                <span class="fw-bold text-success fs-6">${{ c.contract_value|floatformat:2|default:"0.00" }}</span>
+                                <span class="fw-bold text-success fs-6">₹{{ c.contract_value|floatformat:2|default:"0.00" }}</span>
                             </div>
                         </div>
                     {% empty %}
@@ -364,7 +364,7 @@
                                     <td class="ps-3 text-nowrap"><code class="text-dark bg-light px-2 py-1 rounded border">{{ c.contract_number|default:"CON-2026" }}</code></td>
                                     <td class="fw-semibold text-dark small text-truncate" style="max-width: 170px;" title="{{ c.title }}">{{ c.title|default:"Master Agreement" }}</td>
                                     <td class="text-nowrap"><span class="badge bg-success-subtle text-success border">{{ c.status|default:"ACTIVE" }}</span></td>
-                                    <td class="text-end pe-3 fw-bold text-success text-nowrap">${{ c.contract_value|floatformat:2|default:"0.00" }}</td>
+                                    <td class="text-end pe-3 fw-bold text-success text-nowrap">₹{{ c.contract_value|floatformat:2|default:"0.00" }}</td>
                                 </tr>
                             {% empty %}
                                 <tr>
