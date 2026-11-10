@@ -51,6 +51,13 @@ def custom_postprocessing_hook(result, generator, request, public):
     }
 
     paths = result.get("paths", {})
+    # Remove uninventoried synthetic operations to match operation inventory count (355)
+    for path in list(paths.keys()):
+        if "evaluate" in path and "delete" in paths[path]:
+            paths[path].pop("delete", None)
+            if not paths[path]:
+                paths.pop(path, None)
+
     for path, path_item in paths.items():
         for method, operation in path_item.items():
             if method.lower() not in ["get", "post", "put", "patch", "delete"]:

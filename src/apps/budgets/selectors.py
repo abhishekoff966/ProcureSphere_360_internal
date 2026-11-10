@@ -16,14 +16,12 @@ def scope_budgets_queryset(qs, user):
         qs = Budget.objects.select_related("cost_center", "fiscal_period").order_by("-created_at")
     if not user or not user.is_authenticated:
         return qs.none()
-    if user.is_superuser:
-        return qs
 
     role_code = getattr(user, "role_code", None) or (
         user.role.code if hasattr(user, "role") and user.role else None
     )
 
-    if role_code == Role.SUPER_ADMIN:
+    if user.is_superuser or role_code == Role.SUPER_ADMIN:
         return qs
 
     if getattr(user, "is_vendor", False) or role_code == Role.VENDOR_USER:
@@ -60,14 +58,12 @@ def scope_spend_ledger_queryset(qs, user):
     """
     if not user or not user.is_authenticated:
         return qs.none()
-    if user.is_superuser:
-        return qs
 
     role_code = getattr(user, "role_code", None) or (
         user.role.code if hasattr(user, "role") and user.role else None
     )
 
-    if role_code == Role.SUPER_ADMIN:
+    if user.is_superuser or role_code == Role.SUPER_ADMIN:
         return qs
 
     if getattr(user, "is_vendor", False) or role_code == Role.VENDOR_USER:

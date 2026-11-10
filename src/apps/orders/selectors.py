@@ -16,12 +16,13 @@ def scope_purchase_orders_queryset(qs, user):
     """
     if not user or not user.is_authenticated:
         return qs.none()
-    if user.is_superuser:
-        return qs
 
     role_code = getattr(user, "role_code", None) or (
         user.role.code if hasattr(user, "role") and user.role else None
     )
+
+    if user.is_superuser or role_code == Role.SUPER_ADMIN:
+        return qs
 
     # Vendor scoping
     if getattr(user, "is_vendor", False) or role_code == Role.VENDOR_USER:

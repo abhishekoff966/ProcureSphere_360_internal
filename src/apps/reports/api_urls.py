@@ -133,6 +133,12 @@ def dashboard_summary_view(request):
     """
     Executes executive procurement dashboard overview combining spend, PRs, POs, Invoices, Contracts.
     """
+    from apps.orders.models import PurchaseOrder
+    from apps.orders.selectors import scope_purchase_orders_queryset
+    from apps.requisitions.models import PurchaseRequisition
+    from apps.vendors.models import Vendor
+    from apps.vendors.selectors import scope_vendors_queryset
+
     pr_data = get_pr_aging_report()
     spend_data = get_spend_analytics_report()
     po_data = get_po_status_report()
@@ -141,8 +147,8 @@ def dashboard_summary_view(request):
     scorecard_data = get_supplier_performance_report()
 
     summary = {
-        "total_prs": len(pr_data),
-        "total_pos": len(po_data),
+        "total_prs": PurchaseRequisition.objects.count() if request.user.is_superuser else len(pr_data),
+        "total_pos": scope_purchase_orders_queryset(PurchaseOrder.objects.all(), request.user).count(),
         "total_spend": sum(
             float(item.get("actual_spend") or item.get("actual") or 0.0) for item in spend_data
         ),
@@ -150,7 +156,7 @@ def dashboard_summary_view(request):
         "expiring_contracts": len(
             [item for item in contract_data if 0 <= item["days_to_expiry"] <= 60]
         ),
-        "vendor_count": len(scorecard_data),
+        "vendor_count": scope_vendors_queryset(Vendor.objects.all(), request.user).count(),
     }
     return Response(summary, status=status.HTTP_200_OK)
 

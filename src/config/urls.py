@@ -4,7 +4,7 @@ from django.urls import include, path, re_path
 from django.views.generic.base import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
-from apps.accounts.api_views import SessionLoginView, SessionLogoutView
+from apps.accounts.api_views import SessionLoginView, SessionLogoutView, SessionRefreshView
 from apps.accounts.views import (
     change_password_view,
     password_change_view,
@@ -69,7 +69,7 @@ urlpatterns = [
     # REST API v1
     path("api/v1/auth/login/", SessionLoginView.as_view(), name="session_login"),
     path("api/v1/auth/token/", SessionLoginView.as_view(), name="token_obtain_pair"),
-    path("api/v1/auth/token/refresh/", SessionLoginView.as_view(), name="token_refresh"),
+    path("api/v1/auth/token/refresh/", SessionRefreshView.as_view(), name="token_refresh"),
     path("api/v1/auth/logout/", SessionLogoutView.as_view(), name="session_logout"),
     path("api/v1/auth/", include("apps.accounts.api_urls")),
     path("api/v1/accounts/", include("apps.accounts.api_urls")),

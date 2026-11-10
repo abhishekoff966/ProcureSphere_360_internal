@@ -197,6 +197,19 @@ def submit_purchase_requisition_service(
         comments="PR submitted for approval workflow.",
     )
 
+    AuditLog.objects.create(
+        actor=user,
+        action=AuditLog.ACTION_SUBMIT,
+        target_model="PurchaseRequisition",
+        target_object_id=str(requisition.id),
+        previous_state={"status": previous_status, "pr_number": requisition.pr_number},
+        new_state={
+            "pr_number": requisition.pr_number,
+            "status": requisition.status,
+            "total_amount": str(requisition.total_amount),
+        },
+    )
+
     # Notify Department Approvers via Notification model scoped strictly to requisition organization
     from apps.accounts.models import Role, User
     from apps.notifications.models import Notification

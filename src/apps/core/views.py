@@ -38,19 +38,33 @@ def health_check_view(request):
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1;")
             health_status["database"] = "ok"
-    except Exception as e:
-        health_status["database"] = f"error: {str(e)}"
+    except Exception:
+        health_status["database"] = "disconnected"
         health_status["status"] = "unhealthy"
 
-    # Check Redis connection
+    # Check Redis connection safely without leaking hostnames/credentials (DEF-005)
     try:
         redis_client = Redis.from_url(settings.REDIS_URL, socket_timeout=2)
         if redis_client.ping():
             health_status["redis"] = "ok"
-    except Exception as e:
-        health_status["redis"] = f"offline (local mode): {str(e)}"
+        else:
+            health_status["redis"] = "disconnected"
+            health_status["status"] = "degraded"
+    except Exception:
+        # Check cache fallback
+        try:
+            from django.core.cache import cache
+            cache.set("health_check_ping", "1", 10)
+            if cache.get("health_check_ping") == "1":
+                health_status["redis"] = "ok"
+            else:
+                health_status["redis"] = "disconnected"
+                health_status["status"] = "degraded"
+        except Exception:
+            health_status["redis"] = "disconnected"
+            health_status["status"] = "degraded"
 
-    http_status = 200 if health_status["status"] == "healthy" else 503
+    http_status = 200 if health_status["status"] in ("healthy", "degraded") else 503
     return JsonResponse(health_status, status=http_status)
 
 
@@ -126,6 +140,13 @@ def dashboard_redirect_view(request):
 @dashboard_role_required([Role.REQUESTER, Role.SUPER_ADMIN])
 def requester_dashboard_view(request):
     user = request.user
+    role_code = getattr(user, "role_code", None) or (
+        user.role.code if hasattr(user, "role") and user.role else None
+    )
+    if not user.is_superuser and role_code not in [Role.REQUESTER, Role.SUPER_ADMIN]:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Permission Denied: Requester access required.")
+
     my_prs = PurchaseRequisition.objects.filter(requester=user).prefetch_related(
         "purchase_orders", "sourcing_events"
     )
@@ -154,6 +175,13 @@ def manager_dashboard_view(request):
 @dashboard_role_required([Role.STORES_RECEIVER, Role.SUPER_ADMIN])
 def stores_dashboard_view(request):
     user = request.user
+    role_code = getattr(user, "role_code", None) or (
+        user.role.code if hasattr(user, "role") and user.role else None
+    )
+    if not user.is_superuser and role_code not in [Role.STORES_RECEIVER, Role.SUPER_ADMIN]:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Permission Denied: Stores & Receiving Desk access required.")
+
     from apps.receipts.views import get_stores_dashboard_data
 
     data = get_stores_dashboard_data(user)
@@ -182,6 +210,14 @@ def vendor_dashboard_view(request):
 @login_required(login_url="/login/")
 @dashboard_role_required([Role.FINANCE_AP, Role.SUPER_ADMIN])
 def finance_dashboard_view(request):
+    user = request.user
+    role_code = getattr(user, "role_code", None) or (
+        user.role.code if hasattr(user, "role") and user.role else None
+    )
+    if not user.is_superuser and role_code not in [Role.FINANCE_AP, Role.SUPER_ADMIN]:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Permission Denied: Finance & AP Workspace access required.")
+
     from apps.budgets.models import SpendLedger
     from apps.invoices.models import MatchException, SupplierInvoice
     from apps.notifications.models import Notification
@@ -346,6 +382,13 @@ def finance_dashboard_view(request):
 @dashboard_role_required([Role.PROC_EXEC, Role.SUPER_ADMIN])
 def procurement_dashboard_view(request):
     user = request.user
+    role_code = getattr(user, "role_code", None) or (
+        user.role.code if hasattr(user, "role") and user.role else None
+    )
+    if not user.is_superuser and role_code not in [Role.PROC_EXEC, Role.SUPER_ADMIN]:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Permission Denied: Procurement Executive access required.")
+
     from apps.notifications.models import Notification
     from apps.sourcing.selectors import get_sourcing_dashboard_metrics
     from apps.sourcing.services import sync_all_event_windows
@@ -448,6 +491,13 @@ def legal_dashboard_view(request):
 @dashboard_role_required([Role.DEPT_APPROVER, Role.SUPER_ADMIN])
 def approver_dashboard_view(request):
     user = request.user
+    role_code = getattr(user, "role_code", None) or (
+        user.role.code if hasattr(user, "role") and user.role else None
+    )
+    if not user.is_superuser and role_code not in [Role.DEPT_APPROVER, Role.SUPER_ADMIN]:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Permission Denied: Department Approver access required.")
+
     user_department = getattr(user, "department", None)
     from apps.budgets.models import Budget
     from apps.organization.models import CostCenter, Department, FiscalPeriod
