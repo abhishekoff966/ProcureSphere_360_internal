@@ -79,7 +79,8 @@ def test_legal_sidebar_navigation_removes_audit_log_and_sourcing_events(client, 
     Legal Manager workspace sidebar must NOT contain:
     - Sourcing Events (/sourcing-events/)
     - Audit Trail Log (/audit/logs/) which was yielding 403 Access Denied
-    It must preserve Contract Register, New Contract Draft, Vendor KYC Review, Approvals Inbox, Vendor Directory, Reports Hub.
+    It must preserve Contract Register, New Contract Draft, Approvals Inbox, Vendor Directory, Reports Hub.
+    Vendor KYC Review (/vendors/onboarding/) is removed as redundant to Vendor Directory.
     """
     legal_user = legal_world["legal_user"]
     client.force_login(legal_user)
@@ -94,14 +95,14 @@ def test_legal_sidebar_navigation_removes_audit_log_and_sourcing_events(client, 
         assert "Audit Trail Log" not in content
         assert "/sourcing-events/" not in content
         assert "Sourcing Events" not in content
+        assert "/vendors/onboarding/" not in content
+        assert "Vendor KYC Review" not in content
 
         # Required links MUST appear
         assert "/contracts/" in content
         assert "Contract Register" in content
         assert "/contracts/create/" in content
         assert "New Contract Draft" in content
-        assert "/vendors/onboarding/" in content
-        assert "Vendor KYC Review" in content
         assert "/approvals/inbox/" in content
         assert "Approvals Inbox" in content
         assert "/vendors/" in content

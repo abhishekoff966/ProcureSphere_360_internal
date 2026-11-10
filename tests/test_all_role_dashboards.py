@@ -40,7 +40,7 @@ def test_all_role_dashboards_render_successfully(client):
             user.save()
 
         client.force_login(user)
-        response = client.get("/")
+        response = client.get("/dashboard/", follow=True)
         assert response.status_code == 200
         html = response.content.decode()
         assert expected_snippet.lower() in html.lower()
