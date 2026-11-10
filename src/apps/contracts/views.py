@@ -3,6 +3,7 @@ import os
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -113,7 +114,7 @@ def _can_view_contract(user, contract):
 @login_required(login_url="/login/")
 def list_view(request):
     """
-    Contract Register List View with filtering by status, search query, and metrics.
+    Contract Register List View with filtering by status, search query, metrics, and pagination.
     """
     _enforce_internal_contracts_access(request)
     if not _can_view_contract_list(request.user):
@@ -127,13 +128,22 @@ def list_view(request):
     search_query = request.GET.get("q", "").strip()
 
     items = get_contracts_qs(user=request.user, status=status_filter, search=search_query)
-    metrics = get_legal_dashboard_metrics()
+    metrics = get_legal_dashboard_metrics(user=request.user)
+
+    paginator = Paginator(items, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
 
     context = {
-        "items": items,
+        "items": page_obj.object_list,
+        "page_obj": page_obj,
         "metrics": metrics,
         "current_status": status_filter,
         "search_query": search_query,
+        "querystring": query_params.urlencode(),
         "statuses": Contract.STATUS_CHOICES,
     }
     return render(request, "pages/contracts/list.html", context)

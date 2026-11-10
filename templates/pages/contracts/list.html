@@ -87,26 +87,32 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-2 d-grid">
-            <button type="submit" class="btn btn-outline-dark fw-bold">Filter</button>
+        <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-outline-dark fw-bold flex-grow-1">Filter</button>
+            {% if current_status or search_query %}
+            <a href="{% url 'contracts_list' %}" class="btn btn-outline-secondary" title="Reset Filters"><i class="fa-solid fa-rotate-left"></i></a>
+            {% endif %}
         </div>
     </form>
 
     <ul class="nav nav-pills border-bottom pb-2 gap-2">
         <li class="nav-item">
-            <a class="nav-link rounded-pill px-3 {% if not current_status %}active bg-primary{% else %}text-muted{% endif %}" href="{% url 'contracts_list' %}">All Contracts</a>
+            <a class="nav-link rounded-pill px-3 {% if not current_status %}active bg-primary{% else %}text-muted{% endif %}" href="{% url 'contracts_list' %}{% if search_query %}?q={{ search_query }}{% endif %}">All Contracts</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link rounded-pill px-3 {% if current_status == 'LEGAL_REVIEW' %}active bg-warning text-dark{% else %}text-muted{% endif %}" href="{% url 'contracts_list' %}?status=LEGAL_REVIEW">Legal Review</a>
+            <a class="nav-link rounded-pill px-3 {% if current_status == 'LEGAL_REVIEW' %}active bg-warning text-dark{% else %}text-muted{% endif %}" href="{% url 'contracts_list' %}?status=LEGAL_REVIEW{% if search_query %}&q={{ search_query }}{% endif %}">Legal Review</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link rounded-pill px-3 {% if current_status == 'ACTIVE' %}active bg-success{% else %}text-muted{% endif %}" href="{% url 'contracts_list' %}?status=ACTIVE">Active</a>
+            <a class="nav-link rounded-pill px-3 {% if current_status == 'BUSINESS_APPROVAL' %}active bg-info text-white{% else %}text-muted{% endif %}" href="{% url 'contracts_list' %}?status=BUSINESS_APPROVAL{% if search_query %}&q={{ search_query }}{% endif %}">Business Approval</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link rounded-pill px-3 {% if current_status == 'RENEWAL_DUE' %}active bg-danger{% else %}text-muted{% endif %}" href="{% url 'contracts_list' %}?status=RENEWAL_DUE">Renewal Due</a>
+            <a class="nav-link rounded-pill px-3 {% if current_status == 'ACTIVE' %}active bg-success{% else %}text-muted{% endif %}" href="{% url 'contracts_list' %}?status=ACTIVE{% if search_query %}&q={{ search_query }}{% endif %}">Active</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link rounded-pill px-3 {% if current_status == 'DRAFT' %}active bg-secondary{% else %}text-muted{% endif %}" href="{% url 'contracts_list' %}?status=DRAFT">Drafts</a>
+            <a class="nav-link rounded-pill px-3 {% if current_status == 'RENEWAL_DUE' %}active bg-danger{% else %}text-muted{% endif %}" href="{% url 'contracts_list' %}?status=RENEWAL_DUE{% if search_query %}&q={{ search_query }}{% endif %}">Renewal Due</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link rounded-pill px-3 {% if current_status == 'DRAFT' %}active bg-secondary{% else %}text-muted{% endif %}" href="{% url 'contracts_list' %}?status=DRAFT{% if search_query %}&q={{ search_query }}{% endif %}">Drafts</a>
         </li>
     </ul>
 </div>
@@ -180,5 +186,6 @@
             </tbody>
         </table>
     </div>
+    {% include 'partials/pagination.html' %}
 </div>
 {% endblock %}
