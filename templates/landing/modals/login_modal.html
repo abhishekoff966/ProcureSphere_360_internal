@@ -120,13 +120,12 @@
             </div>
           </div>
 
-          <!-- Remember + Forgot -->
+          <!-- Remember -->
           <div class="lm-row">
             <label class="lm-remember">
               <input type="checkbox" id="login-remember" name="rememberMe" />
               <span>Remember me</span>
             </label>
-            <a href="#" class="login-forgot-link lm-forgot">Forgot Password?</a>
           </div>
 
           <!-- Sign In button -->
@@ -460,14 +459,10 @@
   width: 14px;
   height: 14px;
 }
-.lm-forgot {
-  font-size: 13px;
-  color: #3b6fe8;
-  text-decoration: none;
-  font-weight: 500;
-  white-space: nowrap;
+.lm-forgot,
+.login-forgot-link {
+  display: none !important;
 }
-.lm-forgot:hover { color: #1d4ed8; text-decoration: underline; }
 
 /* Submit button */
 .login-fullscreen-overlay .lm-submit {
