@@ -82,6 +82,8 @@ class POLineSerializer(serializers.ModelSerializer):
     def validate_unit_price(self, value):
         if value < Decimal("0.00"):
             raise serializers.ValidationError("Unit price cannot be negative.")
+        if value.as_tuple().exponent < -2:
+            raise serializers.ValidationError("Unit price cannot have more than 2 decimal places.")
         return value
 
     def validate_quantity(self, value):
@@ -311,11 +313,18 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
                     price = line_item.get("unit_price")
                     if price is not None:
                         try:
-                            if Decimal(str(price)) < Decimal("0.00"):
+                            d_price = Decimal(str(price))
+                            if d_price < Decimal("0.00"):
                                 raise serializers.ValidationError(
                                     {"lines": [f"Unit price cannot be negative for line item {idx + 1}."]}
                                 )
-                        except (TypeError, ValueError, ArithmeticError):
+                            if d_price.as_tuple().exponent < -2:
+                                raise serializers.ValidationError(
+                                    {"lines": [f"Unit price cannot have more than 2 decimal places for line item {idx + 1}."]}
+                                )
+                        except (TypeError, ValueError, ArithmeticError) as e:
+                            if isinstance(e, serializers.ValidationError):
+                                raise
                             raise serializers.ValidationError(
                                 {"lines": [f"Invalid unit price for line item {idx + 1}."]}
                             )

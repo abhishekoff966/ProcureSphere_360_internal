@@ -1,8 +1,10 @@
 from decimal import Decimal
+from functools import wraps
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.db import connection
 from django.db.models import Avg, Count, Q, Sum
 from django.http import JsonResponse
@@ -103,6 +105,28 @@ def get_dashboard_url_for_user(user):
     return role_url_map.get(role_code, "/requester/")
 
 
+def dashboard_role_required(allowed_roles):
+    """
+    Enforces backend RBAC on dashboard direct URLs (resolves DEF-005).
+    Raises PermissionDenied (HTTP 403) if authenticated user's role is not permitted.
+    """
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped(request, *args, **kwargs):
+            if not request.user or not request.user.is_authenticated:
+                return redirect("/login/")
+            if request.user.is_superuser:
+                return view_func(request, *args, **kwargs)
+            role_code = getattr(request.user, "role_code", None) or (
+                request.user.role.code if hasattr(request.user, "role") and request.user.role else None
+            )
+            if role_code not in allowed_roles:
+                raise PermissionDenied(f"Access restricted to {', '.join(allowed_roles)} role(s).")
+            return view_func(request, *args, **kwargs)
+        return _wrapped
+    return decorator
+
+
 @login_required(login_url="/login/")
 def dashboard_redirect_view(request):
     """
@@ -113,6 +137,7 @@ def dashboard_redirect_view(request):
 
 
 @login_required(login_url="/login/")
+@dashboard_role_required([Role.REQUESTER, Role.SUPER_ADMIN])
 def requester_dashboard_view(request):
     user = request.user
     role_code = getattr(user, "role_code", None) or (
@@ -139,6 +164,7 @@ def requester_dashboard_view(request):
 
 
 @login_required(login_url="/login/")
+@dashboard_role_required([Role.PROC_MGR, Role.SUPER_ADMIN])
 def manager_dashboard_view(request):
     from apps.core.manager_views import manager_dashboard_view as mgr_view
 
@@ -146,6 +172,7 @@ def manager_dashboard_view(request):
 
 
 @login_required(login_url="/login/")
+@dashboard_role_required([Role.STORES_RECEIVER, Role.SUPER_ADMIN])
 def stores_dashboard_view(request):
     user = request.user
     role_code = getattr(user, "role_code", None) or (
@@ -173,6 +200,7 @@ def stores_dashboard_view(request):
 
 
 @login_required(login_url="/login/")
+@dashboard_role_required([Role.VENDOR_USER, Role.SUPER_ADMIN])
 def vendor_dashboard_view(request):
     from apps.vendors.vendor_dashboard_views import vendor_dashboard_overview_view
 
@@ -180,6 +208,7 @@ def vendor_dashboard_view(request):
 
 
 @login_required(login_url="/login/")
+@dashboard_role_required([Role.FINANCE_AP, Role.SUPER_ADMIN])
 def finance_dashboard_view(request):
     user = request.user
     role_code = getattr(user, "role_code", None) or (
@@ -350,6 +379,7 @@ def finance_dashboard_view(request):
 
 
 @login_required(login_url="/login/")
+@dashboard_role_required([Role.PROC_EXEC, Role.SUPER_ADMIN])
 def procurement_dashboard_view(request):
     user = request.user
     role_code = getattr(user, "role_code", None) or (
@@ -450,6 +480,7 @@ def procurement_dashboard_view(request):
 
 
 @login_required(login_url="/login/")
+@dashboard_role_required([Role.LEGAL_MGR, Role.SUPER_ADMIN])
 def legal_dashboard_view(request):
     from apps.contracts.views import dashboard_view as contract_dashboard_view
 
@@ -457,6 +488,7 @@ def legal_dashboard_view(request):
 
 
 @login_required(login_url="/login/")
+@dashboard_role_required([Role.DEPT_APPROVER, Role.SUPER_ADMIN])
 def approver_dashboard_view(request):
     user = request.user
     role_code = getattr(user, "role_code", None) or (
@@ -562,18 +594,17 @@ def approver_dashboard_view(request):
 
 
 @login_required(login_url="/login/")
+@dashboard_role_required([Role.SUPER_ADMIN])
 def superadmin_dashboard_view(request):
     user = request.user
     from apps.audit.models import AuditLog
     from apps.budgets.models import Budget
+    from apps.core.superadmin_views import get_user_scoped_org
     from apps.invoices.models import MatchException
     from apps.organization.models import Organization
 
-    from apps.core.superadmin_views import get_user_scoped_org
-
     scoped_org = get_user_scoped_org(user)
     is_global_superadmin = bool(not scoped_org and user.is_superuser)
-    can_add_organization = is_global_superadmin
 
     today = timezone.now().date()
     users_qs = User.objects.all()
@@ -640,6 +671,7 @@ def superadmin_dashboard_view(request):
 
 
 @login_required(login_url="/login/")
+@dashboard_role_required([Role.AUDITOR, Role.SUPER_ADMIN])
 def auditor_dashboard_view(request):
     from apps.audit.views import auditor_dashboard_view as aud_view
 

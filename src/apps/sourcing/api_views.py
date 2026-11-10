@@ -1,5 +1,4 @@
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -170,16 +169,6 @@ class SourcingEventViewSet(
                     "error": {
                         "code": "INVALID_TRANSITION",
                         "message": f"Cannot close bidding on event in status '{event.status}'. Must be in BID_WINDOW.",
-                    }
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if event.bid_end_date and timezone.now() < event.bid_end_date:
-            return Response(
-                {
-                    "error": {
-                        "code": "VALIDATION_ERROR",
-                        "message": "Bidding cannot be closed before the deadline.",
                     }
                 },
                 status=status.HTTP_400_BAD_REQUEST,
