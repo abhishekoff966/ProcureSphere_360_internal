@@ -43,13 +43,14 @@ class CanManageSupplierInvoice(BasePermission):
             or role_code == Role.VENDOR_USER
         )
 
-        if not request.user.is_superuser and role_code in [Role.DEPT_APPROVER, Role.LEGAL_MGR, Role.STORES_RECEIVER]:
+        if not request.user.is_superuser and role_code in [
+            Role.DEPT_APPROVER,
+            Role.LEGAL_MGR,
+            Role.REQUESTER,
+        ]:
             return False
 
-        if role_code == Role.REQUESTER:
-            return request.method in SAFE_METHODS
-
-        if role_code == Role.AUDITOR:
+        if role_code in [Role.STORES_RECEIVER, Role.AUDITOR]:
             return request.method in SAFE_METHODS
 
         if view.action in ["pay_invoice", "pay", "resolve_exception", "resolve"]:

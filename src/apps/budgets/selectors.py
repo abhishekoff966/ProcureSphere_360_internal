@@ -23,6 +23,9 @@ def scope_budgets_queryset(qs, user):
         user.role.code if hasattr(user, "role") and user.role else None
     )
 
+    if role_code == Role.SUPER_ADMIN:
+        return qs
+
     if getattr(user, "is_vendor", False) or role_code == Role.VENDOR_USER:
         return qs.none()
 
@@ -63,6 +66,9 @@ def scope_spend_ledger_queryset(qs, user):
     role_code = getattr(user, "role_code", None) or (
         user.role.code if hasattr(user, "role") and user.role else None
     )
+
+    if role_code == Role.SUPER_ADMIN:
+        return qs
 
     if getattr(user, "is_vendor", False) or role_code == Role.VENDOR_USER:
         return qs.none()

@@ -64,19 +64,20 @@ class GoodsReceiptSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def validate(self, attrs):
-        po = attrs.get("po")
-        if po and po.status not in [
-            PurchaseOrder.STATUS_ISSUED,
-            PurchaseOrder.STATUS_ACKNOWLEDGED,
-            PurchaseOrder.STATUS_PARTIAL_RECEIPT,
-        ]:
-            raise serializers.ValidationError(
-                {
-                    "po": [
-                        f"Cannot record goods receipt against PO in status '{po.status}'. Must be ISSUED or ACKNOWLEDGED."
-                    ]
-                }
-            )
+        if not self.instance:
+            po = attrs.get("po")
+            if po and po.status not in [
+                PurchaseOrder.STATUS_ISSUED,
+                PurchaseOrder.STATUS_ACKNOWLEDGED,
+                PurchaseOrder.STATUS_PARTIAL_RECEIPT,
+            ]:
+                raise serializers.ValidationError(
+                    {
+                        "po": [
+                            f"Cannot record goods receipt against PO in status '{po.status}'. Must be ISSUED or ACKNOWLEDGED."
+                        ]
+                    }
+                )
 
         grn_num = attrs.get("grn_number")
         if grn_num:

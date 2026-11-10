@@ -36,6 +36,12 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=10)
+    role = serializers.PrimaryKeyRelatedField(
+        queryset=Role.objects.all(),
+        required=True,
+        allow_null=False,
+        error_messages={"required": "Role is required. Every user must hold an assigned RBAC role."},
+    )
 
     class Meta:
         model = User
@@ -67,11 +73,13 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return val
 
     def validate(self, attrs):
+        if not attrs.get("role"):
+            raise serializers.ValidationError({"role": ["Role is required. Every user must hold an assigned RBAC role."]})
         email = attrs.get("email", "")
         password = attrs.get("password", "")
         if password:
-            from django.contrib.auth.password_validation import validate_password
             import django.core.exceptions
+            from django.contrib.auth.password_validation import validate_password
             temp_user = User(email=email) if email else None
             try:
                 validate_password(password, user=temp_user)

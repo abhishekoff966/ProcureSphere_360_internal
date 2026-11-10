@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import path
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import BasePermission, IsAuthenticated, SAFE_METHODS
+from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
 from rest_framework.views import APIView
@@ -352,9 +352,12 @@ class VendorSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        from apps.core.services import generate_document_number
+        import random
+        import time
+
         from django.db import IntegrityError, transaction
-        import time, random
+
+        from apps.core.services import generate_document_number
 
         for attempt in range(15):
             validated_data["vendor_number"] = generate_document_number(
@@ -363,7 +366,7 @@ class VendorSerializer(serializers.ModelSerializer):
             try:
                 with transaction.atomic():
                     return super().create(validated_data)
-            except IntegrityError as exc:
+            except IntegrityError:
                 if attempt < 14:
                     time.sleep(random.uniform(0.01, 0.05))
                     continue
@@ -795,9 +798,10 @@ class VendorAssessRiskAPIView(APIView):
     """
     POST /api/v1/vendors/<uuid:pk>/assess-risk/
     Records a new VendorRiskRecord and optionally updates vendor status (ACTIVE, ON_HOLD, SUSPENDED).
+    Allowed for Procurement Executives, Procurement Managers, and Super Admins (resolves DEF-014).
     """
 
-    permission_classes = [IsAuthenticated, IsProcurementManager]
+    permission_classes = [IsAuthenticated, GovernanceOperatePermission]
 
     def post(self, request, pk):
         vendor = get_object_or_404(Vendor, pk=pk)

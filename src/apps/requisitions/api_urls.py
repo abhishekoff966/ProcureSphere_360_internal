@@ -1,6 +1,6 @@
 from decimal import Decimal
-from drf_spectacular.utils import OpenApiResponse, extend_schema
 
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import permissions, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -94,6 +94,15 @@ class PurchaseRequisitionSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
+    def validate(self, attrs):
+        if self.instance is None:
+            lines_data = self.initial_data.get("line_items", self.initial_data.get("lines", []))
+            if not lines_data or len(lines_data) == 0:
+                raise serializers.ValidationError(
+                    {"lines": ["Purchase Requisition must contain at least one line item."]}
+                )
+        return attrs
+
     def validate_requested_delivery_date(self, value):
         from django.utils import timezone
 
@@ -116,6 +125,10 @@ class PurchaseRequisitionSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         lines_data = self.initial_data.get("line_items", self.initial_data.get("lines", []))
+        if not lines_data or len(lines_data) == 0:
+            raise serializers.ValidationError(
+                {"lines": ["Purchase Requisition must contain at least one line item."]}
+            )
         validated_data.pop("lines", None)
 
         if not validated_data.get("pr_number"):
@@ -244,7 +257,10 @@ class CanCreateRequisitionPermission(permissions.BasePermission):
             request.user.role.code if hasattr(request.user, "role") and request.user.role else None
         )
 
-        if getattr(request.user, "is_vendor", False) or role_code == Role.VENDOR_USER:
+        if not request.user.is_superuser and (
+            getattr(request.user, "is_vendor", False)
+            or role_code in [Role.VENDOR_USER, Role.STORES_RECEIVER, Role.LEGAL_MGR]
+        ):
             return False
 
         if request.method in ["POST", "PUT", "PATCH", "DELETE"]:

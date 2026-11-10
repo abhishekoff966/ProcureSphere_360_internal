@@ -1,14 +1,8 @@
 import os
-
 import sys
-
 from pathlib import Path
 
-
-
 import environ
-
-
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 
@@ -422,7 +416,7 @@ SESSION_COOKIE_HTTPONLY = True
 
 SESSION_COOKIE_SAMESITE = "Lax"
 
-SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=False)
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=not DEBUG)
 
 # Support reverse proxy TLS headers (Render, Nginx, ALB)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

@@ -8,7 +8,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.models import Role
 from apps.accounts.permissions import IsProcurementManager
 from apps.budgets.models import Budget, SpendLedger
 from apps.invoices.models import MatchException, SupplierInvoice
@@ -1806,16 +1805,16 @@ class ManagerSupplierCompareAPIView(APIView):
                 "category": v.category.name if v.category else "General",
                 "status": v.status,
                 "risk_level": latest_risk.risk_level if latest_risk else "LOW",
-                "composite_score": float(latest_sc.composite_score) if latest_sc else 0.0,
-                "quality_score": float(latest_sc.quality_score) if latest_sc else 0.0,
-                "delivery_score": float(latest_sc.delivery_score) if latest_sc else 0.0,
-                "price_score": float(latest_sc.price_score) if latest_sc else 0.0,
-                "compliance_score": float(latest_sc.compliance_score) if latest_sc else 0.0,
-                "evaluation_period": latest_sc.evaluation_period if latest_sc else "N/A",
-                "total_received": float(tot_recv),
-                "total_accepted": float(tot_acc),
-                "total_rejected": float(tot_rej),
-                "rejection_rate": round(float(rej_rate), 2),
+                "composite_score": float(latest_sc.composite_score) if latest_sc and latest_sc.composite_score is not None else 0.0,
+                "quality_score": float(latest_sc.quality_score) if latest_sc and latest_sc.quality_score is not None else 0.0,
+                "delivery_score": float(latest_sc.delivery_score) if latest_sc and latest_sc.delivery_score is not None else 0.0,
+                "price_score": float(latest_sc.price_score) if latest_sc and latest_sc.price_score is not None else 0.0,
+                "compliance_score": float(latest_sc.compliance_score) if latest_sc and latest_sc.compliance_score is not None else 0.0,
+                "evaluation_period": latest_sc.evaluation_period if latest_sc and latest_sc.evaluation_period else "N/A",
+                "total_received": float(tot_recv or Decimal("0.00")),
+                "total_accepted": float(tot_acc or Decimal("0.00")),
+                "total_rejected": float(tot_rej or Decimal("0.00")),
+                "rejection_rate": round(float(rej_rate or Decimal("0.00")), 2),
             }
 
         return Response(
@@ -2238,25 +2237,11 @@ class ManagerApprovalsAPIView(APIView):
 
 class ManagerApprovalActionAPIView(APIView):
     """
-    Executes approval or rejection governance action on PR or PO Amendment.
+    Executes approval or rejection governance action on PR, PO, or PO Amendment.
     """
     permission_classes = [IsAuthenticated, IsProcurementManager]
 
     def post(self, request):
-        # Procurement Managers maintain approval oversight only, not approval/rejection authority
-        role_code = getattr(request.user.role, 'code', None) if getattr(request.user, 'role', None) else None
-        if not request.user.is_superuser and role_code == Role.PROC_MGR:
-            return Response(
-                {
-                    'error': (
-                        'Permission Denied: Procurement Managers hold approval oversight only '
-                        'and do not possess direct approval or rejection authority. '
-                        'Decisions must be authorized by designated Department or Financial Approvers.'
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         item_type = str(request.data.get('item_type', '')).strip().upper()
         item_id = str(request.data.get('item_id', '')).strip()
         action = str(request.data.get('action', '')).strip().upper()
@@ -2436,12 +2421,14 @@ class ManagerBudgetExceptionsAPIView(APIView):
         org = get_user_org(request.user)
 
         from decimal import Decimal
-        from django.db.models import Sum, Q
+
+        from django.db.models import Sum
         from django.utils import timezone
-        from apps.requisitions.models import PurchaseRequisition
-        from apps.invoices.models import MatchException
-        from apps.budgets.models import Budget
+
         from apps.approvals.models import ApprovalAction
+        from apps.budgets.models import Budget
+        from apps.invoices.models import MatchException
+        from apps.requisitions.models import PurchaseRequisition
 
         # 1. Budget Review PRs (Overruns)
         budget_prs_qs = PurchaseRequisition.objects.filter(
@@ -2673,12 +2660,17 @@ class ManagerBudgetExceptionDecisionAPIView(APIView):
             )
 
         import uuid
+
         from django.db import transaction
         from django.db.models import Q
-        from apps.requisitions.models import PurchaseRequisition
+
         from apps.approvals.models import ApprovalAction
         from apps.audit.models import AuditLog
-        from apps.budgets.services import check_and_reserve_budget_service, release_budget_reservation_service
+        from apps.budgets.services import (
+            check_and_reserve_budget_service,
+            release_budget_reservation_service,
+        )
+        from apps.requisitions.models import PurchaseRequisition
 
         try:
             req_uuid = uuid.UUID(str(requisition_id))

@@ -1,14 +1,25 @@
+import zlib
+
+from django.db import connection
 from django.utils import timezone
 
 
 def generate_document_number(model_class, field_name: str, prefix: str, padding: int = 5, offset: int = 0) -> str:
     """
-    Safely generates the next sequential document number (e.g. VND-2026-00001, PR-2026-00001)
-    by finding the highest existing sequence number for the current year/prefix,
-    ensuring deletions never result in duplicate key collisions (VMR-CR-010).
+    Safely generates the next sequential document number (e.g. VND-2026-00001, PR-2026-00001, CON-2026-00001)
+    by finding the highest existing sequence number for the current year/prefix.
+    Uses PostgreSQL transaction advisory locking to guarantee atomic, collision-free
+    number generation under heavy parallel load (resolves DEF-001).
     """
     year = timezone.now().strftime("%Y")
     base_prefix = f"{prefix}-{year}-"
+
+    # Acquire an exclusive advisory transaction lock for this prefix and year
+    if connection.vendor == "postgresql":
+        lock_id = zlib.crc32(f"ps360_doc_{prefix}_{year}".encode("utf-8")) & 0x7FFFFFFF
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT pg_advisory_xact_lock(%s)", [lock_id])
+
     latest_obj = (
         model_class.objects.filter(**{f"{field_name}__startswith": base_prefix})
         .order_by(f"-{field_name}")

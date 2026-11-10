@@ -58,6 +58,17 @@ def validate_budget_availability_service(*, cost_center: CostCenter, amount: Dec
     ).first()
 
     if not budget:
+        # Fall back to any open fiscal period budget for this cost center
+        budget = (
+            Budget.objects.filter(
+                cost_center=cost_center,
+                fiscal_period__is_closed=False,
+            )
+            .order_by("-fiscal_period__start_date")
+            .first()
+        )
+
+    if not budget:
         from apps.organization.models import FiscalPeriod
         fp = FiscalPeriod.objects.filter(is_closed=False).order_by("-start_date").first()
         if not fp:
@@ -81,8 +92,8 @@ def validate_budget_availability_service(*, cost_center: CostCenter, amount: Dec
             cost_center=cost_center,
             fiscal_period=fp,
             defaults={
-                "allocated_amount": Decimal("1000000.00"),
-                "allow_overspend": True,
+                "allocated_amount": Decimal("0.00"),
+                "allow_overspend": False,
             }
         )
 
@@ -123,6 +134,18 @@ def check_and_reserve_budget_service(
     )
 
     if not budget:
+        # Fall back to any open fiscal period budget for this cost center
+        budget = (
+            Budget.objects.select_for_update()
+            .filter(
+                cost_center=cost_center,
+                fiscal_period__is_closed=False,
+            )
+            .order_by("-fiscal_period__start_date")
+            .first()
+        )
+
+    if not budget:
         from apps.organization.models import FiscalPeriod
         fp = FiscalPeriod.objects.filter(is_closed=False).order_by("-start_date").first()
         if not fp:
@@ -146,8 +169,8 @@ def check_and_reserve_budget_service(
             cost_center=cost_center,
             fiscal_period=fp,
             defaults={
-                "allocated_amount": Decimal("1000000.00"),
-                "allow_overspend": True,
+                "allocated_amount": Decimal("0.00"),
+                "allow_overspend": False,
             }
         )
 
