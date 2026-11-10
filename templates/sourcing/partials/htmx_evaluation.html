@@ -90,7 +90,7 @@
             <select name="bid_id" class="form-select form-select-sm mb-2" required>
                 {% for row in rows %}<option value="{{ row.bid.id }}">{{ row.vendor.legal_name }} — {% if row.amount %}{{ row.amount|floatformat:2 }}{% else %}sealed{% endif %}{% if row.weighted_avg is not None %} · {{ row.weighted_avg|floatformat:1 }}{% endif %}</option>{% endfor %}
             </select>
-            <textarea name="award_reason" rows="2" class="form-control form-control-sm mb-2" placeholder="Award justification (required)" required></textarea>
+            <textarea name="award_reason" rows="2" class="form-control form-control-sm mb-2" placeholder="Award justification *" required></textarea>
             <button class="btn btn-sm btn-success">Submit for award approval</button>
         </form>
     </div>

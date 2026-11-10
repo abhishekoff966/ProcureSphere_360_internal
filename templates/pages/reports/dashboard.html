@@ -27,7 +27,7 @@
                 <form action="{% url 'generate_report' %}" method="POST">
                     {% csrf_token %}
                     <div class="mb-4">
-                        <label class="form-label fw-bold text-muted small text-uppercase">Select Report Module</label>
+                        <label class="form-label fw-bold text-muted small text-uppercase">Select Report Module <span class="text-danger ms-1">*</span></label>
                         <select name="report_type" class="form-select bg-light" required>
                             <option value="">-- Choose a report --</option>
                             {% for r in reports %}
@@ -36,7 +36,7 @@
                         </select>
                     </div>
                     <div class="mb-4">
-                        <label class="form-label fw-bold text-muted small text-uppercase">Export Format</label>
+                        <label class="form-label fw-bold text-muted small text-uppercase">Export Format <span class="text-danger ms-1">*</span></label>
                         <select name="format_type" class="form-select bg-light" required>
                             <option value="CSV">CSV (Comma Separated Values)</option>
                             <option value="XLSX">Excel Spreadsheet (.xlsx)</option>

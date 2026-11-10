@@ -155,7 +155,7 @@
             <form method="POST" action="{% url 'order_cancel' po.id %}">
                 {% csrf_token %}
                 <textarea name="reason" rows="3" class="form-control mb-2" required
-                          placeholder="Cancellation reason / justification (mandatory)…"></textarea>
+                          placeholder="Cancellation reason / justification *"></textarea>
                 <button type="submit" class="btn btn-danger rounded-pill px-4 fw-semibold">
                     <i class="fa-solid fa-ban me-2"></i>Confirm Cancellation
                 </button>
@@ -188,7 +188,7 @@
             <form method="POST" action="{% url 'order_reject' po.id %}">
                 {% csrf_token %}
                 <textarea name="reason" rows="3" class="form-control mb-2" required
-                          placeholder="Rejection reason (mandatory)…"></textarea>
+                          placeholder="Rejection reason *"></textarea>
                 <button type="submit" class="btn btn-danger rounded-pill px-4 fw-semibold">
                     <i class="fa-solid fa-ban me-2"></i>Reject PO
                 </button>
