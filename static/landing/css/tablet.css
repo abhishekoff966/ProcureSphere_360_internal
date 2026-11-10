@@ -111,10 +111,14 @@
     font-size: clamp(34px, 5.2vw, 46px) !important;
   }
 
-  /* Login to portal inside overlay menu: hidden on tablet since top-right navbar already has Login */
-  .overlay-menu-login-wrap,
+  /* Login to portal inside overlay menu: visible on mobile & tablet drawer */
   .overlay-menu-container.is-open .overlay-menu-login-wrap {
-    display: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    margin-top: 20px !important;
+    opacity: 1 !important;
   }
 
   /* ------------------------------------------------------------------------

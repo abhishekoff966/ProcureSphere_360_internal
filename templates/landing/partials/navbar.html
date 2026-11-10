@@ -1,13 +1,41 @@
 {% load static %}
 <style id="nav-mobile-critical">
+  .nav-brand-emblem {
+    height: 52px;
+    max-height: 54px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+    transition: transform 0.2s ease;
+  }
+  .nav-brand-wordmark {
+    height: 30px;
+    max-height: 32px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+    transition: opacity 0.2s ease;
+  }
   @media (max-width: 1024px) {
     .navarino-links-desktop { display: none !important; }
     .navarino-blue-btn { display: none !important; }
     .navarino-mobile-toggle { display: inline-flex !important; }
     .nav-inner { justify-content: space-between !important; min-height: 64px !important; }
   }
+  @media (max-width: 768px) {
+    .nav-brand-emblem { height: 44px !important; max-height: 46px !important; }
+    .nav-brand-wordmark { height: 26px !important; max-height: 28px !important; }
+  }
   @media (max-width: 540px) {
     .nav-login-btn { display: none !important; }
+    .nav-brand-emblem { height: 38px !important; max-height: 40px !important; }
+    .nav-brand-wordmark { height: 22px !important; max-height: 24px !important; }
+    .brand.nav-brand { gap: 8px !important; }
+  }
+  @media (max-width: 380px) {
+    .nav-brand-emblem { height: 32px !important; max-height: 34px !important; }
+    .nav-brand-wordmark { height: 18px !important; max-height: 20px !important; }
+    .brand.nav-brand { gap: 6px !important; }
   }
 </style>
 <header class="site-nav navarino-nav {% if scrolled %}is-scrolled{% endif %}" id="site-navbar" style="z-index:1000;">
@@ -20,13 +48,11 @@
           src="{% static 'landing/images/procuresphere_360_emblem.png' %}?v=12"
           alt="ProcureSphere 360 Logo"
           class="nav-brand-emblem"
-          style="height:56px;max-height:58px;width:auto;object-fit:contain;display:block;transition:transform 0.2s ease;"
         />
         <img
           src="{% static 'landing/images/procuresphere_360_wordmark.png' %}?v=12"
           alt="ProcureSphere 360"
           class="nav-brand-wordmark"
-          style="height:32px;max-height:34px;width:auto;object-fit:contain;display:block;transition:opacity 0.2s ease;"
         />
       </a>
 
