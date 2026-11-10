@@ -253,14 +253,8 @@ class SourcingEventViewSet(
         return Response(VendorBidSerializer(bids, many=True, context={"request": request}).data)
 
     @extend_schema(request=EvaluationPayload, responses=BidEvaluationSerializer)
-    @action(detail=True, methods=["post", "delete"], url_path="evaluate/(?P<stage>(?i:technical|commercial))")
+    @action(detail=True, methods=["post"], url_path="evaluate/(?P<stage>(?i:technical|commercial))")
     def evaluate(self, request, pk=None, stage=None):
-        if request.method == "DELETE":
-            return Response(
-                {"error": {"code": "METHOD_NOT_ALLOWED", "message": "Method DELETE not allowed on evaluation."}},
-                status=status.HTTP_405_METHOD_NOT_ALLOWED,
-                headers={"Allow": "POST, OPTIONS"},
-            )
         _require_manage(request)
         stage_lower = (stage or "").lower()
         payload = EvaluationPayload(data=request.data)

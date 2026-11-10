@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema
 from rest_framework import filters, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthenticated
@@ -192,6 +193,23 @@ class SupplierInvoiceSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class InvoiceLineItemPayloadSerializer(serializers.Serializer):
+    description = serializers.CharField(required=False, default="", allow_blank=True)
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+    unit_price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.00"))
+    po_line_id = serializers.CharField(required=False, allow_null=True)
+
+
+class InvoiceCreatePayloadSerializer(serializers.Serializer):
+    vendor_id = serializers.CharField(required=True, help_text="ID of the vendor")
+    po_id = serializers.CharField(required=True, help_text="ID of the purchase order")
+    invoice_number = serializers.CharField(required=True, max_length=100)
+    invoice_date = serializers.DateField(required=True)
+    due_date = serializers.DateField(required=False, allow_null=True)
+    line_items = InvoiceLineItemPayloadSerializer(many=True, required=True)
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
+
+
 class SupplierInvoiceViewSet(viewsets.ModelViewSet):
     queryset = (
         SupplierInvoice.objects.select_related("vendor", "po")
@@ -241,6 +259,12 @@ class SupplierInvoiceViewSet(viewsets.ModelViewSet):
             )
         instance.delete()
 
+    @extend_schema(
+        request=InvoiceCreatePayloadSerializer,
+        responses={201: SupplierInvoiceSerializer},
+        summary="Create supplier invoice",
+        description="Create a new supplier invoice against a purchase order with line items.",
+    )
     @action(detail=False, methods=["post"], url_path="create-invoice")
     def create_invoice(self, request):
         vendor_id = request.data.get("vendor_id")

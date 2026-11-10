@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -211,9 +212,10 @@ def submit_purchase_requisition_service(
     )
 
     # Notify Department Approvers via Notification model scoped strictly to requisition organization
+    from django.db.models import Q
+
     from apps.accounts.models import Role, User
     from apps.notifications.models import Notification
-    from django.db.models import Q
 
     target_org = (
         requisition.department.organization

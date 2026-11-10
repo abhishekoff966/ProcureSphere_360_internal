@@ -155,6 +155,7 @@ class GoodsReceiptSerializer(serializers.ModelSerializer):
         received_by = validated_data.get("received_by") or (request.user if request else None)
         delivery_note = validated_data.get("delivery_note_number", "")
         remarks = validated_data.get("remarks", "")
+        grn_num = validated_data.get("grn_number") or self.initial_data.get("grn_number")
 
         try:
             return create_goods_receipt_service(
@@ -163,6 +164,7 @@ class GoodsReceiptSerializer(serializers.ModelSerializer):
                 receipt_items=lines_data,
                 delivery_note_number=delivery_note,
                 remarks=remarks,
+                grn_number=grn_num,
             )
         except ValidationError as e:
             msg = e.messages if hasattr(e, "messages") else [str(e)]

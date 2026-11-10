@@ -490,7 +490,15 @@ def test_po_amendment_with_existing_receipts_preserves_lines(rbac_users, base_or
     )
     po.status = PurchaseOrder.STATUS_ISSUED
     po.save(update_fields=["status"])
-    po = acknowledge_purchase_order_service(po=po, vendor_user=rbac_users["proc_exec"])
+    vendor_role, _ = Role.objects.get_or_create(code=Role.VENDOR_USER, defaults={"name": "Vendor User"})
+    vendor_user, _ = User.objects.get_or_create(
+        email="vendor_ack_phase1@systems.com",
+        defaults={"role": vendor_role, "vendor": base_org_data["vendor"]}
+    )
+    if not vendor_user.vendor:
+        vendor_user.vendor = base_org_data["vendor"]
+        vendor_user.save()
+    po = acknowledge_purchase_order_service(po=po, vendor_user=vendor_user)
 
     orig_line = po.lines.first()
     orig_line_id = orig_line.id

@@ -82,6 +82,30 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["name", "code"]
 
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        from apps.audit.models import AuditLog
+        actor = self.request.user if getattr(self.request, "user", None) and self.request.user.is_authenticated else None
+        AuditLog.objects.create(
+            actor=actor,
+            action=AuditLog.ACTION_CREATE,
+            target_model="Organization",
+            target_object_id=str(instance.id),
+            new_state={"name": instance.name, "code": instance.code, "is_active": instance.is_active},
+        )
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        from apps.audit.models import AuditLog
+        actor = self.request.user if getattr(self.request, "user", None) and self.request.user.is_authenticated else None
+        AuditLog.objects.create(
+            actor=actor,
+            action=AuditLog.ACTION_UPDATE,
+            target_model="Organization",
+            target_object_id=str(instance.id),
+            new_state={"name": instance.name, "code": instance.code, "is_active": instance.is_active},
+        )
+
     def perform_destroy(self, instance):
         if hasattr(instance, "departments") and instance.departments.exists():
             raise serializers.ValidationError(
@@ -91,6 +115,15 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError(
                 {"detail": "Cannot delete organization: active users are assigned to this organization."}
             )
+        from apps.audit.models import AuditLog
+        actor = self.request.user if getattr(self.request, "user", None) and self.request.user.is_authenticated else None
+        AuditLog.objects.create(
+            actor=actor,
+            action=AuditLog.ACTION_DELETE,
+            target_model="Organization",
+            target_object_id=str(instance.id),
+            previous_state={"name": instance.name, "code": instance.code},
+        )
         instance.delete()
 
 
