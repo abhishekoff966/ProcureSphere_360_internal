@@ -143,8 +143,8 @@
         {% endif %}
 
         {% if scoped_org %}
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
-            <div class="card-header bg-white pt-3 pt-md-4 pb-0 px-3 px-md-4 border-bottom-0 d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+        <div class="card border-0 shadow-sm rounded-4 mb-4" id="deptCard">
+            <div class="card-header bg-white pt-3 pt-md-4 pb-0 px-3 px-md-4 border-bottom-0 d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2" id="deptCardHeader">
                 <div>
                     <h5 class="fw-bold text-dark mb-1">Departments</h5>
                     <p class="text-muted small mb-0">Operational units and functional divisions.</p>
@@ -157,7 +157,7 @@
                 <!-- Mobile Card View (< 768px) -->
                 <div class="list-group list-group-flush d-md-none">
                     {% for dept in departments %}
-                    <div class="list-group-item p-3 border-bottom">
+                    <div class="list-group-item p-3 border-bottom{% if forloop.counter > 5 %} dept-extra-row d-none{% endif %}">
                         <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
                             <div>
                                 <span class="badge bg-primary bg-opacity-10 text-primary fw-bold font-monospace px-2 py-1 rounded small">{{ dept.code }}</span>
@@ -193,7 +193,7 @@
                     </thead>
                     <tbody>
                         {% for dept in departments %}
-                        <tr>
+                        <tr{% if forloop.counter > 5 %} class="dept-extra-row d-none"{% endif %}>
                             <td class="ps-4 fw-bold text-primary">{{ dept.code }}</td>
                             <td>{{ dept.name }}</td>
                             <td>
@@ -213,10 +213,17 @@
                 </table>
                 </div>
             </div>
+            {% if departments|length > 5 %}
+            <div class="card-footer bg-white border-top py-3 text-center">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-4 fw-semibold shadow-2xs" id="toggleDeptsBtn" onclick="toggleSectionRows('dept', {{ departments|length|add:'-5' }})">
+                    <span id="toggleDeptsText"><i class="fa-solid fa-chevron-down me-1"></i> Show More ({{ departments|length|add:'-5' }} more)</span>
+                </button>
+            </div>
+            {% endif %}
         </div>
 
-        <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-header bg-white pt-3 pt-md-4 pb-0 px-3 px-md-4 border-bottom-0 d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center flex-wrap gap-2">
+        <div class="card border-0 shadow-sm rounded-4" id="ccCard">
+            <div class="card-header bg-white pt-3 pt-md-4 pb-0 px-3 px-md-4 border-bottom-0 d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center flex-wrap gap-2" id="ccCardHeader">
                 <div>
                     <h5 class="fw-bold text-dark mb-1">Cost Centers</h5>
                     <p class="text-muted small mb-0">Financial tracking units tied to departments.</p>
@@ -241,7 +248,7 @@
                 <!-- Mobile Card View (< 768px) -->
                 <div class="list-group list-group-flush d-md-none">
                     {% for cc in cost_centers %}
-                    <div class="list-group-item p-3 border-bottom">
+                    <div class="list-group-item p-3 border-bottom{% if forloop.counter > 5 %} cc-extra-row d-none{% endif %}">
                         <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
                             <div>
                                 <span class="badge bg-secondary bg-opacity-10 text-dark fw-bold font-monospace px-2 py-1 rounded small">{{ cc.code }}</span>
@@ -283,7 +290,7 @@
                     </thead>
                     <tbody>
                         {% for cc in cost_centers %}
-                        <tr>
+                        <tr{% if forloop.counter > 5 %} class="cc-extra-row d-none"{% endif %}>
                             <td class="ps-4 fw-bold text-dark">{{ cc.code }}</td>
                             <td>{{ cc.name }}</td>
                             <td>
@@ -315,8 +322,46 @@
                 </table>
                 </div>
             </div>
+            {% if cost_centers|length > 5 %}
+            <div class="card-footer bg-white border-top py-3 text-center">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-4 fw-semibold shadow-2xs" id="toggleCCBtn" onclick="toggleSectionRows('cc', {{ cost_centers|length|add:'-5' }})">
+                    <span id="toggleCCText"><i class="fa-solid fa-chevron-down me-1"></i> Show More ({{ cost_centers|length|add:'-5' }} more)</span>
+                </button>
+            </div>
+            {% endif %}
         </div>
         {% endif %}
+    </div>
+</div>
+
+<script>
+    function toggleSectionRows(prefix, remainingCount) {
+        var isDept = prefix === 'dept';
+        var extraRows = document.querySelectorAll('.' + prefix + '-extra-row');
+        var btnText = document.getElementById(isDept ? 'toggleDeptsText' : 'toggleCCText');
+        if (!extraRows.length || !btnText) return;
+
+        var isCurrentlyHidden = extraRows[0].classList.contains('d-none');
+
+        extraRows.forEach(function(row) {
+            if (isCurrentlyHidden) {
+                row.classList.remove('d-none');
+            } else {
+                row.classList.add('d-none');
+            }
+        });
+
+        if (isCurrentlyHidden) {
+            btnText.innerHTML = '<i class="fa-solid fa-chevron-up me-1"></i> Show Less';
+        } else {
+            btnText.innerHTML = '<i class="fa-solid fa-chevron-down me-1"></i> Show More (' + remainingCount + ' more)';
+            var headerEl = document.getElementById(isDept ? 'deptCardHeader' : 'ccCardHeader');
+            if (headerEl) {
+                headerEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+    }
+</script>
     </div>
 </div>
 {% endblock %}

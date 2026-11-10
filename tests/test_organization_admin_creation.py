@@ -759,3 +759,57 @@ def test_create_organization_with_optional_proc_mgr_and_auditor(client, super_ad
     assert org_provided.compliance_auditor.email == "auditor@betafull.com"
     assert org_provided.compliance_auditor.role.code == Role.AUDITOR
 
+
+@pytest.mark.django_db
+def test_departments_and_cost_centers_show_more_show_less(client, db_roles):
+    """
+    Verify that when departments or cost centers exceed 5 items:
+    1. The first 5 are shown initially, and remaining rows have extra-row d-none class.
+    2. 'Show More' button renders with the exact remaining count.
+    3. Both Departments and Cost Centers feature Show More / Show Less controls.
+    """
+    from apps.organization.models import Department, CostCenter
+
+    org = Organization.objects.create(name="ShowMore Org", code="SHOW-MORE", is_active=True)
+    admin_user = User.objects.create_user(
+        email="admin@showmore.com",
+        password="Password123!",
+        role=db_roles[Role.SUPER_ADMIN],
+        organization=org,
+        is_staff=True,
+    )
+    org.admin_user = admin_user
+    org.save(update_fields=["admin_user"])
+
+    # Create 7 departments (> 5)
+    depts = []
+    for i in range(1, 8):
+        d = Department.objects.create(organization=org, name=f"Department {i}", code=f"DEPT-{i}")
+        depts.append(d)
+
+    # Create 8 cost centers (> 5)
+    for i in range(1, 9):
+        CostCenter.objects.create(
+            department=depts[i % len(depts)],
+            name=f"Cost Center {i}",
+            code=f"CC-00{i}",
+        )
+
+    client.force_login(admin_user)
+    resp = client.get(reverse("superadmin:organizations"))
+    assert resp.status_code == 200
+    content = resp.content.decode()
+
+    # Department toggle button & extra rows
+    assert "toggleDeptsBtn" in content
+    assert "Show More (2 more)" in content
+    assert "dept-extra-row d-none" in content
+
+    # Cost Center toggle button & extra rows
+    assert "toggleCCBtn" in content
+    assert "Show More (3 more)" in content
+    assert "cc-extra-row d-none" in content
+
+    # JavaScript toggle function
+    assert "toggleSectionRows" in content
+
