@@ -9,7 +9,7 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Count, Q, Sum
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -165,12 +165,21 @@ def vendor_dashboard_overview_view(request):
         "-created_at"
     )[:5]
 
+    # Section G: Latest Supplier Scorecard & Performance
+    latest_scorecard = (
+        VendorScorecard.objects.filter(vendor=vendor)
+        .prefetch_related("sla_metrics")
+        .order_by("-created_at")
+        .first()
+    )
+
     onboarding = get_vendor_onboarding_progress(vendor)
 
     context = {
         "vendor": vendor,
         "metrics": metrics,
         "onboarding": onboarding,
+        "latest_scorecard": latest_scorecard,
         "recent_invitations": recent_invitations,
         "upcoming_events": upcoming_events,
         "recent_bids": recent_bids,
@@ -617,30 +626,30 @@ def vendor_sourcing_list_view(request):
             }
         )
 
-    # Counts for tabs
-    tab_counts = {
-        "all": BidInvite.objects.exclude(event__status=SourcingEvent.STATUS_DRAFT)
-        .filter(vendor=vendor)
-        .count(),
-        "active": BidInvite.objects.exclude(event__status=SourcingEvent.STATUS_DRAFT)
-        .filter(
-            vendor=vendor,
-            event__status__in=[SourcingEvent.STATUS_BID_WINDOW, SourcingEvent.STATUS_PUBLISHED],
-            event__bid_end_date__gte=now,
-        )
-        .count(),
-        "closing": BidInvite.objects.exclude(event__status=SourcingEvent.STATUS_DRAFT)
-        .filter(
-            vendor=vendor,
-            event__status__in=[SourcingEvent.STATUS_BID_WINDOW, SourcingEvent.STATUS_PUBLISHED],
-            event__bid_end_date__gte=now,
-            event__bid_end_date__lte=now + timedelta(days=3),
-        )
-        .count(),
-        "closed": BidInvite.objects.exclude(event__status=SourcingEvent.STATUS_DRAFT)
-        .filter(vendor=vendor)
-        .filter(
-            Q(
+    # Single aggregate query for all tabs (replaces 4 sequential count queries)
+    base_invites_qs = BidInvite.objects.exclude(
+        event__status=SourcingEvent.STATUS_DRAFT
+    ).filter(vendor=vendor)
+    tab_counts = base_invites_qs.aggregate(
+        all=Count("id"),
+        active=Count(
+            "id",
+            filter=Q(
+                event__status__in=[SourcingEvent.STATUS_BID_WINDOW, SourcingEvent.STATUS_PUBLISHED],
+                event__bid_end_date__gte=now,
+            ),
+        ),
+        closing=Count(
+            "id",
+            filter=Q(
+                event__status__in=[SourcingEvent.STATUS_BID_WINDOW, SourcingEvent.STATUS_PUBLISHED],
+                event__bid_end_date__gte=now,
+                event__bid_end_date__lte=now + timedelta(days=3),
+            ),
+        ),
+        closed=Count(
+            "id",
+            filter=Q(
                 event__status__in=[
                     SourcingEvent.STATUS_TECHNICAL_REVIEW,
                     SourcingEvent.STATUS_COMMERCIAL_REVIEW,
@@ -649,10 +658,9 @@ def vendor_sourcing_list_view(request):
                     SourcingEvent.STATUS_CANCELLED,
                 ]
             )
-            | Q(event__bid_end_date__lt=now)
-        )
-        .count(),
-    }
+            | Q(event__bid_end_date__lt=now),
+        ),
+    )
 
     context = {
         "vendor": vendor,
@@ -1460,42 +1468,60 @@ def vendor_purchase_orders_list_view(request):
     elif tab == "completed":
         pos_qs = pos_qs.filter(status=PurchaseOrder.STATUS_COMPLETED)
 
-    tab_counts = {
-        "all": PurchaseOrder.objects.filter(vendor=vendor).count(),
-        "pending_ack": PurchaseOrder.objects.filter(
-            vendor=vendor, status=PurchaseOrder.STATUS_ISSUED
-        ).count(),
-        "active": PurchaseOrder.objects.filter(
-            vendor=vendor,
-            status__in=[
-                PurchaseOrder.STATUS_ISSUED,
-                PurchaseOrder.STATUS_ACKNOWLEDGED,
-                PurchaseOrder.STATUS_PARTIAL_RECEIPT,
-            ],
-        ).count(),
-        "accepted": PurchaseOrder.objects.filter(
-            vendor=vendor,
-            status__in=[
-                PurchaseOrder.STATUS_ACKNOWLEDGED,
-                PurchaseOrder.STATUS_PARTIAL_RECEIPT,
-                PurchaseOrder.STATUS_COMPLETED,
-            ],
-        ).count(),
-        "rejected": PurchaseOrder.objects.filter(
-            vendor=vendor,
-            status=PurchaseOrder.STATUS_CANCELLED,
-            acknowledgement_notes__icontains="REJECTED",
-        ).count(),
-        "cancelled": PurchaseOrder.objects.filter(
-            vendor=vendor, status=PurchaseOrder.STATUS_CANCELLED
-        ).count(),
-        "amended": PurchaseOrder.objects.filter(vendor=vendor, amendments__isnull=False)
-        .distinct()
-        .count(),
-        "completed": PurchaseOrder.objects.filter(
-            vendor=vendor, status=PurchaseOrder.STATUS_COMPLETED
-        ).count(),
-    }
+    # Single aggregate query for all tabs (replaces 8 sequential count queries)
+    tab_counts = PurchaseOrder.objects.filter(vendor=vendor).aggregate(
+        all=Count("id", distinct=True),
+        pending_ack=Count(
+            "id",
+            distinct=True,
+            filter=Q(status=PurchaseOrder.STATUS_ISSUED),
+        ),
+        active=Count(
+            "id",
+            distinct=True,
+            filter=Q(
+                status__in=[
+                    PurchaseOrder.STATUS_ISSUED,
+                    PurchaseOrder.STATUS_ACKNOWLEDGED,
+                    PurchaseOrder.STATUS_PARTIAL_RECEIPT,
+                ]
+            ),
+        ),
+        accepted=Count(
+            "id",
+            distinct=True,
+            filter=Q(
+                status__in=[
+                    PurchaseOrder.STATUS_ACKNOWLEDGED,
+                    PurchaseOrder.STATUS_PARTIAL_RECEIPT,
+                    PurchaseOrder.STATUS_COMPLETED,
+                ]
+            ),
+        ),
+        rejected=Count(
+            "id",
+            distinct=True,
+            filter=Q(
+                status=PurchaseOrder.STATUS_CANCELLED,
+                acknowledgement_notes__icontains="REJECTED",
+            ),
+        ),
+        cancelled=Count(
+            "id",
+            distinct=True,
+            filter=Q(status=PurchaseOrder.STATUS_CANCELLED),
+        ),
+        amended=Count(
+            "id",
+            distinct=True,
+            filter=Q(amendments__isnull=False),
+        ),
+        completed=Count(
+            "id",
+            distinct=True,
+            filter=Q(status=PurchaseOrder.STATUS_COMPLETED),
+        ),
+    )
 
     context = {
         "vendor": vendor,
@@ -1837,8 +1863,12 @@ ELIGIBLE_INVOICE_STATUSES = [
 @vendor_required
 def vendor_invoices_view(request):
     vendor = request.vendor
-    invoices_qs = SupplierInvoice.objects.filter(vendor=vendor).order_by("-created_at")
-    from django.db.models import Q
+    # select_related("po") eliminates N+1 query when template renders invoice.po.id and invoice.po.po_number
+    invoices_qs = (
+        SupplierInvoice.objects.filter(vendor=vendor)
+        .select_related("po")
+        .order_by("-created_at")
+    )
 
     tab = request.GET.get("tab", "all").strip().lower()
     if tab == "pending":
@@ -1866,26 +1896,31 @@ def vendor_invoices_view(request):
     else:
         filtered_invoices = invoices_qs
 
-    counts = {
-        "all": invoices_qs.count(),
-        "pending": invoices_qs.filter(
-            status__in=[
-                SupplierInvoice.STATUS_RECEIVED,
-                SupplierInvoice.STATUS_VALIDATION,
-                SupplierInvoice.STATUS_MATCHING,
-                SupplierInvoice.STATUS_APPROVAL,
-            ]
-        ).count(),
-        "approved": invoices_qs.filter(
-            status=SupplierInvoice.STATUS_READY_FOR_PAYMENT
-        ).count(),
-        "paid": invoices_qs.filter(status=SupplierInvoice.STATUS_PAID).count(),
-        "exceptions": invoices_qs.filter(
-            Q(status=SupplierInvoice.STATUS_EXCEPTION)
-            | ~Q(correction_request_notes="")
-        ).count(),
-        "rejected": invoices_qs.filter(status=SupplierInvoice.STATUS_REJECTED).count(),
-    }
+    # Single aggregate query for all tabs (replaces 6 sequential count queries)
+    counts = invoices_qs.aggregate(
+        all=Count("id"),
+        pending=Count(
+            "id",
+            filter=Q(
+                status__in=[
+                    SupplierInvoice.STATUS_RECEIVED,
+                    SupplierInvoice.STATUS_VALIDATION,
+                    SupplierInvoice.STATUS_MATCHING,
+                    SupplierInvoice.STATUS_APPROVAL,
+                ]
+            ),
+        ),
+        approved=Count(
+            "id", filter=Q(status=SupplierInvoice.STATUS_READY_FOR_PAYMENT)
+        ),
+        paid=Count("id", filter=Q(status=SupplierInvoice.STATUS_PAID)),
+        exceptions=Count(
+            "id",
+            filter=Q(status=SupplierInvoice.STATUS_EXCEPTION)
+            | ~Q(correction_request_notes=""),
+        ),
+        rejected=Count("id", filter=Q(status=SupplierInvoice.STATUS_REJECTED)),
+    )
 
     eligible_pos = PurchaseOrder.objects.filter(
         vendor=vendor

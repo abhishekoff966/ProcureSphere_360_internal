@@ -708,6 +708,10 @@ def custom_404_view(request, exception=None):
         from django.shortcuts import redirect
         return redirect("/static/icons/favicon.ico")
 
+    if request.path.lower() in ("/quit", "/quit/"):
+        from django.shortcuts import redirect
+        return redirect("/")
+
     # Auto-redirect non-slash URLs if the slashed path resolves (replaces default CommonMiddleware behavior bypassed by catch-all)
     if not request.path.endswith("/") and not _is_api_request(request):
         slash_path = request.path + "/"

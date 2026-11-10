@@ -200,6 +200,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 
     "axes.middleware.AxesMiddleware",
+    "apps.core.middleware.HtmxAuthInterceptorMiddleware",
 
 ]
 
