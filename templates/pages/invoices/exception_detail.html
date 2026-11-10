@@ -66,7 +66,7 @@
                 <form action="{% url 'resolve_exception' exception.id %}" method="POST">
                     {% csrf_token %}
                     <div class="mb-4">
-                        <label class="form-label fw-bold small text-uppercase text-muted">Resolution Notes (Required)</label>
+                        <label class="form-label fw-bold small text-uppercase text-muted">Resolution Notes <span class="text-danger">*</span></label>
                         <textarea class="form-control bg-light" name="resolution_notes" rows="4" placeholder="Enter justification for overriding this variance..." required></textarea>
                     </div>
 

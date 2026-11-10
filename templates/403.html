@@ -11,7 +11,7 @@
         <h1 class="fw-bold text-dark mb-2">Access Denied (403)</h1>
         <p class="text-muted mb-4 fs-6">You do not have authorization or role permissions to access this specific module or perform this action.</p>
         <div class="d-flex justify-content-center gap-2 flex-wrap">
-            <a href="/" class="btn btn-primary rounded-pill px-4 py-2 fw-semibold shadow-sm">
+            <a href="{% if request.user.is_authenticated %}/dashboard/{% else %}/{% endif %}" class="btn btn-primary rounded-pill px-4 py-2 fw-semibold shadow-sm">
                 <i class="fa-solid fa-house me-2"></i>Return to Dashboard
             </a>
         </div>
