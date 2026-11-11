@@ -10,7 +10,7 @@
             <i class="fa-solid fa-arrow-left me-1"></i> Back to Contract Register
         </a>
         <div class="d-flex gap-2">
-            {% if contract.status == 'DRAFT' %}
+            {% if contract.status == 'DRAFT' and can_submit_legal %}
                 <button type="button" class="btn btn-warning rounded-pill btn-sm fw-bold px-3" data-bs-toggle="modal" data-bs-target="#submitLegalModal">
                     <i class="fa-solid fa-gavel me-1"></i> Submit for Legal Review
                 </button>
@@ -25,25 +25,28 @@
                 </button>
             {% endif %}
 
-            {% if contract.status == 'BUSINESS_APPROVAL' and is_proc_mgr %}
+            {% if contract.status == 'BUSINESS_APPROVAL' and can_business_approve %}
                 <button type="button" class="btn btn-success rounded-pill btn-sm fw-bold px-3" data-bs-toggle="modal" data-bs-target="#businessApproveModal">
                     <i class="fa-solid fa-signature me-1"></i> Business Approve & Activate
                 </button>
             {% endif %}
 
-            {% if contract.status == 'ACTIVE' or contract.status == 'RENEWAL_DUE' or contract.status == 'RENEWED' %}
-                <button type="button" class="btn btn-outline-primary rounded-pill btn-sm fw-bold px-3" data-bs-toggle="modal" data-bs-target="#amendmentModal">
-                    <i class="fa-solid fa-code-branch me-1"></i> Amend Contract (New Version)
-                </button>
-                <button type="button" class="btn btn-primary rounded-pill btn-sm fw-bold px-3" data-bs-toggle="modal" data-bs-target="#renewModal">
-                    <i class="fa-solid fa-arrows-rotate me-1"></i> Renew Contract
-                </button>
-            {% endif %}
-
-            {% if contract.status != 'TERMINATED' %}
-                <button type="button" class="btn btn-outline-danger rounded-pill btn-sm fw-bold px-3" data-bs-toggle="modal" data-bs-target="#terminateModal">
-                    <i class="fa-solid fa-ban me-1"></i> Terminate
-                </button>
+            {% if can_manage_contracts %}
+                {% if contract.status == 'ACTIVE' or contract.status == 'RENEWAL_DUE' or contract.status == 'RENEWED' %}
+                    <button type="button" class="btn btn-outline-primary rounded-pill btn-sm fw-bold px-3" data-bs-toggle="modal" data-bs-target="#amendmentModal">
+                        <i class="fa-solid fa-code-branch me-1"></i> Amend Contract (New Version)
+                    </button>
+                {% endif %}
+                {% if contract.status == 'ACTIVE' or contract.status == 'RENEWAL_DUE' or contract.status == 'RENEWED' or contract.status == 'EXPIRED' %}
+                    <button type="button" class="btn btn-primary rounded-pill btn-sm fw-bold px-3" data-bs-toggle="modal" data-bs-target="#renewModal">
+                        <i class="fa-solid fa-arrows-rotate me-1"></i> Renew Contract
+                    </button>
+                {% endif %}
+                {% if contract.status == 'ACTIVE' or contract.status == 'RENEWAL_DUE' or contract.status == 'RENEWED' %}
+                    <button type="button" class="btn btn-outline-danger rounded-pill btn-sm fw-bold px-3" data-bs-toggle="modal" data-bs-target="#terminateModal">
+                        <i class="fa-solid fa-ban me-1"></i> Terminate
+                    </button>
+                {% endif %}
             {% endif %}
         </div>
     </div>
@@ -205,10 +208,12 @@
         <div class="glass-card p-4 shadow-sm">
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-code-branch text-primary me-2"></i> Preserved Version & Amendment History</h5>
-                {% if contract.status == 'ACTIVE' or contract.status == 'RENEWAL_DUE' %}
-                    <button class="btn btn-outline-primary btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#amendmentModal">
-                        <i class="fa-solid fa-plus me-1"></i> Amend Contract
-                    </button>
+                {% if can_manage_contracts %}
+                    {% if contract.status == 'ACTIVE' or contract.status == 'RENEWAL_DUE' or contract.status == 'RENEWED' %}
+                        <button class="btn btn-outline-primary btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#amendmentModal">
+                            <i class="fa-solid fa-plus me-1"></i> Amend Contract
+                        </button>
+                    {% endif %}
                 {% endif %}
             </div>
             <div class="table-responsive">
@@ -247,9 +252,11 @@
         <div class="glass-card p-4 shadow-sm">
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-flag text-success me-2"></i> Tracked Contract SLA Milestones</h5>
+                {% if can_manage_sla and contract.status != 'TERMINATED' %}
                 <button class="btn btn-success btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#addMilestoneModal">
                     <i class="fa-solid fa-plus me-1"></i> Add Milestone
                 </button>
+                {% endif %}
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
@@ -277,10 +284,14 @@
                             </td>
                             <td class="text-end pe-3">
                                 {% if not m.is_completed %}
+                                    {% if can_manage_sla and contract.status != 'TERMINATED' %}
                                     <form method="POST" action="{% url 'contract_milestone_complete' contract_id=contract.id milestone_id=m.id %}" class="d-inline">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-outline-success btn-sm rounded-pill px-3">Mark Complete</button>
                                     </form>
+                                    {% else %}
+                                    <span class="text-muted small">Pending</span>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-muted small">Done {{ m.completed_at|date:"M d" }}</span>
                                 {% endif %}
@@ -300,9 +311,11 @@
         <div class="glass-card p-4 shadow-sm">
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-scale-balanced text-warning me-2"></i> Legal & Governance Obligations</h5>
+                {% if can_manage_sla and contract.status != 'TERMINATED' %}
                 <button class="btn btn-warning btn-sm rounded-pill px-3 fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#addObligationModal">
                     <i class="fa-solid fa-plus me-1"></i> Add Obligation
                 </button>
+                {% endif %}
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
@@ -330,10 +343,14 @@
                             </td>
                             <td class="text-end pe-3">
                                 {% if not ob.is_fulfilled %}
+                                    {% if can_manage_sla and contract.status != 'TERMINATED' %}
                                     <form method="POST" action="{% url 'contract_obligation_fulfill' contract_id=contract.id obligation_id=ob.id %}" class="d-inline">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-outline-success btn-sm rounded-pill px-3">Mark Fulfilled</button>
                                     </form>
+                                    {% else %}
+                                    <span class="text-muted small">Pending</span>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-muted small">Fulfilled {{ ob.fulfilled_at|date:"M d" }}</span>
                                 {% endif %}
@@ -353,9 +370,11 @@
         <div class="glass-card p-4 shadow-sm">
             <div class="d-flex align-items-center justify-content-between mb-3">
                 <h5 class="fw-bold text-dark mb-0"><i class="fa-solid fa-file-pdf text-danger me-2"></i> Executed Documents & Attachments</h5>
+                {% if can_manage_sla and contract.status != 'TERMINATED' %}
                 <button class="btn btn-outline-danger btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#uploadDocModal">
                     <i class="fa-solid fa-upload me-1"></i> Upload Attachment
                 </button>
+                {% endif %}
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
@@ -375,7 +394,7 @@
                             <td class="small text-muted">{{ doc.created_at|date:"M d, Y H:i" }}</td>
                             <td class="text-end pe-3">
                                 {% if doc.file %}
-                                    <a href="{{ doc.file.url }}" target="_blank" class="btn btn-sm btn-light rounded-pill px-3"><i class="fa-solid fa-download me-1"></i> Download</a>
+                                    <a href="{% url 'contract_document_download' contract_id=contract.id document_id=doc.id %}" target="_blank" class="btn btn-sm btn-light rounded-pill px-3"><i class="fa-solid fa-download me-1"></i> Download</a>
                                 {% else %}
                                     <span class="text-muted small">No file attached</span>
                                 {% endif %}
@@ -565,7 +584,7 @@
                 </div>
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label fw-bold">New Contract Value ($)</label>
+                        <label class="form-label fw-bold">New Contract Value (₹)</label>
                         {{ amendment_form.contract_value }}
                     </div>
                     <div class="col-md-4">
@@ -606,7 +625,7 @@
                         {{ milestone_form.due_date }}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-bold">Amount ($)</label>
+                        <label class="form-label fw-bold">Amount (₹)</label>
                         {{ milestone_form.amount }}
                     </div>
                 </div>
@@ -694,7 +713,7 @@
                     {{ renewal_form.new_end_date }}
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Updated Value ($)</label>
+                    <label class="form-label fw-bold">Updated Value (₹)</label>
                     {{ renewal_form.new_value }}
                 </div>
                 <div class="mb-3">

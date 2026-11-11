@@ -546,7 +546,9 @@ def generate_export_job_service(export_job_id: int) -> ExportJob:
     job.save(update_fields=["status", "updated_at"])
 
     try:
-        report_fn = REPORT_DISPATCHER.get(job.report_type, get_audit_log_report)
+        report_fn = REPORT_DISPATCHER.get(job.report_type)
+        if report_fn is None:
+            raise ValueError(f"Unsupported report type: {job.report_type}")
         try:
             data = report_fn(user=job.requested_by)
         except TypeError:
