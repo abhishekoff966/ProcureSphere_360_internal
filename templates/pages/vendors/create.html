@@ -30,9 +30,15 @@
                                 {% for value, label in field.field.choices %}{% if value %}<option value="{{ value }}" {% if field.value|stringformat:'s' == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>{% endif %}{% endfor %}
                             </select>
                         {% else %}
-                            <input type="text" name="{{ field.html_name }}" id="{{ field.id_for_label }}" value="{{ field.value|default:'' }}" class="form-control {% if field.errors %}is-invalid{% endif %}" {% if field.field.required %}required{% endif %}>
+                            <input type="text" name="{{ field.html_name }}" id="{{ field.id_for_label }}" value="{{ field.value|default:'' }}" class="form-control {% if field.errors %}is-invalid{% endif %}" {% if field.field.required %}required{% endif %}
+                               {% if field.name == 'pan_number' %}maxlength="10" style="text-transform: uppercase;" placeholder="e.g. ABCDE1234F"{% endif %}
+                               {% if field.name == 'gstin' %}maxlength="15" style="text-transform: uppercase;" placeholder="e.g. 29ABCDE1234F1Z5"{% endif %}
+                               {% if field.name == 'tax_identification_number' %}maxlength="30" placeholder="e.g. TAX-12345678 or 12-3456789"{% endif %}
+                               {% if field.name == 'legal_name' %}placeholder="e.g. Acme Corporation Ltd"{% endif %}
+                               {% if field.name == 'trade_name' %}placeholder="e.g. Acme Solutions (trading name)"{% endif %}
+                               {% if field.name == 'registration_number' %}placeholder="e.g. CIN U12345MH2020PTC123456"{% endif %}>
                         {% endif %}
-                        {% for e in field.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                        {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
                     </div>
                     {% endif %}
                 {% endfor %}
@@ -45,11 +51,13 @@
                     <div class="{% if field.name == 'address' %}col-12{% else %}col-md-6{% endif %}">
                         <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
                         {% if field.name == 'address' %}
-                            <textarea name="address" id="{{ field.id_for_label }}" rows="2" class="form-control {% if field.errors %}is-invalid{% endif %}" required>{{ field.value|default:'' }}</textarea>
+                            <textarea name="address" id="{{ field.id_for_label }}" rows="2" class="form-control {% if field.errors %}is-invalid{% endif %}" required placeholder="Registered business address...">{{ field.value|default:'' }}</textarea>
                         {% else %}
-                            <input type="{% if field.name == 'email' %}email{% else %}text{% endif %}" name="{{ field.html_name }}" id="{{ field.id_for_label }}" value="{{ field.value|default:'' }}" class="form-control {% if field.errors %}is-invalid{% endif %}" {% if field.field.required %}required{% endif %}>
+                            <input type="{% if field.name == 'email' %}email{% else %}text{% endif %}" name="{{ field.html_name }}" id="{{ field.id_for_label }}" value="{{ field.value|default:'' }}" class="form-control {% if field.errors %}is-invalid{% endif %}" {% if field.field.required %}required{% endif %}
+                               {% if field.name == 'email' %}placeholder="e.g. contact@vendor.com"{% endif %}
+                               {% if field.name == 'phone' %}placeholder="e.g. +91 9876543210 (optional)"{% endif %}>
                         {% endif %}
-                        {% for e in field.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                        {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
                     </div>
                     {% endif %}
                 {% endfor %}
@@ -61,8 +69,11 @@
                     {% if field.name in 'bank_name bank_account_number bank_routing_code' %}
                     <div class="col-md-4">
                         <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        <input type="text" name="{{ field.html_name }}" id="{{ field.id_for_label }}" value="{{ field.value|default:'' }}" class="form-control {% if field.errors %}is-invalid{% endif %}">
-                        {% for e in field.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                        <input type="text" name="{{ field.html_name }}" id="{{ field.id_for_label }}" value="{{ field.value|default:'' }}" class="form-control {% if field.errors %}is-invalid{% endif %}"
+                               {% if field.name == 'bank_name' %}placeholder="e.g. HDFC Bank, JPMorgan Chase"{% endif %}
+                               {% if field.name == 'bank_account_number' %}placeholder="e.g. 123456789012"{% endif %}
+                               {% if field.name == 'bank_routing_code' %}placeholder="e.g. HDFC0001234 (IFSC/SWIFT)"{% endif %}>
+                        {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
                     </div>
                     {% endif %}
                 {% endfor %}

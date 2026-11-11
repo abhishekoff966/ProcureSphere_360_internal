@@ -139,11 +139,15 @@ class SourcingEventViewSet(
             technical_weight=data.get("technical_weight", 50),
             commercial_weight=data.get("commercial_weight", 50),
             created_by_user=self.request.user,
+            enforce_future_start=True,
         )
 
     def perform_update(self, serializer):
         serializer.instance = services.update_draft_sourcing_event_service(
-            event=serializer.instance, user=self.request.user, data=serializer.validated_data
+            event=serializer.instance,
+            user=self.request.user,
+            data=serializer.validated_data,
+            enforce_future_start=True,
         )
 
     def _ok(self, event):

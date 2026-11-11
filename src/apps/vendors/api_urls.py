@@ -36,6 +36,7 @@ from apps.vendors.selectors import get_vendor_change_history
 from apps.vendors.services import (
     allowed_governance_transitions,
     approve_vendor_service,
+    delete_vendor_service,
     record_vendor_risk_assessment_service,
     set_vendor_status_governance_service,
 )
@@ -528,6 +529,38 @@ class VendorViewSet(viewsets.ModelViewSet):
             qs = qs.order_by("-created_at")
 
         return qs
+
+
+    def destroy(self, request, *args, **kwargs):
+        from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
+        from django.db.models import ProtectedError, RestrictedError
+
+        vendor = self.get_object()
+        try:
+            delete_vendor_service(vendor=vendor, actor=request.user)
+        except DjangoPermissionDenied as exc:
+            return Response(
+                {"error": {"code": "FORBIDDEN", "message": str(exc), "details": {}}},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except DjangoValidationError as exc:
+            msg = exc.messages[0] if hasattr(exc, "messages") and exc.messages else str(exc)
+            return Response(
+                {"error": {"code": "VALIDATION_ERROR", "message": msg, "details": {}}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except (ProtectedError, RestrictedError):
+            return Response(
+                {
+                    "error": {
+                        "code": "CONFLICT",
+                        "message": "Vendor cannot be deleted because linked records still reference it.",
+                        "details": {},
+                    }
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
