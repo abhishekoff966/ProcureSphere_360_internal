@@ -46,6 +46,22 @@ def generate_purchase_order_service(
             f"Vendor '{vendor.legal_name}' is in status '{vendor.get_status_display()}' and cannot be issued Purchase Orders. Vendor must be ACTIVE."
         )
 
+    if sourcing_event:
+        from apps.sourcing.models import SourcingEvent
+        if sourcing_event.status != SourcingEvent.STATUS_AWARDED:
+            raise ValidationError(
+                f"Cannot generate Purchase Order from Sourcing Event '{sourcing_event.event_number}': Event status is '{sourcing_event.status}' (must be AWARDED)."
+            )
+
+    if requisition:
+        from apps.requisitions.models import PurchaseRequisition
+        if hasattr(requisition, "refresh_from_db"):
+            requisition.refresh_from_db()
+        if requisition.status not in (PurchaseRequisition.STATUS_APPROVED, PurchaseRequisition.STATUS_SOURCING, PurchaseRequisition.STATUS_PO_ISSUED):
+            raise ValidationError(
+                f"Cannot generate Purchase Order from Requisition '{requisition.pr_number}': Requisition status is '{requisition.status}' (must be APPROVED)."
+            )
+
     po_number = generate_document_number(PurchaseOrder, "po_number", "PO")
 
     po = PurchaseOrder.objects.create(
@@ -119,6 +135,17 @@ def generate_purchase_order_service(
                 reference_number=po.po_number,
                 description=f"PO Commitment for {vendor.legal_name}",
             )
+
+        if requisition:
+            from apps.budgets.services import release_budget_reservation_service
+            try:
+                release_budget_reservation_service(
+                    requisition=requisition,
+                    user=created_by_user,
+                    reason=f"Converted to Purchase Order {po.po_number}",
+                )
+            except Exception:
+                pass
 
         # Notify active vendor users
         for v_user in User.objects.filter(vendor=vendor, is_active=True):
@@ -961,6 +988,23 @@ def cancel_purchase_order_governance_service(
         },
     )
 
+    if previous_status in (
+        PurchaseOrder.STATUS_ISSUED,
+        PurchaseOrder.STATUS_ACKNOWLEDGED,
+        PurchaseOrder.STATUS_PARTIAL_RECEIPT,
+    ):
+        try:
+            from apps.notifications.services import notify_vendor_users
+            notify_vendor_users(
+                vendor=po.vendor,
+                notification_type=Notification.TYPE_PO_ISSUED,
+                title=f"Purchase Order Cancelled: {po.po_number}",
+                message=f"Purchase Order {po.po_number} has been cancelled. Reason: {reason}",
+                target_url=f"/vendor/purchase-orders/{po.id}/",
+            )
+        except Exception:
+            pass
+
     return po
 
 
@@ -1123,6 +1167,17 @@ def approve_purchase_order_service(
         new_state={"status": po.status, "comments": comments, "approved_by": approver.email},
     )
 
+    if po.requisition:
+        from apps.budgets.services import release_budget_reservation_service
+        try:
+            release_budget_reservation_service(
+                requisition=po.requisition,
+                user=approver,
+                reason=f"Converted to Purchase Order {po.po_number}",
+            )
+        except Exception:
+            pass
+
     try:
         from apps.approvals.models import ApprovalAction
         from apps.approvals.services import record_approval_action_service
@@ -1199,6 +1254,32 @@ def issue_purchase_order_service(
         previous_state={"status": previous_status},
         new_state={"status": po.status, "issued_by": actor.email},
     )
+
+    if po.requisition:
+        from apps.budgets.services import release_budget_reservation_service
+        try:
+            release_budget_reservation_service(
+                requisition=po.requisition,
+                user=actor,
+                reason=f"Converted to Purchase Order {po.po_number}",
+            )
+        except Exception:
+            pass
+
+    # Record commitment on spend ledger if not already recorded
+    from apps.budgets.models import Budget, SpendLedger
+    budget = Budget.objects.filter(cost_center=po.cost_center).order_by("-created_at").first()
+    if budget:
+        if not SpendLedger.objects.filter(reference_number=po.po_number, entry_type=SpendLedger.ENTRY_COMMITMENT).exists():
+            budget.committed_amount += po.total_amount
+            budget.save(update_fields=["committed_amount", "updated_at"])
+            SpendLedger.objects.create(
+                budget=budget,
+                entry_type=SpendLedger.ENTRY_COMMITMENT,
+                amount=po.total_amount,
+                reference_number=po.po_number,
+                description=f"PO Commitment for {po.vendor.legal_name}",
+            )
 
     from apps.notifications.services import notify_vendor_users
 

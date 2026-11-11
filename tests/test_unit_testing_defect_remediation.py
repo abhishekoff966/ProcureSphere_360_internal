@@ -148,3 +148,32 @@ class TestUnitDefectRemediation:
         """
         assert reverse("accounts:login") == "/login/"
         assert reverse("login") == "/login/"
+
+    def test_tc_cpr_018_validate_pr_attachment_with_non_zero_stream_pointer(self):
+        """
+        DEF-001 / TC-CPR-018:
+        Valid PDF whose stream pointer is not at byte 0 (e.g. already partly read by an earlier consumer)
+        is uploaded as a PR attachment.
+        Steps:
+          1. Build a valid PDF upload (starts with %PDF-).
+          2. Advance the file pointer (file.seek(4)).
+          3. Call validate_pr_attachment(file).
+        Expected:
+          File accepted: signature check must read from the start of the file (seek(0)),
+          and restore pointer afterwards.
+        """
+        from apps.core.validators import validate_pr_attachment
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        valid_pdf = SimpleUploadedFile(
+            "quote.pdf",
+            b"%PDF-1.4\nTest PDF content with stream pointer advance.",
+            content_type="application/pdf",
+        )
+        valid_pdf.seek(4)
+        assert valid_pdf.tell() == 4
+
+        result = validate_pr_attachment(valid_pdf)
+        assert result == valid_pdf
+        assert valid_pdf.tell() == 4
+

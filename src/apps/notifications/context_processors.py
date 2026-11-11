@@ -79,14 +79,8 @@ def notifications_processor(request):
                 .count()
             )
     elif role_code == Role.PROC_MGR:
-        scoped_org = getattr(user, "effective_organization", None) or getattr(user, "organization", None)
-        if scoped_org:
-            pending_count = PurchaseRequisition.objects.filter(
-                department__organization=scoped_org,
-                status__in=statuses,
-            ).count()
-        else:
-            pending_count = PurchaseRequisition.objects.filter(status__in=statuses).count()
+        # Procurement Managers hold oversight authority and do not render direct approvals
+        pending_count = 0
     elif role_code == Role.SUPER_ADMIN:
         scoped_org = getattr(user, "effective_organization", None) if not (user.is_superuser and not getattr(user, "organization_id", None)) else None
         if scoped_org:

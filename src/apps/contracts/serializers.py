@@ -60,6 +60,8 @@ class ContractSerializer(serializers.ModelSerializer):
     alerts = ContractAlertSerializer(many=True, read_only=True)
     vendor_name = serializers.CharField(source="vendor.legal_name", read_only=True)
     owner_email = serializers.CharField(source="contract_owner.email", read_only=True)
+    termination_reason = serializers.SerializerMethodField()
+    terminated_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Contract
@@ -71,7 +73,43 @@ class ContractSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "contract_owner",
+            "termination_reason",
+            "terminated_at",
         )
+
+    def get_termination_reason(self, obj):
+        if obj.status != Contract.STATUS_TERMINATED:
+            return None
+        from apps.audit.models import AuditLog
+        log = (
+            AuditLog.objects.filter(
+                target_model="Contract",
+                target_object_id=str(obj.id),
+                new_state__status=Contract.STATUS_TERMINATED,
+            )
+            .order_by("-timestamp")
+            .first()
+        )
+        if log and isinstance(log.new_state, dict):
+            return log.new_state.get("reason")
+        return None
+
+    def get_terminated_at(self, obj):
+        if obj.status != Contract.STATUS_TERMINATED:
+            return None
+        from apps.audit.models import AuditLog
+        log = (
+            AuditLog.objects.filter(
+                target_model="Contract",
+                target_object_id=str(obj.id),
+                new_state__status=Contract.STATUS_TERMINATED,
+            )
+            .order_by("-timestamp")
+            .first()
+        )
+        if log:
+            return log.timestamp.isoformat()
+        return obj.updated_at.isoformat()
 
     def validate(self, attrs):
         title = attrs.get("title", getattr(self.instance, "title", None))

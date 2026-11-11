@@ -45,6 +45,10 @@ class VendorScorecardSerializer(serializers.ModelSerializer):
     performance_status = serializers.SerializerMethodField()
     performance_band = serializers.SerializerMethodField()
     band_display = serializers.SerializerMethodField()
+    overall_score = serializers.DecimalField(
+        source="composite_score", max_digits=5, decimal_places=2, required=False, allow_null=True
+    )
+    period = serializers.CharField(source="evaluation_period", required=False)
 
     class Meta:
         model = VendorScorecard
@@ -57,6 +61,7 @@ class VendorScorecardSerializer(serializers.ModelSerializer):
             "vendor_category_code",
             "vendor_status",
             "evaluation_period",
+            "period",
             "delivery_score",
             "quality_score",
             "price_score",
@@ -64,6 +69,7 @@ class VendorScorecardSerializer(serializers.ModelSerializer):
             "compliance_score",
             "sla_score",
             "composite_score",
+            "overall_score",
             "performance_status",
             "performance_band",
             "band_display",
@@ -75,7 +81,30 @@ class VendorScorecardSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "evaluated_by", "evaluated_by_email", "created_at", "updated_at"]
 
+    def to_internal_value(self, data):
+        data = data.copy() if hasattr(data, "copy") else dict(data)
+        if "period" in data and "evaluation_period" not in data:
+            data["evaluation_period"] = data.get("period")
+        if "overall_score" in data and "composite_score" not in data:
+            data["composite_score"] = data.get("overall_score")
+        return super().to_internal_value(data)
+
     def validate(self, attrs):
+        import decimal
+
+        raw_overall = self.initial_data.get("overall_score")
+        if raw_overall is not None:
+            try:
+                ov = Decimal(str(raw_overall))
+                if ov < Decimal("0.00") or ov > Decimal("100.00"):
+                    raise serializers.ValidationError(
+                        {"overall_score": ["overall_score must be between 0.00 and 100.00."]}
+                    )
+                attrs["composite_score"] = ov
+            except (ValueError, decimal.InvalidOperation):
+                raise serializers.ValidationError(
+                    {"overall_score": ["overall_score must be a valid numeric score."]}
+                )
         score_fields = [
             "delivery_score",
             "quality_score",
@@ -161,11 +190,11 @@ class VendorScorecardViewSet(viewsets.ModelViewSet):
                 return qs.filter(vendor_id=user.vendor_id)
             return qs.none()
 
-        vendor_id = self.request.query_params.get("vendor_id")
+        vendor_id = self.request.query_params.get("vendor_id") or self.request.query_params.get("vendor")
         if vendor_id:
             qs = qs.filter(vendor_id=vendor_id)
 
-        period = self.request.query_params.get("period")
+        period = self.request.query_params.get("period") or self.request.query_params.get("evaluation_period")
         if period:
             qs = qs.filter(evaluation_period=period)
 

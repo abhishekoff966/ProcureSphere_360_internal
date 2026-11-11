@@ -61,7 +61,7 @@
 
     <!-- Card 2: Approvals Executed -->
     <div class="col-sm-6 col-xl-3">
-        <a href="/audit/approvals/" class="text-decoration-none">
+        <a href="/audit/approvals/?action=APPROVED" class="text-decoration-none">
             <div class="stat-card glass-card p-3 p-md-4 rounded-4 border-start border-4 border-success shadow-sm h-100">
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <span class="text-secondary fw-semibold small text-uppercase">APPROVALS EXECUTED</span>
@@ -80,7 +80,7 @@
 
     <!-- Card 3: Open Invoice Exceptions -->
     <div class="col-sm-6 col-xl-3">
-        <a href="/audit/invoice-exceptions/" class="text-decoration-none">
+        <a href="/audit/invoice-exceptions/?status=OPEN" class="text-decoration-none">
             <div class="stat-card glass-card p-3 p-md-4 rounded-4 border-start border-4 border-danger shadow-sm h-100">
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <span class="text-secondary fw-semibold small text-uppercase">OPEN EXCEPTIONS</span>
@@ -129,7 +129,7 @@
                     <i class="fa-solid fa-triangle-exclamation text-warning"></i>
                     <h6 class="fw-bold text-dark mb-0 font-heading">Open 3-Way Match Discrepancies</h6>
                 </div>
-                <a href="/audit/invoice-exceptions/" class="badge bg-warning text-dark text-decoration-none rounded-pill px-3 py-1 fw-bold">
+                <a href="/audit/invoice-exceptions/?status=OPEN" class="badge bg-warning text-dark text-decoration-none rounded-pill px-3 py-1 fw-bold">
                     {{ metrics.open_exceptions|default:0 }} Open &rarr;
                 </a>
             </div>
@@ -192,7 +192,7 @@
                     <i class="fa-solid fa-ban text-danger"></i>
                     <h6 class="fw-bold text-dark mb-0 font-heading">Suspended & At-Risk Vendors</h6>
                 </div>
-                <a href="/audit/vendors/" class="badge bg-danger text-white text-decoration-none rounded-pill px-3 py-1 fw-bold">
+                <a href="/audit/vendors/?status=SUSPENDED" class="badge bg-danger text-white text-decoration-none rounded-pill px-3 py-1 fw-bold">
                     {{ metrics.suspended_vendors|default:0 }} Suspended &rarr;
                 </a>
             </div>

@@ -50,11 +50,23 @@
     <!-- Filter Bar -->
     <div class="card-header bg-white border-bottom p-3">
         <form method="get" action="/audit/contract-changes/" class="row g-2 align-items-center">
-            <div class="col-md-9">
+            <div class="col-md-6">
                 <div class="input-group input-group-sm">
                     <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
                     <input type="text" name="search" value="{{ search_query }}" class="form-control border-start-0" placeholder="Search contract #, title, vendor name...">
                 </div>
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Statuses</option>
+                    <option value="DRAFT" {% if status_filter == 'DRAFT' %}selected{% endif %}>DRAFT</option>
+                    <option value="LEGAL_REVIEW" {% if status_filter == 'LEGAL_REVIEW' %}selected{% endif %}>LEGAL_REVIEW</option>
+                    <option value="ACTIVE" {% if status_filter == 'ACTIVE' %}selected{% endif %}>ACTIVE</option>
+                    <option value="RENEWAL_DUE" {% if status_filter == 'RENEWAL_DUE' %}selected{% endif %}>RENEWAL_DUE</option>
+                    <option value="RENEWED" {% if status_filter == 'RENEWED' %}selected{% endif %}>RENEWED</option>
+                    <option value="EXPIRED" {% if status_filter == 'EXPIRED' %}selected{% endif %}>EXPIRED</option>
+                    <option value="TERMINATED" {% if status_filter == 'TERMINATED' %}selected{% endif %}>TERMINATED</option>
+                </select>
             </div>
             <div class="col-md-2">
                 <button type="submit" class="btn btn-dark btn-sm rounded-pill w-100 fw-semibold">
@@ -120,12 +132,12 @@
         </div>
         <div class="d-flex gap-1">
             {% if current_page > 1 %}
-                <a href="?page={{ current_page|add:'-1' }}{% if search_query %}&search={{ search_query }}{% endif %}" class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                <a href="?page={{ current_page|add:'-1' }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm btn-outline-dark rounded-pill px-3">
                     &laquo; Previous
                 </a>
             {% endif %}
             {% if current_page < total_pages %}
-                <a href="?page={{ current_page|add:'1' }}{% if search_query %}&search={{ search_query }}{% endif %}" class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                <a href="?page={{ current_page|add:'1' }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-sm btn-outline-dark rounded-pill px-3">
                     Next &raquo;
                 </a>
             {% endif %}
