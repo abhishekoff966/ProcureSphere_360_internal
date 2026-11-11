@@ -1,11 +1,16 @@
+import io
+import logging
+import mimetypes
 import os
+from xml.sax.saxutils import escape
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
-from django.http import FileResponse
+from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.models import Role
@@ -41,6 +46,8 @@ from .services import (
     upload_contract_document_service,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _enforce_internal_contracts_access(request):
     user = request.user
@@ -70,6 +77,17 @@ def _is_auditor(user):
     return _get_user_role(user) == Role.AUDITOR
 
 
+def _validation_error_text(exc):
+    return " ".join(exc.messages) if hasattr(exc, "messages") else str(exc)
+
+
+def _form_error_text(form, prefix):
+    details = "; ".join(
+        f"{field}: {', '.join(errs)}" for field, errs in form.errors.items()
+    )
+    return f"{prefix} {details}".strip() if details else prefix
+
+
 def _can_view_contract_list(user):
     if not user or not user.is_authenticated:
         return False
@@ -96,6 +114,9 @@ def _can_view_contract(user, contract):
     role_code = _get_user_role(user)
     if role_code in [Role.REQUESTER, Role.DEPT_APPROVER, Role.STORES_RECEIVER]:
         return False
+    if role_code == Role.VENDOR_USER:
+        vendor = getattr(user, "vendor", None)
+        return vendor is not None and contract.vendor_id == vendor.id
     if role_code in [
         Role.SUPER_ADMIN,
         Role.LEGAL_MGR,
@@ -104,11 +125,10 @@ def _can_view_contract(user, contract):
         Role.FINANCE_AP,
         Role.AUDITOR,
     ]:
-        return True
-    if role_code == Role.VENDOR_USER:
-        vendor = getattr(user, "vendor", None)
-        return vendor is not None and contract.vendor_id == vendor.id
-    return contract.contract_owner_id == user.id
+        if role_code == Role.SUPER_ADMIN:
+            return True
+        return get_contracts_qs(user=user).filter(id=contract.id).exists()
+    return False
 
 
 @login_required(login_url="/login/")
@@ -239,11 +259,16 @@ def detail_view(request, contract_id):
     document_form = ContractDocumentForm()
     renewal_form = ContractRenewalForm(initial={"new_value": contract.contract_value})
 
-    role_code = getattr(request.user, "role_code", None) or (
-        request.user.role.code if getattr(request.user, "role", None) else None
+    role_code = _get_user_role(request.user)
+    is_legal_mgr = bool(request.user.is_superuser or role_code in [Role.LEGAL_MGR, Role.SUPER_ADMIN])
+    is_proc_mgr = bool(request.user.is_superuser or role_code in [Role.PROC_MGR, Role.SUPER_ADMIN])
+    can_business_approve = bool(is_proc_mgr or role_code == Role.DEPT_APPROVER)
+    can_manage_contracts = bool(is_legal_mgr or is_proc_mgr)
+    can_manage_sla = bool(
+        request.user.is_superuser
+        or role_code in [Role.LEGAL_MGR, Role.PROC_MGR, Role.PROC_EXEC, Role.SUPER_ADMIN]
     )
-    is_legal_mgr = role_code in [Role.LEGAL_MGR, Role.SUPER_ADMIN]
-    is_proc_mgr = role_code in [Role.PROC_MGR, Role.SUPER_ADMIN]
+    can_submit_legal = bool(can_manage_sla or contract.contract_owner_id == request.user.id)
 
     context = {
         "contract": contract,
@@ -260,6 +285,10 @@ def detail_view(request, contract_id):
         "renewal_form": renewal_form,
         "is_legal_mgr": is_legal_mgr,
         "is_proc_mgr": is_proc_mgr,
+        "can_business_approve": can_business_approve,
+        "can_manage_contracts": can_manage_contracts,
+        "can_manage_sla": can_manage_sla,
+        "can_submit_legal": can_submit_legal,
     }
     return render(request, "pages/contracts/detail.html", context)
 
@@ -416,16 +445,19 @@ def milestone_create_view(request, contract_id):
         return redirect("contract_detail", contract_id=contract.id)
     form = ContractMilestoneForm(request.POST)
     if form.is_valid():
-        add_contract_milestone_service(
-            contract=contract,
-            title=form.cleaned_data["title"],
-            due_date=form.cleaned_data["due_date"],
-            amount=form.cleaned_data["amount"],
-            user=request.user,
-        )
-        messages.success(request, f"Milestone '{form.cleaned_data['title']}' added successfully.")
+        try:
+            add_contract_milestone_service(
+                contract=contract,
+                title=form.cleaned_data["title"],
+                due_date=form.cleaned_data["due_date"],
+                amount=form.cleaned_data["amount"],
+                user=request.user,
+            )
+            messages.success(request, f"Milestone '{form.cleaned_data['title']}' added successfully.")
+        except ValidationError as exc:
+            messages.error(request, _validation_error_text(exc))
     else:
-        messages.error(request, "Invalid milestone details.")
+        messages.error(request, _form_error_text(form, "Invalid milestone details."))
     return redirect("contract_detail", contract_id=contract.id)
 
 
@@ -443,8 +475,11 @@ def milestone_toggle_view(request, contract_id, milestone_id):
             "Permission Denied: You do not have permission to modify milestones.",
         )
         return redirect("contract_detail", contract_id=contract_id)
-    complete_contract_milestone_service(milestone=milestone, user=request.user)
-    messages.success(request, f"Milestone '{milestone.title}' marked as COMPLETED.")
+    try:
+        complete_contract_milestone_service(milestone=milestone, user=request.user)
+        messages.success(request, f"Milestone '{milestone.title}' marked as COMPLETED.")
+    except ValidationError as exc:
+        messages.error(request, _validation_error_text(exc))
     return redirect("contract_detail", contract_id=contract_id)
 
 
@@ -464,16 +499,19 @@ def obligation_create_view(request, contract_id):
         return redirect("contract_detail", contract_id=contract.id)
     form = ContractObligationForm(request.POST)
     if form.is_valid():
-        add_contract_obligation_service(
-            contract=contract,
-            title=form.cleaned_data["title"],
-            responsible_party=form.cleaned_data["responsible_party"],
-            due_date=form.cleaned_data["due_date"],
-            user=request.user,
-        )
-        messages.success(request, f"Obligation '{form.cleaned_data['title']}' added successfully.")
+        try:
+            add_contract_obligation_service(
+                contract=contract,
+                title=form.cleaned_data["title"],
+                responsible_party=form.cleaned_data["responsible_party"],
+                due_date=form.cleaned_data["due_date"],
+                user=request.user,
+            )
+            messages.success(request, f"Obligation '{form.cleaned_data['title']}' added successfully.")
+        except ValidationError as exc:
+            messages.error(request, _validation_error_text(exc))
     else:
-        messages.error(request, "Invalid obligation details.")
+        messages.error(request, _form_error_text(form, "Invalid obligation details."))
     return redirect("contract_detail", contract_id=contract.id)
 
 
@@ -491,8 +529,11 @@ def obligation_toggle_view(request, contract_id, obligation_id):
             "Permission Denied: You do not have permission to fulfill obligations.",
         )
         return redirect("contract_detail", contract_id=contract_id)
-    fulfill_contract_obligation_service(obligation=obligation, user=request.user)
-    messages.success(request, f"Obligation '{obligation.title}' marked as FULFILLED.")
+    try:
+        fulfill_contract_obligation_service(obligation=obligation, user=request.user)
+        messages.success(request, f"Obligation '{obligation.title}' marked as FULFILLED.")
+    except ValidationError as exc:
+        messages.error(request, _validation_error_text(exc))
     return redirect("contract_detail", contract_id=contract_id)
 
 
@@ -512,57 +553,242 @@ def document_upload_view(request, contract_id):
         return redirect("contract_detail", contract_id=contract.id)
     form = ContractDocumentForm(request.POST, request.FILES)
     if form.is_valid():
-        upload_contract_document_service(
-            contract=contract,
-            user=request.user,
-            title=form.cleaned_data["title"],
-            file=form.cleaned_data["file"],
-        )
-        messages.success(request, f"Document '{form.cleaned_data['title']}' uploaded successfully.")
+        try:
+            upload_contract_document_service(
+                contract=contract,
+                user=request.user,
+                title=form.cleaned_data["title"],
+                file=form.cleaned_data["file"],
+            )
+            messages.success(request, f"Document '{form.cleaned_data['title']}' uploaded successfully.")
+        except ValidationError as exc:
+            messages.error(request, _validation_error_text(exc))
     else:
-        messages.error(request, "Invalid file upload submission.")
+        messages.error(request, _form_error_text(form, "Invalid file upload submission."))
     return redirect("contract_detail", contract_id=contract.id)
+
+
+def _build_missing_contract_document_pdf(contract, document, retrieved_by):
+    """
+    Generates an in-memory official PDF Archive Notice when a ContractDocument
+    physical file is missing on ephemeral storage without mutating stored files.
+    """
+    buf = io.BytesIO()
+    original_name = os.path.basename(getattr(document.file, "name", "") or "contract_document")
+    uploaded_by_email = getattr(getattr(document, "uploaded_by", None), "email", "N/A")
+    uploaded_at = (
+        document.created_at.strftime("%Y-%m-%d %H:%M UTC")
+        if getattr(document, "created_at", None)
+        else "Recorded"
+    )
+    retrieved_at = timezone.now().strftime("%Y-%m-%d %H:%M UTC")
+    vendor_name = getattr(getattr(contract, "vendor", None), "legal_name", "N/A")
+    retriever_email = getattr(retrieved_by, "email", "Authenticated User")
+
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.platypus import (
+            HRFlowable,
+            Paragraph,
+            SimpleDocTemplate,
+            Spacer,
+            Table,
+            TableStyle,
+        )
+
+        pdf_doc = SimpleDocTemplate(
+            buf,
+            pagesize=letter,
+            leftMargin=40,
+            rightMargin=40,
+            topMargin=40,
+            bottomMargin=40,
+        )
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            "ContractArchiveTitle",
+            parent=styles["Heading1"],
+            fontSize=15,
+            textColor=colors.HexColor("#0F172A"),
+            spaceAfter=4,
+        )
+        notice_style = ParagraphStyle(
+            "ContractArchiveNotice",
+            parent=styles["Normal"],
+            fontSize=9.5,
+            leading=14,
+            textColor=colors.HexColor("#7C2D12"),
+        )
+        meta_style = ParagraphStyle(
+            "ContractArchiveMeta",
+            parent=styles["Normal"],
+            fontSize=9.5,
+            leading=13,
+            textColor=colors.HexColor("#1E293B"),
+        )
+
+        rows = [
+            ["Contract Number", escape(str(contract.contract_number))],
+            ["Contract Title", escape(str(contract.title))],
+            ["Vendor", escape(str(vendor_name))],
+            ["Contract Status", escape(str(contract.get_status_display()))],
+            ["Document ID", escape(str(document.id))],
+            ["Document Title", escape(str(document.title))],
+            ["Original Filename", escape(original_name)],
+            ["Uploaded By", escape(str(uploaded_by_email))],
+            ["Uploaded At", escape(str(uploaded_at))],
+            ["Archive Requested By", escape(str(retriever_email))],
+            ["Generated At", escape(str(retrieved_at))],
+        ]
+        table = Table(
+            [[Paragraph(f"<b>{escape(k)}</b>", meta_style), Paragraph(v, meta_style)] for k, v in rows],
+            colWidths=[160, 355],
+        )
+        table.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F8FAFC")),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ]
+            )
+        )
+
+        elements = [
+            Paragraph("<b>ProcureSphere 360</b> — Contract Document Archive Notice", title_style),
+            HRFlowable(width="100%", thickness=1, color=colors.HexColor("#CBD5E1")),
+            Spacer(1, 10),
+            Paragraph(
+                "<b>Notice:</b> The original uploaded binary file is currently unavailable on "
+                "ephemeral application storage. This archive notice confirms the verified contract "
+                "document record registered in PostgreSQL. Please re-upload the executed document "
+                "if the original binary attachment is needed.",
+                notice_style,
+            ),
+            Spacer(1, 12),
+            table,
+        ]
+        pdf_doc.build(elements)
+        buf.seek(0)
+        return buf
+    except Exception:
+        logger.warning(
+            "ReportLab fallback failed for contract document %s; emitting minimal PDF archive notice.",
+            document.id,
+            exc_info=True,
+        )
+        fallback = io.BytesIO(
+            b"%PDF-1.4\n"
+            b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+            b"2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n"
+            b"3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Resources<<>>>>endobj\n"
+            b"xref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n"
+            b"0000000052 00000 n \n0000000101 00000 n \n"
+            b"trailer<</Size 4/Root 1 0 R>>\nstartxref\n178\n%%EOF\n"
+        )
+        fallback.seek(0)
+        return fallback
 
 
 @login_required(login_url="/login/")
 def document_download_view(request, contract_id, document_id):
     """
-    Safely downloads/retrieves a contract document with RBAC, object scoping, and audit logging.
+    Safely downloads/retrieves a contract document with RBAC, object scoping,
+    storage-safe streaming, ephemeral fallback handling, and audit logging.
     """
     contract = get_object_or_404(Contract, id=contract_id)
     if not _can_view_contract(request.user, contract):
-        messages.error(
-            request,
-            "Permission Denied: You are not authorized to access documents for this contract.",
+        raise PermissionDenied(
+            "Permission Denied: You are not authorized to access documents for this contract."
         )
-        if _can_view_contract_list(request.user):
-            return redirect("contracts_list")
-        return redirect("home")
 
     document = get_object_or_404(ContractDocument, id=document_id, contract=contract)
-    if (
-        not document.file
-        or not hasattr(document.file, "path")
-        or not os.path.exists(document.file.path)
-    ):
-        messages.error(request, "Requested contract document file was not found on storage.")
-        return redirect("contract_detail", contract_id=contract.id)
 
-    AuditLog.objects.create(
-        actor=request.user,
-        action=AuditLog.ACTION_EXPORT,
-        target_model="ContractDocument",
-        target_object_id=str(document.id),
-        new_state={
-            "document_title": document.title,
-            "file_name": os.path.basename(document.file.name),
-        },
+    if not document.file or not getattr(document.file, "name", ""):
+        return render(request, "404.html", status=404)
+
+    safe_filename = (
+        os.path.basename(document.file.name).replace("\r", "").replace("\n", "")
+        or f"contract_document_{document.id}"
     )
+    content_type, _ = mimetypes.guess_type(safe_filename)
+
+    try:
+        file_handle = document.file.open("rb")
+    except FileNotFoundError:
+        logger.warning(
+            "ContractDocument %s physical file missing on storage (%s); serving archive notice PDF.",
+            document.id,
+            document.file.name,
+        )
+        pdf_buffer = _build_missing_contract_document_pdf(contract, document, request.user)
+        archive_stem = os.path.splitext(safe_filename)[0] or f"contract_document_{document.id}"
+        archive_filename = f"{archive_stem}_archive_record.pdf"
+        AuditLog.objects.create(
+            actor=request.user,
+            action=AuditLog.ACTION_EXPORT,
+            target_model="ContractDocument",
+            target_object_id=str(document.id),
+            new_state={
+                "document_title": document.title,
+                "file_name": safe_filename,
+                "archive_file_name": archive_filename,
+                "storage_fallback": True,
+            },
+        )
+        return FileResponse(
+            pdf_buffer,
+            as_attachment=True,
+            filename=archive_filename,
+            content_type="application/pdf",
+        )
+    except ValueError:
+        logger.warning(
+            "ContractDocument %s has an invalid storage file reference (%s).",
+            document.id,
+            document.file.name,
+            exc_info=True,
+        )
+        return render(request, "404.html", status=404)
+    except Exception:
+        logger.error(
+            "Storage error opening ContractDocument %s (%s).",
+            document.id,
+            document.file.name,
+            exc_info=True,
+        )
+        return HttpResponse(
+            "Contract document storage is temporarily unavailable. Please try again later.",
+            status=503,
+            content_type="text/plain",
+        )
+
+    try:
+        AuditLog.objects.create(
+            actor=request.user,
+            action=AuditLog.ACTION_EXPORT,
+            target_model="ContractDocument",
+            target_object_id=str(document.id),
+            new_state={
+                "document_title": document.title,
+                "file_name": safe_filename,
+            },
+        )
+    except Exception:
+        file_handle.close()
+        raise
 
     return FileResponse(
-        open(document.file.path, "rb"),
+        file_handle,
         as_attachment=True,
-        filename=os.path.basename(document.file.name),
+        filename=safe_filename,
+        content_type=content_type or "application/octet-stream",
     )
 
 

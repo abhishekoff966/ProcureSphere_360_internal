@@ -1206,13 +1206,13 @@ def approve_vendor_service(*, vendor: Vendor, manager: User, notes: str = "") ->
 
     """
 
-    from .permissions import can_legal_verify_vendor, can_operate_governance
+    from .permissions import can_operate_governance
 
     from .selectors import get_vendor_kyc_summary
 
 
 
-    if not (can_operate_governance(manager) or can_legal_verify_vendor(manager)):
+    if not can_operate_governance(manager):
 
         raise PermissionDenied("Your role is not authorised to activate vendors.")
 

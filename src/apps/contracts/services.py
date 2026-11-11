@@ -521,6 +521,8 @@ def add_contract_obligation_service(
     """
     Adds a legal obligation to a contract with audit logging.
     """
+    if contract.status == Contract.STATUS_TERMINATED:
+        raise ValidationError("Cannot add obligations to a terminated contract.")
     if not title or not str(title).strip():
         raise ValidationError("Obligation title is required.")
     if not due_date:

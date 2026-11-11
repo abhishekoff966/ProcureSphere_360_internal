@@ -72,6 +72,8 @@ from apps.reports.services import (
 
 PROC_REPORT_ROLES = {"PROC_EXEC", "PROCUREMENT_EXECUTIVE", "PROC_MGR", "SUPER_ADMIN"}
 
+AUDIT_REPORT_ROLES = {"AUDITOR", "COMPLIANCE_AUDITOR", "AUDIT", "SUPER_ADMIN", "ADMIN"}
+
 
 
 
@@ -568,7 +570,8 @@ def dashboard_view(request):
 
     role_code = _get_role_code(request.user)
 
-
+    if not (getattr(request.user, "is_superuser", False) or role_code in AUDIT_REPORT_ROLES):
+        reports = [r for r in reports if r["id"] != "audit_log"]
 
     base_layout = _resolve_base_layout(role_code)
 
@@ -650,19 +653,32 @@ def generate_view(request):
 
 
 
+    role_code = _get_role_code(request.user)
+    if getattr(request.user, "is_vendor", False) or role_code == "VENDOR_USER":
+        raise PermissionDenied("External vendor users are not authorized to access internal reports.")
+
     if request.method == "POST":
 
 
 
-        report_type = request.POST.get("report_type")
+        from apps.reports.services import REPORT_DISPATCHER
 
+        report_type = (request.POST.get("report_type") or "").strip()
 
+        format_type = (request.POST.get("format_type") or "CSV").strip().upper()
 
-        format_type = request.POST.get("format_type", "CSV")
+        if not report_type or report_type not in REPORT_DISPATCHER:
+            messages.error(request, "Please select a valid report module.")
+            return redirect("reports_hub")
 
+        if format_type not in ("CSV", "XLSX", "PDF"):
+            messages.error(request, "Please select a valid export format (CSV, XLSX, or PDF).")
+            return redirect("reports_hub")
 
-
-
+        if report_type == "audit_log" and not (
+            getattr(request.user, "is_superuser", False) or role_code in AUDIT_REPORT_ROLES
+        ):
+            raise PermissionDenied("Only Compliance Auditors and Super Admins can export Audit Trail reports.")
 
 
 
