@@ -36,9 +36,11 @@
                         <option value="BUDGET_REVIEW" {% if status_filter == 'BUDGET_REVIEW' %}selected{% endif %}>Budget Review</option>
                         <option value="APPROVED" {% if status_filter == 'APPROVED' %}selected{% endif %}>Approved</option>
                         <option value="REJECTED" {% if status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                        {% if role_code != 'DEPT_APPROVER' %}
                         <option value="DRAFT" {% if status_filter == 'DRAFT' %}selected{% endif %}>Draft</option>
                         <option value="SOURCING" {% if status_filter == 'SOURCING' %}selected{% endif %}>In Sourcing</option>
                         <option value="PO_ISSUED" {% if status_filter == 'PO_ISSUED' %}selected{% endif %}>PO Issued</option>
+                        {% endif %}
                     </select>
                 </div>
             </div>

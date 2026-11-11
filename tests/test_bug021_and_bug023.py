@@ -77,3 +77,4 @@ def test_bug023_browser_navigation_guard_state_management():
 
     # Verify double-open guard prevents modal from triggering repeatedly
     assert "isAlreadyOpen" in app_js
+

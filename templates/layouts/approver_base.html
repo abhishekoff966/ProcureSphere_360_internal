@@ -214,7 +214,7 @@
             <div class="nav-section-label">Approver &amp; Workflow</div>
 
             <a href="/approvals/inbox/"
-               class="vendor-navlink approver-navlink d-flex align-items-center justify-content-between {% if '/approvals/' in request.path and request.GET.tab != 'history' or active_nav == 'pending_approvals' %}active-nav-item{% endif %}">
+               class="vendor-navlink approver-navlink d-flex align-items-center justify-content-between {% if active_nav == 'pending_approvals' or '/approvals/' in request.path and request.GET.tab != 'history' and active_nav != 'my_approvals' %}active-nav-item{% endif %}">
                 <div class="d-flex align-items-center min-width-0">
                     <span class="text-truncate">Pending Approvals</span>
                 </div>
@@ -226,7 +226,7 @@
             </a>
 
             <a href="/requisitions/"
-               class="vendor-navlink approver-navlink {% if '/requisitions/' in request.path or active_nav == 'dept_prs' %}active-nav-item{% endif %}">
+               class="vendor-navlink approver-navlink {% if active_nav == 'dept_prs' or '/requisitions/' in request.path and active_nav != 'my_approvals' %}active-nav-item{% endif %}">
                 <span>Department PRs</span>
             </a>
 

@@ -85,6 +85,7 @@ def list_view(request):
                 PurchaseRequisition.objects.filter(
                     Q(department=user_department) | Q(cost_center__manager=user)
                 )
+                .exclude(status=PurchaseRequisition.STATUS_DRAFT)
                 .distinct()
                 .order_by("-created_at")
             )
@@ -93,6 +94,7 @@ def list_view(request):
                 PurchaseRequisition.objects.filter(
                     Q(department__organization=user.organization) | Q(cost_center__manager=user)
                 )
+                .exclude(status=PurchaseRequisition.STATUS_DRAFT)
                 .distinct()
                 .order_by("-created_at")
             )
@@ -174,6 +176,7 @@ def list_view(request):
             "querystring": querystring,
             "role_code": role_code,
             "base_layout": base_layout,
+            "active_nav": "dept_prs" if role_code == Role.DEPT_APPROVER else "my_prs",
             "search_q": search_q,
             "status_filter": status_filter,
         },
@@ -638,7 +641,7 @@ def detail_view(request, pk):
         is_pending_review
         and (
             pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW
-            or (available_budget is not None and pr.total_amount > available_budget)
+            or (available_budget is not None and (available_budget <= 0 or pr.total_amount > available_budget))
         )
     )
 
@@ -661,7 +664,9 @@ def detail_view(request, pk):
     can_approve = False
     current_step_info = None
 
-    if pr.status in [
+    if is_budget_exceeded and role_code == Role.DEPT_APPROVER:
+        can_approve = False
+    elif pr.status in [
         PurchaseRequisition.STATUS_SUBMITTED,
         PurchaseRequisition.STATUS_MANAGER_REVIEW,
     ]:

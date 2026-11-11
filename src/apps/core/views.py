@@ -525,11 +525,11 @@ def approver_dashboard_view(request):
     if user_department:
         dept_prs = PurchaseRequisition.objects.filter(
             Q(department=user_department) | Q(cost_center__manager=user)
-        ).distinct()
+        ).exclude(status=PurchaseRequisition.STATUS_DRAFT).distinct()
     elif getattr(user, "organization", None):
         dept_prs = PurchaseRequisition.objects.filter(
             Q(department__organization=user.organization) | Q(cost_center__manager=user)
-        ).distinct()
+        ).exclude(status=PurchaseRequisition.STATUS_DRAFT).distinct()
     else:
         dept_prs = PurchaseRequisition.objects.none()
 
@@ -577,6 +577,38 @@ def approver_dashboard_view(request):
         )
         available_budget = sum([b.available_amount for b in budgets])
 
+    # Budget validation for pending PR queue to prevent unauthorized approval of over-budget or unfunded PRs
+    today_date = now.date()
+    pending_list = list(pending_prs_qs[:10])
+    cc_ids = [pr.cost_center_id for pr in pending_list if pr.cost_center_id]
+    active_budgets = {}
+    if cc_ids:
+        cc_budgets = Budget.objects.filter(
+            cost_center_id__in=cc_ids,
+            fiscal_period__start_date__lte=today_date,
+            fiscal_period__end_date__gte=today_date,
+            fiscal_period__is_closed=False,
+        )
+        for b in cc_budgets:
+            active_budgets[b.cost_center_id] = b
+
+    for pr in pending_list:
+        b = active_budgets.get(pr.cost_center_id)
+        if pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW:
+            pr.is_over_budget = True
+        elif b and (b.available_amount <= 0 or pr.total_amount > b.available_amount):
+            pr.is_over_budget = True
+        elif available_budget <= 0 and current_period and (user_department or getattr(user, "organization", None)):
+            pr.is_over_budget = True
+        else:
+            pr.is_over_budget = False
+
+    over_budget_in_pending = sum(1 for pr in pending_list if getattr(pr, "is_over_budget", False))
+    if over_budget_in_pending > budget_overrun_count:
+        budget_overrun_count = over_budget_in_pending
+    if budget_overrun_count > 0:
+        has_budget_overrun = True
+
     context = {
         "user_department": user_department,
         "has_budget_overrun": has_budget_overrun,
@@ -588,7 +620,7 @@ def approver_dashboard_view(request):
             "available_budget": float(available_budget),
             "budget_overrun_count": budget_overrun_count,
         },
-        "pending_prs": pending_prs_qs[:10],
+        "pending_prs": pending_list,
     }
     return render(request, "pages/dashboards/approver_dashboard.html", context)
 
