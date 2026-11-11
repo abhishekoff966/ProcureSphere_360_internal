@@ -103,6 +103,7 @@ class LoginRequestSerializer(serializers.Serializer):
     password = serializers.CharField(
         required=True,
         write_only=True,
+        trim_whitespace=False,
         style={"input_type": "password"},
         help_text="User account password",
     )

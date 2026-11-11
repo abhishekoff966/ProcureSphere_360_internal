@@ -39,8 +39,11 @@ def portal_login_view(request):
 
 
         # Explicit request=request keyword parameter is required for django-axes compatibility
+        from apps.accounts.models import User
+        matched_user = User.objects.filter(email__iexact=str(email).strip()).first()
+        auth_username = matched_user.email if matched_user else email
 
-        user = authenticate(request=request, username=email, password=password)
+        user = authenticate(request=request, username=auth_username, password=password)
 
 
 
@@ -254,8 +257,13 @@ def portal_logout_view(request):
     """
 
     Logs out the user from the ERP Portal and redirects to the public landing page (/).
+    Requires HTTP POST method to prevent CSRF logout attacks (DEF-020).
 
     """
+    if request.method != "POST":
+        from django.http import HttpResponseNotAllowed
+        return HttpResponseNotAllowed(["POST"], "Logout requires HTTP POST method.")
+
     user = request.user if request.user.is_authenticated else None
 
     if user:

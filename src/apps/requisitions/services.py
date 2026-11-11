@@ -405,9 +405,6 @@ def approve_purchase_requisition_service(
                         raise ValidationError("Department Approver can only approve requisitions for their own department.")
                 else:
                     is_authorized = True
-            elif approver_role_code in [Role.PROC_MGR, Role.SUPER_ADMIN]:
-                # Procurement Manager executive oversight on PR approval chain
-                is_authorized = True
 
         # Enforce multi-tenant organization boundary: Approver must belong to the requisition's organization
         target_org = (
@@ -542,11 +539,15 @@ def reject_purchase_requisition_service(
     role_code = getattr(approver, "role_code", None) or (
         approver.role.code if getattr(approver, "role", None) else None
     )
-    if not (
-        approver.is_superuser
-        or role_code in [Role.SUPER_ADMIN, Role.DEPT_APPROVER, Role.PROC_MGR, Role.FINANCE_AP]
-    ):
-        raise ValidationError(f"User '{approver.email}' is not authorized to reject purchase requisitions.")
+    if requisition.status in [PurchaseRequisition.STATUS_SUBMITTED, PurchaseRequisition.STATUS_MANAGER_REVIEW]:
+        if not (approver.is_superuser or role_code in [Role.SUPER_ADMIN, Role.DEPT_APPROVER, Role.PROC_MGR]):
+            raise ValidationError(f"User '{approver.email}' with role '{role_code}' is not authorized to reject requisitions in Manager Review.")
+    elif requisition.status == PurchaseRequisition.STATUS_BUDGET_REVIEW:
+        if not (approver.is_superuser or role_code in [Role.SUPER_ADMIN, Role.FINANCE_AP, Role.PROC_MGR]):
+            raise ValidationError(f"User '{approver.email}' with role '{role_code}' is not authorized to reject requisitions in Budget Review.")
+    else:
+        if not (approver.is_superuser or role_code in [Role.SUPER_ADMIN, Role.DEPT_APPROVER, Role.PROC_MGR]):
+            raise ValidationError(f"User '{approver.email}' is not authorized to reject purchase requisitions.")
 
     previous_status = requisition.status
     requisition.status = PurchaseRequisition.STATUS_REJECTED
