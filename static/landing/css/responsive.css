@@ -372,7 +372,7 @@
     border-radius: 0 !important;
     -webkit-mask-image: radial-gradient(ellipse 60% 54% at 50% 50%, #000 60%, rgba(0,0,0,0.7) 78%, transparent 96%) !important;
     mask-image: radial-gradient(ellipse 60% 54% at 50% 50%, #000 60%, rgba(0,0,0,0.7) 78%, transparent 96%) !important;
-    mask-composite: normal !important;
+    mask-composite: add !important;
     -webkit-mask-composite: source-over !important;
   }
 

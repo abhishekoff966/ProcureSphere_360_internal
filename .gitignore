@@ -47,6 +47,9 @@ staticfiles/
 
 # Testing / Coverage
 .coverage
+coverage.xml
+test_db.sqlite3
+.scannerwork/
 htmlcov/
 .pytest_cache/
 .tox/
