@@ -31,8 +31,11 @@ from apps.core.validators import (
     normalize_tax_identifier,
     validate_file_upload,
     validate_gstin,
+    validate_legal_name,
+    validate_optional_phone_number,
     validate_pan_gstin_consistency,
     validate_pan_number,
+    validate_tax_id_number,
 )
 from apps.notifications.models import Notification
 from apps.notifications.services import notify_users, notify_vendor_users
@@ -107,6 +110,11 @@ def register_vendor_service(
         organization = getattr(created_by_user, "effective_organization", None)
 
 
+
+    legal_name = validate_legal_name(legal_name)
+    tax_identification_number = validate_tax_id_number(tax_identification_number)
+    if phone:
+        phone = validate_optional_phone_number(phone)
 
     if Vendor.objects.filter(tax_identification_number=tax_identification_number).exists():
 
@@ -281,6 +289,10 @@ def update_vendor_service(
         raise PermissionDenied("Only Procurement Executives/Managers can edit vendor information.")
 
 
+
+    legal_name = validate_legal_name(legal_name)
+    if phone:
+        phone = validate_optional_phone_number(phone)
 
     previous_state = {
 

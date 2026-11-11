@@ -3,8 +3,11 @@ from django import forms
 from apps.core.validators import (
     normalize_tax_identifier,
     validate_gstin,
+    validate_legal_name,
+    validate_optional_phone_number,
     validate_pan_gstin_consistency,
     validate_pan_number,
+    validate_tax_id_number,
 )
 
 from .models import Vendor, VendorCategory, VendorRiskRecord
@@ -19,7 +22,7 @@ class VendorEditForm(forms.Form):
     legal_name = forms.CharField(max_length=255, label="Legal name")
     trade_name = forms.CharField(max_length=255, required=False, label="Trade / brand name")
     email = forms.EmailField(label="Primary email")
-    phone = forms.CharField(max_length=30, required=False, label="Phone")
+    phone = forms.CharField(max_length=30, required=False, label="Phone (Optional)")
     address = forms.CharField(widget=forms.Textarea(attrs={"rows": 2}), label="Address")
     category = forms.ModelChoiceField(
         queryset=VendorCategory.objects.order_by("name"), label="Category"
@@ -28,6 +31,12 @@ class VendorEditForm(forms.Form):
     bank_account_number = forms.CharField(max_length=100, required=False, label="Bank account no.")
     bank_routing_code = forms.CharField(max_length=100, required=False, label="Bank routing / IFSC")
 
+    def clean_legal_name(self):
+        return validate_legal_name(self.cleaned_data.get("legal_name"))
+
+    def clean_phone(self):
+        return validate_optional_phone_number(self.cleaned_data.get("phone", ""))
+
 
 class VendorRegistrationForm(forms.Form):
     legal_name = forms.CharField(max_length=255)
@@ -35,31 +44,41 @@ class VendorRegistrationForm(forms.Form):
     tax_identification_number = forms.CharField(max_length=100)
     pan_number = forms.CharField(
         max_length=10,
+        min_length=10,
         required=False,
         label="PAN",
         error_messages={
-            "max_length": "Invalid PAN format. PAN must be 10 characters: 5 uppercase letters, 4 digits, 1 uppercase letter (e.g. ABCDE1234F).",
+            "max_length": "Invalid PAN format. PAN must be exactly 10 characters: 5 uppercase letters, 4 digits, 1 uppercase letter (e.g. ABCDE1234F).",
+            "min_length": "Invalid PAN format. PAN must be exactly 10 characters: 5 uppercase letters, 4 digits, 1 uppercase letter (e.g. ABCDE1234F).",
         },
     )
     gstin = forms.CharField(
         max_length=15,
+        min_length=15,
         required=False,
         label="GSTIN",
         error_messages={
-            "max_length": "Invalid GSTIN format. GSTIN must be 15 alphanumeric characters (e.g. 29ABCDE1234F1Z5).",
+            "max_length": "Invalid GSTIN format. GSTIN must be exactly 15 alphanumeric characters (e.g. 29ABCDE1234F1Z5).",
+            "min_length": "Invalid GSTIN format. GSTIN must be exactly 15 alphanumeric characters (e.g. 29ABCDE1234F1Z5).",
         },
     )
     registration_number = forms.CharField(max_length=100, required=False)
     category = forms.ModelChoiceField(queryset=VendorCategory.objects.order_by("name"))
     email = forms.EmailField()
-    phone = forms.CharField(max_length=30, required=False)
+    phone = forms.CharField(max_length=30, required=False, label="Phone (Optional)")
     address = forms.CharField(widget=forms.Textarea(attrs={"rows": 2}))
     bank_name = forms.CharField(max_length=150, required=False)
     bank_account_number = forms.CharField(max_length=100, required=False)
     bank_routing_code = forms.CharField(max_length=100, required=False)
 
+    def clean_legal_name(self):
+        return validate_legal_name(self.cleaned_data.get("legal_name"))
+
+    def clean_phone(self):
+        return validate_optional_phone_number(self.cleaned_data.get("phone", ""))
+
     def clean_tax_identification_number(self):
-        tin = self.cleaned_data["tax_identification_number"].strip()
+        tin = validate_tax_id_number(self.cleaned_data.get("tax_identification_number"))
         if Vendor.objects.filter(tax_identification_number=tin).exists():
             raise forms.ValidationError("A vendor with this tax ID already exists.")
         return tin
@@ -131,18 +150,22 @@ class VendorProfileUpdateForm(forms.Form):
     )
     pan_number = forms.CharField(
         max_length=10,
+        min_length=10,
         required=False,
         label="PAN",
         error_messages={
-            "max_length": "Invalid PAN format. PAN must be 10 characters: 5 uppercase letters, 4 digits, 1 uppercase letter (e.g. ABCDE1234F).",
+            "max_length": "Invalid PAN format. PAN must be exactly 10 characters: 5 uppercase letters, 4 digits, 1 uppercase letter (e.g. ABCDE1234F).",
+            "min_length": "Invalid PAN format. PAN must be exactly 10 characters: 5 uppercase letters, 4 digits, 1 uppercase letter (e.g. ABCDE1234F).",
         },
     )
     gstin = forms.CharField(
         max_length=15,
+        min_length=15,
         required=False,
         label="GSTIN",
         error_messages={
-            "max_length": "Invalid GSTIN format. GSTIN must be 15 alphanumeric characters (e.g. 29ABCDE1234F1Z5).",
+            "max_length": "Invalid GSTIN format. GSTIN must be exactly 15 alphanumeric characters (e.g. 29ABCDE1234F1Z5).",
+            "min_length": "Invalid GSTIN format. GSTIN must be exactly 15 alphanumeric characters (e.g. 29ABCDE1234F1Z5).",
         },
     )
     bank_name = forms.CharField(max_length=150, required=False)

@@ -216,6 +216,22 @@
 document.addEventListener('DOMContentLoaded', function () {
     console.log('ProcureSphere 360 Interface Initialized.');
 
+    // Auto-dismiss success and info alert banners after 4.5 seconds (BUG-018)
+    document.querySelectorAll('.alert.alert-dismissible.alert-success, .alert.alert-dismissible.alert-info').forEach(function (alertEl) {
+        setTimeout(function () {
+            if (!document.body.contains(alertEl)) return;
+            try {
+                if (window.bootstrap && window.bootstrap.Alert) {
+                    window.bootstrap.Alert.getOrCreateInstance(alertEl).close();
+                    return;
+                }
+            } catch (err) {}
+            alertEl.classList.remove('show');
+            setTimeout(function () { if (alertEl.parentNode) alertEl.parentNode.removeChild(alertEl); }, 200);
+        }, 4500);
+    });
+
+
     // Auto-inject CSRF token into HTMX headers
     document.body.addEventListener('htmx:configRequest', function (evt) {
         const csrfToken = getCookie('csrftoken');
