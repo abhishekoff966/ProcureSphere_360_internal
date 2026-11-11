@@ -8,6 +8,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import connection
 from django.db.models import Avg, Count, Q, Sum
 from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from redis import Redis
@@ -754,6 +755,7 @@ def _is_api_request(request):
     return request.path.startswith("/api/") or "application/json" in accept or "json" in accept
 
 
+@require_http_methods(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
 def custom_api_404_view(request, *args, **kwargs):
     return JsonResponse(
         {

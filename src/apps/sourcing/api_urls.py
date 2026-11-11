@@ -1,3 +1,4 @@
+from django.views.decorators.http import require_http_methods
 from django.db import models
 from django.shortcuts import get_object_or_404
 from django.urls import path
@@ -303,14 +304,17 @@ class AwardApproveAPIView(APIView):
         )
 
 
+@require_http_methods(["GET", "PUT", "PATCH"])
 def sourcing_event_direct_detail(request, pk):
     return SourcingEventViewSet.as_view({"get": "retrieve", "put": "update", "patch": "partial_update"})(request, pk=pk)
 
 
+@require_http_methods(["POST"])
 def sourcing_event_direct_publish(request, pk):
     return SourcingEventViewSet.as_view({"post": "publish"})(request, pk=pk)
 
 
+@require_http_methods(["GET", "POST"])
 def sourcing_event_direct_bids(request, pk):
     return SourcingEventViewSet.as_view({"get": "bids", "post": "bids"})(request, pk=pk)
 
