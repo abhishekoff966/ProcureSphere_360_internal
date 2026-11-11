@@ -445,8 +445,20 @@ document.addEventListener('DOMContentLoaded', function () {
         const curPath = window.location.pathname;
         const onRoot = isDashboardRoot(curPath);
 
-        // Track subpage visit state in sessionStorage
+        // Track session depth & entry point to ensure back button navigates seamlessly across internal modules
+        // and only prompts sign-out confirmation at the initial entry point.
+        let isInitialEntry = false;
         try {
+            if (!sessionStorage.getItem('ps_portal_initialized')) {
+                sessionStorage.setItem('ps_portal_initialized', 'true');
+                sessionStorage.setItem('ps_initial_entry_path', curPath);
+                sessionStorage.setItem('ps_nav_depth', '0');
+                isInitialEntry = true;
+            } else {
+                let depth = parseInt(sessionStorage.getItem('ps_nav_depth') || '0', 10);
+                sessionStorage.setItem('ps_nav_depth', String(depth + 1));
+            }
+
             if (!onRoot) {
                 sessionStorage.setItem('ps_visited_subpage', 'true');
                 sessionStorage.setItem('ps_last_subpage_path', curPath);
@@ -524,22 +536,33 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        // Arm the history barrier whenever on a dashboard root
+        // Arm the history barrier ONLY at the initial entry point on a dashboard root
         function armDashboardGuard() {
             if (!window.history || !window.history.pushState) return;
             const currentPath = window.location.pathname;
             if (!isDashboardRoot(currentPath)) return;
 
+            // Only arm at initial entry point
+            let navDepth = 0;
+            try {
+                navDepth = parseInt(sessionStorage.getItem('ps_nav_depth') || '0', 10);
+            } catch (e) {}
+
+            // If user navigated forward across internal modules (navDepth > 0), do not trap
+            if (navDepth > 0 && !isInitialEntry) {
+                return;
+            }
+
             // Only push barrier if not already at guard state
             if (!window.history.state || !window.history.state.isPsGuard) {
                 try {
                     window.history.replaceState(
-                        { ps_portal: true, isPsBase: true, rootPath: currentPath },
+                        { ps_portal: true, isPsBase: true, isInitialEntry: true, rootPath: currentPath },
                         document.title,
                         window.location.href
                     );
                     window.history.pushState(
-                        { ps_portal: true, isPsGuard: true, rootPath: currentPath },
+                        { ps_portal: true, isPsGuard: true, isInitialEntry: true, rootPath: currentPath },
                         document.title,
                         window.location.href
                     );
@@ -547,15 +570,21 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        // Arm immediately on dashboard root page load
-        if (onRoot) {
+        // Arm immediately on dashboard root page load ONLY at the initial entry point
+        if (onRoot && isInitialEntry) {
             armDashboardGuard();
         }
 
-        // Re-arm when shown via browser navigation (including bfcache restore)
+        // Re-arm when shown via browser navigation ONLY if at initial entry point
         window.addEventListener('pageshow', function () {
             if (isDashboardRoot(window.location.pathname)) {
-                armDashboardGuard();
+                let navDepth = 0;
+                try {
+                    navDepth = parseInt(sessionStorage.getItem('ps_nav_depth') || '0', 10);
+                } catch (e) {}
+                if (navDepth === 0) {
+                    armDashboardGuard();
+                }
             }
         });
 
@@ -601,6 +630,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 const currentPath = window.location.pathname;
                 const currentlyOnRoot = isDashboardRoot(currentPath);
 
+                // Update session navigation depth on backward navigation
+                try {
+                    let navDepth = parseInt(sessionStorage.getItem('ps_nav_depth') || '0', 10);
+                    if (navDepth > 0) {
+                        sessionStorage.setItem('ps_nav_depth', String(navDepth - 1));
+                    }
+                } catch (err) {}
+
                 // Case 1: Active in-page tab back navigation
                 if (e.state && e.state.isTab && e.state.tabTarget) {
                     const tabBtn = document.querySelector(`[data-bs-target="${e.state.tabTarget}"], [href="${e.state.tabTarget}"]`);
@@ -629,15 +666,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
-                // Case 3: On Subpages (e.g. /vendor/profile/, /vendor/sourcing/, /vendor/bids/, etc.)
+                // Case 3: On Subpages (e.g. /vendor/profile/, /vendor/sourcing/, /vendor/bids/, /superadmin/users/, etc.)
                 // Normal browser navigation smoothly steps back between subpages, query tabs, or sections.
                 // The signout modal NEVER appears under ANY circumstance on subpages!
                 if (!currentlyOnRoot) {
                     return;
                 }
 
-                // Case 4: Arrived at / on Dashboard Root
-                // Check if user came back from a subpage:
+                // Case 4: Arrived at / on Dashboard Root from internal navigation
                 let cameFromSubpage = false;
                 try {
                     if (sessionStorage.getItem('ps_visited_subpage') === 'true') {
@@ -646,26 +682,37 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 } catch (err) {}
 
-                // If user just backed into the root from a subpage, or landed on isPsGuard:
-                // DO NOT show modal! Re-arm the guard and allow them to peacefully view their dashboard!
-                if (cameFromSubpage || (e.state && e.state.isPsGuard)) {
-                    armDashboardGuard();
+                let curNavDepth = 0;
+                try {
+                    curNavDepth = parseInt(sessionStorage.getItem('ps_nav_depth') || '0', 10);
+                } catch (err) {}
+
+                // If user just backed into the root from a subpage, or landed on isPsGuard,
+                // or is navigating backwards through previously visited modules:
+                // DO NOT show modal! Allow them to seamlessly return through previous pages in history.
+                if (cameFromSubpage || (e.state && e.state.isPsGuard) || curNavDepth > 0) {
                     return;
                 }
 
-                // Case 5: User is AT the Dashboard Root barrier attempting to exit backwards
-                // (e.state.isPsBase is true, or popped past guard barrier)
+                // Case 5: User is AT the Initial Entry Point barrier attempting to exit backwards
                 if (e.state && e.state.isPsBase) {
+                    // Prevent repeated triggers: only show if modal is not already showing
+                    const modalEl = document.getElementById('signout-confirm-modal');
+                    const isAlreadyOpen = modalEl && (modalEl.classList.contains('show') || modalEl.style.display === 'block');
+                    if (isAlreadyOpen) {
+                        return;
+                    }
+
                     // Re-push barrier state immediately so browser stays locked on dashboard root
                     try {
                         window.history.pushState(
-                            { ps_portal: true, isPsGuard: true, rootPath: currentPath },
+                            { ps_portal: true, isPsGuard: true, isInitialEntry: true, rootPath: currentPath },
                             document.title,
                             window.location.href
                         );
                     } catch (err) {}
 
-                    // Trigger the sign-out confirmation toggle modal
+                    // Trigger the sign-out confirmation toggle modal ONLY at initial entry point
                     showSignoutModal();
                     return;
                 }
