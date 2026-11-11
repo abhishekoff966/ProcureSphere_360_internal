@@ -20,6 +20,9 @@ def scope_invoices_queryset(qs, user):
         user.role.code if hasattr(user, "role") and user.role else None
     )
 
+    if role_code in [Role.REQUESTER, Role.DEPT_APPROVER, Role.LEGAL_MGR]:
+        return qs.none()
+
     if getattr(user, "is_vendor", False) or role_code == Role.VENDOR_USER:
         vendor_id = getattr(user, "vendor_id", None)
         return qs.filter(vendor_id=vendor_id) if vendor_id else qs.none()

@@ -28,7 +28,8 @@ def _validate_and_create_receipt_line(
     received_by: User,
     item: dict,
 ) -> None:
-    po_line_id = item.get("po_line_id") or (item["po_line"].id if "po_line" in item else None)
+    po_line_val = item.get("po_line_id") or item.get("po_line")
+    po_line_id = po_line_val.id if hasattr(po_line_val, "id") else po_line_val
     if not po_line_id:
         raise ValidationError("Invalid receipt line: missing PO line reference.")
 
@@ -81,7 +82,35 @@ def _validate_and_create_receipt_line(
             f"Quantity accepted ({qty_accepted}) cannot exceed quantity received ({qty_received}) for '{po_line.item_description}'."
         )
 
-    qty_rejected = qty_received - qty_accepted
+    raw_rejected = item.get("quantity_rejected") or item.get("rejected")
+    if raw_rejected is not None and str(raw_rejected).strip() != "":
+        try:
+            qty_rejected = Decimal(str(raw_rejected))
+        except Exception:
+            raise ValidationError(
+                f"Quantity rejected for '{po_line.item_description}' must be a valid numeric value."
+            )
+        if qty_rejected < Decimal("0.00"):
+            raise ValidationError(
+                f"Quantity rejected for '{po_line.item_description}' cannot be negative."
+            )
+        if qty_accepted + qty_rejected > qty_received:
+            raise ValidationError(
+                f"Accepted quantity ({qty_accepted}) plus rejected quantity ({qty_rejected}) cannot exceed received quantity ({qty_received}) for '{po_line.item_description}'."
+            )
+    else:
+        qty_rejected = qty_received - qty_accepted
+
+    rej_reason = (
+        item.get("rejection_reason")
+        or item.get("reason")
+        or item.get("notes")
+        or ""
+    ).strip()
+    if qty_rejected > Decimal("0.00") and not rej_reason:
+        raise ValidationError(
+            f"Rejection reason is required when rejected quantity is greater than 0 for '{po_line.item_description}'."
+        )
 
     line = ReceiptLine.objects.create(
         receipt=receipt,
@@ -89,7 +118,7 @@ def _validate_and_create_receipt_line(
         quantity_received=qty_received,
         quantity_accepted=qty_accepted,
         quantity_rejected=qty_rejected,
-        notes=item.get("notes", ""),
+        notes=rej_reason or item.get("notes", ""),
     )
 
     if "inspection_notes" in item:
@@ -104,7 +133,7 @@ def _validate_and_create_receipt_line(
         RejectionRecord.objects.create(
             receipt_line=line,
             rejected_quantity=qty_rejected,
-            rejection_reason=item.get("rejection_reason", "Quality non-conformance"),
+            rejection_reason=rej_reason or "Quality non-conformance",
         )
 
     po_line.quantity_received = current_received + qty_accepted
@@ -312,7 +341,8 @@ def vendor_dispatch_delivery_service(
 
     created_any_line = False
     for item in delivery_items:
-        po_line_id = item.get("po_line_id") or (item["po_line"].id if "po_line" in item else None)
+        po_line_val = item.get("po_line_id") or item.get("po_line")
+        po_line_id = po_line_val.id if hasattr(po_line_val, "id") else po_line_val
         if not po_line_id:
             continue
 

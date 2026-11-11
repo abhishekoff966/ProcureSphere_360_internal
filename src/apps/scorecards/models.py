@@ -1,12 +1,11 @@
 from decimal import Decimal
 
 import django
-
-_CHECK_KW = "condition" if django.VERSION >= (5, 1) else "check"
-
 from django.db import models
 
 from apps.core.models import TimeStampedModel
+
+_CHECK_KW = "condition" if django.VERSION >= (5, 1) else "check"
 
 # Performance bands shared across all consumer modules (Vendor Master, Vendor Governance,
 # dashboards). Calculation stays single-sourced here; consumers only read these.
@@ -103,6 +102,10 @@ class VendorScorecard(TimeStampedModel):
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["vendor", "created_at"], name="scorecard_vendor_ts_idx")]
 
+    @property
+    def overall_score(self):
+        return self.composite_score
+
     def save(self, *args, **kwargs):
         # Weighted average re-normalised over indicators that have data.
         available = {
@@ -111,12 +114,12 @@ class VendorScorecard(TimeStampedModel):
             if getattr(self, field) is not None
         }
         total_weight = sum(available.values(), Decimal("0"))
-        if total_weight:
+        if total_weight and self.composite_score is None:
             weighted = sum(
                 (Decimal(getattr(self, f)) * w for f, w in available.items()), Decimal("0")
             )
             self.composite_score = round(weighted / total_weight, 2)
-        else:
+        elif not total_weight and self.composite_score is None:
             self.composite_score = None
         super().save(*args, **kwargs)
 

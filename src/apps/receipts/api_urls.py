@@ -61,11 +61,16 @@ class GoodsReceiptSerializer(serializers.ModelSerializer):
     received_by = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(), default=serializers.CurrentUserDefault()
     )
+    grn_number = serializers.CharField(required=False, allow_blank=True)
+    received_date = serializers.DateTimeField(required=False)
 
     class Meta:
         model = GoodsReceipt
         fields = "__all__"
-        read_only_fields = ["grn_number"]
+        extra_kwargs = {
+            "grn_number": {"required": False},
+            "received_date": {"required": False},
+        }
 
     def validate(self, attrs):
         if not self.instance:
@@ -147,6 +152,26 @@ class GoodsReceiptSerializer(serializers.ModelSerializer):
                         raise serializers.ValidationError({"lines": [f"Quantity accepted cannot be negative for line {idx + 1}."]})
                     if qty_acc > qty_recv:
                         raise serializers.ValidationError({"lines": [f"Quantity accepted ({qty_acc}) cannot exceed quantity received ({qty_recv}) for line {idx + 1}."]})
+                else:
+                    qty_acc = qty_recv
+
+                raw_rej = item.get("quantity_rejected") or item.get("rejected")
+                if raw_rej is not None and str(raw_rej).strip() != "":
+                    try:
+                        qty_rej = Decimal(str(raw_rej))
+                    except (TypeError, ValueError, ArithmeticError, Exception):
+                        raise serializers.ValidationError({"lines": [f"Quantity rejected must be a valid numeric value for line {idx + 1}."]})
+                    if qty_rej < Decimal("0.00"):
+                        raise serializers.ValidationError({"lines": [f"Quantity rejected cannot be negative for line {idx + 1}."]})
+                else:
+                    qty_rej = qty_recv - qty_acc
+
+                if qty_acc + qty_rej > qty_recv:
+                    raise serializers.ValidationError({"lines": [f"Accepted quantity ({qty_acc}) plus rejected quantity ({qty_rej}) cannot exceed received quantity ({qty_recv}) for line {idx + 1}."]})
+
+                rej_reason = (item.get("rejection_reason") or item.get("reason") or item.get("notes") or "").strip()
+                if qty_rej > Decimal("0.00") and not rej_reason:
+                    raise serializers.ValidationError({"lines": [f"Rejection reason is required when rejected quantity is greater than 0 for line {idx + 1}."]})
 
         return attrs
 
@@ -248,12 +273,25 @@ class GoodsReceiptViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = self.queryset
 
+        if not user or not user.is_authenticated:
+            return qs.none()
+
         # Vendor scoping: only receipts for vendor's own purchase orders
         if getattr(user, "is_vendor", False) or getattr(user, "vendor_id", None):
             if getattr(user, "vendor_id", None):
-                qs = qs.filter(po__vendor_id=user.vendor_id)
-            else:
-                return qs.none()
+                return qs.filter(po__vendor_id=user.vendor_id)
+            return qs.none()
+
+        # Multi-tenant organization scoping for internal users
+        if not user.is_superuser:
+            org = getattr(user, "effective_organization", None) or getattr(user, "organization", None)
+            if org:
+                from django.db.models import Q
+                qs = qs.filter(
+                    Q(po__cost_center__department__organization=org)
+                    | Q(po__requisition__department__organization=org)
+                    | Q(received_by__organization=org)
+                )
 
         po_id = self.request.query_params.get("po")
         if po_id:

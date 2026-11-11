@@ -131,6 +131,26 @@ def _can_view_contract(user, contract):
     return False
 
 
+def _resolve_contract_layout(user, role_code):
+    if getattr(user, "is_superuser", False) or role_code in [
+        Role.SUPER_ADMIN,
+        "SUPER_ADMIN",
+        "ADMIN",
+    ]:
+        return "layouts/superadmin_base.html"
+    if role_code in [Role.PROC_MGR, "PROC_MGR"]:
+        return "manager/base_manager.html"
+    if role_code in [Role.AUDITOR, "AUDITOR"]:
+        return "audit/base_auditor.html"
+    if role_code in [Role.PROC_EXEC, "PROC_EXEC"]:
+        return "layouts/proc_exec_base.html"
+    if role_code in [Role.FINANCE_AP, "FINANCE_AP"]:
+        return "layouts/finance_base.html"
+    if role_code in [Role.DEPT_APPROVER, "DEPT_APPROVER"]:
+        return "layouts/approver_base.html"
+    return "layouts/legal_base.html"
+
+
 @login_required(login_url="/login/")
 def list_view(request):
     """
@@ -157,6 +177,7 @@ def list_view(request):
     query_params = request.GET.copy()
     query_params.pop("page", None)
 
+    role_code = _get_user_role(request.user)
     context = {
         "items": page_obj.object_list,
         "page_obj": page_obj,
@@ -165,6 +186,8 @@ def list_view(request):
         "search_query": search_query,
         "querystring": query_params.urlencode(),
         "statuses": Contract.STATUS_CHOICES,
+        "base_layout": _resolve_contract_layout(request.user, role_code),
+        "role_code": role_code,
     }
     return render(request, "pages/contracts/list.html", context)
 
@@ -217,7 +240,12 @@ def create_view(request):
     else:
         form = ContractCreateForm()
 
-    return render(request, "pages/contracts/create.html", {"form": form})
+    base_layout = _resolve_contract_layout(request.user, role_code)
+    return render(
+        request,
+        "pages/contracts/create.html",
+        {"form": form, "base_layout": base_layout, "role_code": role_code},
+    )
 
 
 @login_required(login_url="/login/")
@@ -285,6 +313,8 @@ def detail_view(request, contract_id):
         "can_manage_contracts": can_manage_contracts,
         "can_manage_sla": can_manage_sla,
         "can_submit_legal": can_submit_legal,
+        "base_layout": _resolve_contract_layout(request.user, role_code),
+        "role_code": role_code,
     }
     return render(request, "pages/contracts/detail.html", context)
 

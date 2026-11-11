@@ -371,14 +371,20 @@ def validate_pr_attachment(file):
         except (AttributeError, OSError):
             initial_pos = None
 
+    if hasattr(file, "seek"):
+        try:
+            file.seek(0)
+        except (AttributeError, OSError):
+            pass
+
     try:
         header = file.read(8)
     except Exception:
         raise ValidationError(_("Invalid file format."))
     finally:
-        if hasattr(file, "seek") and initial_pos is not None:
+        if hasattr(file, "seek"):
             try:
-                file.seek(initial_pos)
+                file.seek(initial_pos if initial_pos is not None else 0)
             except (AttributeError, OSError):
                 pass
 

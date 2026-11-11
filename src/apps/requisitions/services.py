@@ -319,6 +319,16 @@ def approve_purchase_requisition_service(
         )
         if not (approver.is_superuser or approver_role_code in [Role.PROC_MGR, Role.SUPER_ADMIN]):
             raise ValidationError("Permission Denied: Only Procurement Manager can approve a budget overrun exception.")
+
+        # Check if cost center budget allows overspend
+        from apps.budgets.models import Budget
+        budget = Budget.objects.filter(cost_center=requisition.cost_center).first()
+        if budget and not budget.allow_overspend and requisition.total_amount > budget.available_amount:
+            raise ValidationError(
+                f"Budget overspend is not permitted for Cost Center '{requisition.cost_center.code}'. "
+                f"allow_overspend is disabled and requested amount (${requisition.total_amount:,.2f}) exceeds available budget (${budget.available_amount:,.2f})."
+            )
+
         # Procurement Manager is approving an overrun explicitly, force the reservation
         check_and_reserve_budget_service(
             requisition=requisition, requested_by_user=approver, force_overrun=True
@@ -377,6 +387,11 @@ def approve_purchase_requisition_service(
     ).order_by("created_at")
     current_step_index = existing_approvals.count()
 
+    if existing_approvals.filter(actor=approver).exists() and not approver.is_superuser:
+        raise ValidationError(
+            "Segregation of duties violation: You have already approved a step in this approval workflow."
+        )
+
     current_policy_step = None
     if chain:
         if current_step_index >= len(chain):
@@ -398,11 +413,11 @@ def approve_purchase_requisition_service(
         else:
             approver_role_code = getattr(approver.role, "code", None)
             if (getattr(approver, "role_id", None) == required_role.id) or (approver_role_code == required_role.code):
-                if required_role.code == Role.DEPT_APPROVER and requisition.department and approver.department:
-                    if approver.department == requisition.department or (requisition.cost_center and approver == requisition.cost_center.manager):
-                        is_authorized = True
-                    else:
+                if required_role.code == Role.DEPT_APPROVER:
+                    req_dept = requisition.department or (requisition.cost_center.department if requisition.cost_center else None)
+                    if (approver.department_id and req_dept and approver.department_id != req_dept.id) and not (requisition.cost_center and approver.id == requisition.cost_center.manager_id):
                         raise ValidationError("Department Approver can only approve requisitions for their own department.")
+                    is_authorized = True
                 else:
                     is_authorized = True
 

@@ -10,6 +10,7 @@ from apps.budgets.services import convert_commitment_to_actual_service
 from apps.orders.models import PurchaseOrder
 from apps.receipts.models import ReceiptLine
 from apps.vendors.models import Vendor
+
 from .models import InvoiceLine, MatchException, PaymentStatus, SupplierInvoice
 
 
@@ -47,9 +48,19 @@ def create_supplier_invoice_service(
             f"Purchase Order {po.po_number} does not belong to vendor '{vendor.legal_name}'."
         )
 
-    if po.status in [PurchaseOrder.STATUS_CANCELLED]:
+    if vendor.status != "ACTIVE":
         raise ValidationError(
-            f"Cannot submit invoice against Purchase Order {po.po_number} in '{po.status}' status."
+            f"Cannot create invoice: Vendor '{vendor.legal_name}' is in status '{vendor.status}'. Vendor must be ACTIVE."
+        )
+
+    if po.status not in (
+        PurchaseOrder.STATUS_ISSUED,
+        PurchaseOrder.STATUS_ACKNOWLEDGED,
+        PurchaseOrder.STATUS_PARTIAL_RECEIPT,
+        PurchaseOrder.STATUS_COMPLETED,
+    ):
+        raise ValidationError(
+            f"Cannot create invoice against Purchase Order {po.po_number} in '{po.status}' status. Invoices require an issued purchase order."
         )
 
     if require_grn:
@@ -123,21 +134,25 @@ def create_supplier_invoice_service(
                 f"Negative value ({unit_price}) is not permitted."
             )
 
-        if enforce_billable_limits and po_line:
+        if po_line:
             accepted_qty_agg = ReceiptLine.objects.filter(po_line=po_line).aggregate(
                 total_accepted=models.Sum("quantity_accepted")
-            )["total_accepted"] or Decimal("0.00")
+            )["total_accepted"]
             prior_invoiced_qty = (
                 InvoiceLine.objects.filter(po_line=po_line)
                 .exclude(invoice__status=SupplierInvoice.STATUS_REJECTED)
+                .exclude(invoice=invoice)
                 .aggregate(total_prior=models.Sum("quantity"))["total_prior"]
                 or Decimal("0.00")
             )
-            remaining_billable_qty = max(Decimal("0.00"), accepted_qty_agg - prior_invoiced_qty)
-            if qty > remaining_billable_qty:
+            if accepted_qty_agg is not None and accepted_qty_agg > Decimal("0.00"):
+                if prior_invoiced_qty + qty > accepted_qty_agg:
+                    raise ValidationError(
+                        f"Cumulative invoiced quantity ({prior_invoiced_qty + qty}) for '{item_desc}' would exceed accepted receipt quantity ({accepted_qty_agg})."
+                    )
+            elif po_line.quantity and (prior_invoiced_qty + qty > po_line.quantity):
                 raise ValidationError(
-                    f"Over-invoicing prevented: Cannot bill quantity {qty} for '{item_desc}'. "
-                    f"Only {remaining_billable_qty} accepted units remain eligible to be billed."
+                    f"Cumulative invoiced quantity ({prior_invoiced_qty + qty}) for '{item_desc}' would exceed Purchase Order line quantity ({po_line.quantity})."
                 )
 
         line = InvoiceLine.objects.create(
@@ -151,6 +166,18 @@ def create_supplier_invoice_service(
 
     tax = subtotal * tax_rate
     total = subtotal + tax
+
+    prior_invoiced_total = (
+        SupplierInvoice.objects.filter(po=po)
+        .exclude(pk=invoice.pk)
+        .exclude(status=SupplierInvoice.STATUS_REJECTED)
+        .aggregate(total=models.Sum("total_amount"))["total"]
+        or Decimal("0.00")
+    )
+    if prior_invoiced_total + total > po.total_amount:
+        raise ValidationError(
+            f"Cumulative invoiced amount (${prior_invoiced_total + total:,.2f}) would exceed Purchase Order total (${po.total_amount:,.2f})."
+        )
 
     invoice.subtotal = subtotal
     invoice.tax_amount = tax
@@ -173,7 +200,7 @@ def create_supplier_invoice_service(
         },
     )
 
-    from apps.accounts.models import Role, User
+    from apps.accounts.models import Role
     from apps.notifications.models import Notification
 
     # 1. Notify Finance & AP
@@ -346,7 +373,7 @@ def run_3_way_match_service(
             exceptions.append(exc)
 
     # 3. Check for Total Amount discrepancy
-    calc_subtotal = sum(l.line_total for l in invoice.lines.all())
+    calc_subtotal = sum(line.line_total for line in invoice.lines.all())
     expected_total = calc_subtotal + invoice.tax_amount
     if abs(invoice.total_amount - expected_total) > Decimal("0.01"):
         exc = MatchException.objects.create(
@@ -392,7 +419,7 @@ def run_3_way_match_service(
                 target_url=f"/invoices/{invoice.id}/",
             )
     else:
-        invoice.status = SupplierInvoice.STATUS_APPROVAL
+        invoice.status = SupplierInvoice.STATUS_READY_FOR_PAYMENT
 
     invoice.save(update_fields=["status", "updated_at"])
 
@@ -552,7 +579,6 @@ def mark_invoice_paid_service(
     )
 
     # Convert spend ledger commitment -> actual
-    from apps.budgets.services import convert_commitment_to_actual_service
     convert_commitment_to_actual_service(po=invoice.po, invoice=invoice, user=user)
 
     AuditLog.objects.create(
@@ -635,7 +661,6 @@ def approve_supplier_invoice_service(
     )
 
     from apps.notifications.models import Notification
-    from apps.accounts.models import User
     vendor_users = User.objects.filter(vendor=invoice.vendor, is_active=True)
     for vu in vendor_users:
         Notification.objects.create(
@@ -721,7 +746,6 @@ def reject_supplier_invoice_service(
     )
 
     from apps.notifications.models import Notification
-    from apps.accounts.models import User
     vendor_users = User.objects.filter(vendor=invoice.vendor, is_active=True)
     for vu in vendor_users:
         Notification.objects.create(
@@ -791,7 +815,6 @@ def request_invoice_correction_service(
     )
 
     from apps.notifications.models import Notification
-    from apps.accounts.models import User
     vendor_users = User.objects.filter(vendor=invoice.vendor, is_active=True)
     for vu in vendor_users:
         Notification.objects.create(
