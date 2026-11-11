@@ -468,16 +468,22 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
         role_code = getattr(user, "role_code", None) or (
             user.role.code if hasattr(user, "role") and user.role else None
         )
-        if not user.is_superuser and role_code not in [
-            Role.DEPT_APPROVER,
-            Role.PROC_MGR,
-            Role.FINANCE_AP,
-            Role.SUPER_ADMIN,
-        ]:
-            raise permissions.exceptions.PermissionDenied(
-                "You do not have permission to reject Purchase Requisitions."
-            )
-        comments = (request.data.get("comments") or "").strip()
+        if pr.status in [PurchaseRequisition.STATUS_SUBMITTED, PurchaseRequisition.STATUS_MANAGER_REVIEW]:
+            if not user.is_superuser and role_code not in [Role.DEPT_APPROVER, Role.PROC_MGR, Role.SUPER_ADMIN]:
+                raise permissions.exceptions.PermissionDenied(
+                    "Only Department Approvers, Procurement Managers, or Super Admins can reject requisitions in Manager Review."
+                )
+        elif pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW:
+            if not user.is_superuser and role_code not in [Role.FINANCE_AP, Role.PROC_MGR, Role.SUPER_ADMIN]:
+                raise permissions.exceptions.PermissionDenied(
+                    "Only Finance/AP or Procurement Managers can reject requisitions in Budget Review."
+                )
+        else:
+            if not user.is_superuser and role_code not in [Role.DEPT_APPROVER, Role.PROC_MGR, Role.SUPER_ADMIN]:
+                raise permissions.exceptions.PermissionDenied(
+                    "You do not have permission to reject Purchase Requisitions."
+                )
+        comments = (request.data.get("comments") or request.data.get("reason") or "").strip()
         if not comments:
             raise serializers.ValidationError(
                 {"comments": "Rejection comments/justification are mandatory."}
@@ -504,6 +510,7 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
             PurchaseRequisition.STATUS_PO_ISSUED,
             PurchaseRequisition.STATUS_CANCELLED,
             PurchaseRequisition.STATUS_SOURCING,
+            PurchaseRequisition.STATUS_REJECTED,
         ]:
             raise serializers.ValidationError(
                 {"status": f"Cannot cancel requisition in '{pr.status}' status."}

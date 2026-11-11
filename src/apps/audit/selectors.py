@@ -561,7 +561,7 @@ def get_vendor_compliance_audit(
         perf_score = (
             scorecard.composite_score
             if scorecard and scorecard.composite_score is not None
-            else (100 if v.status == Vendor.STATUS_ACTIVE else 100)
+            else (100 if v.status == Vendor.STATUS_ACTIVE else 0)
         )
 
         items.append(

@@ -181,17 +181,13 @@ def create_view(request):
     allowed_roles = [
         Role.SUPER_ADMIN,
         Role.LEGAL_MGR,
-        Role.PROC_MGR,
-        Role.PROC_EXEC,
         "SUPER_ADMIN",
         "LEGAL_MGR",
-        "PROC_MGR",
-        "PROC_EXEC",
     ]
     if not (request.user.is_superuser or role_code in allowed_roles):
         messages.error(
             request,
-            "Permission Denied: Contract drafting is restricted to Legal and Procurement Managers.",
+            "Permission Denied: Contract drafting is restricted to Legal Managers and Super Admins.",
         )
         return redirect("contracts_list")
 

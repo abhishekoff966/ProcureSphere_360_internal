@@ -50,6 +50,18 @@ from .services import (
 logger = logging.getLogger(__name__)
 
 
+def _clean_error_message(exc):
+    if hasattr(exc, "messages") and exc.messages:
+        return exc.messages[0]
+    if hasattr(exc, "message_dict") and exc.message_dict:
+        first_val = next(iter(exc.message_dict.values()))
+        return first_val[0] if isinstance(first_val, list) and first_val else str(first_val)
+    msg = str(exc)
+    if (msg.startswith("['") and msg.endswith("']")) or (msg.startswith('["') and msg.endswith('"]')):
+        return msg[2:-2]
+    return msg
+
+
 class ContractViewSet(viewsets.ModelViewSet):
     serializer_class = ContractSerializer
     permission_classes = [IsAuthenticated, CanManageContract, CanViewContract]
@@ -119,7 +131,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_TRANSITION", "message": str(e)}},
+                {"error": {"code": "INVALID_TRANSITION", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -139,7 +151,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_TRANSITION", "message": str(e)}},
+                {"error": {"code": "INVALID_TRANSITION", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -164,7 +176,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_TRANSITION", "message": str(e)}},
+                {"error": {"code": "INVALID_TRANSITION", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -182,7 +194,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_TRANSITION", "message": str(e)}},
+                {"error": {"code": "INVALID_TRANSITION", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -232,7 +244,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(ContractVersionSerializer(version).data, status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_AMENDMENT", "message": str(e)}},
+                {"error": {"code": "INVALID_AMENDMENT", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -282,7 +294,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             )
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_MILESTONE", "message": str(e)}},
+                {"error": {"code": "INVALID_MILESTONE", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -330,7 +342,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             )
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_OBLIGATION", "message": str(e)}},
+                {"error": {"code": "INVALID_OBLIGATION", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -396,7 +408,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_RENEWAL", "message": str(e)}},
+                {"error": {"code": "INVALID_RENEWAL", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -421,7 +433,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_TERMINATION", "message": str(e)}},
+                {"error": {"code": "INVALID_TERMINATION", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -449,7 +461,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             )
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_DOCUMENT", "message": str(e)}},
+                {"error": {"code": "INVALID_DOCUMENT", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
