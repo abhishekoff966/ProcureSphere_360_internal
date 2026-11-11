@@ -1,3 +1,4 @@
+from django.views.decorators.http import require_GET
 from django.contrib import admin
 from django.http import JsonResponse
 from django.shortcuts import redirect
@@ -23,6 +24,7 @@ from apps.core.views import (
 from .healthchecks import health, readyz
 
 
+@require_GET
 def api_schema_dispatch_view(request):
     """
     Serves Swagger UI (HTML) by default on /api/v1/schema/ and OpenAPI specification
@@ -35,6 +37,7 @@ def api_schema_dispatch_view(request):
     return SpectacularSwaggerView.as_view(url_name="schema")(request)
 
 
+@require_GET
 def admin_dashboard_dispatch_view(request):
     """
     Intelligent dispatch for /admin/dashboard/:
