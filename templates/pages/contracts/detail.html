@@ -1,13 +1,19 @@
-{% extends 'layouts/legal_base.html' %}
+{% extends base_layout|default:'layouts/legal_base.html' %}
 
 {% block title %}{{ contract.contract_number }} - Contract SLA Workspace{% endblock %}
+
+{% block manager_breadcrumbs %}
+<li class="breadcrumb-item"><a href="/manager/" class="text-decoration-none text-muted">Manager</a></li>
+<li class="breadcrumb-item"><a href="/manager/notifications/" class="text-decoration-none text-muted">Notifications</a></li>
+<li class="breadcrumb-item active text-dark fw-semibold" aria-current="page">{{ contract.contract_number }}</li>
+{% endblock manager_breadcrumbs %}
 
 {% block content %}
 <!-- Back link & Top Bar -->
 <div class="row mb-3">
     <div class="col-12 d-flex align-items-center justify-content-between">
-        <a href="{% url 'contracts_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill">
-            <i class="fa-solid fa-arrow-left me-1"></i> Back to Contract Register
+        <a href="{% if role_code == 'PROC_MGR' %}/manager/notifications/{% else %}{% url 'contracts_list' %}{% endif %}" class="btn btn-outline-secondary btn-sm rounded-pill">
+            <i class="fa-solid fa-arrow-left me-1"></i> {% if role_code == 'PROC_MGR' %}Back to Notifications{% else %}Back to Contract Register{% endif %}
         </a>
         <div class="d-flex gap-2">
             {% if contract.status == 'DRAFT' and can_submit_legal %}
@@ -144,7 +150,7 @@
                             </tr>
                             <tr>
                                 <th class="text-muted py-2">Vendor Name</th>
-                                <td class="fw-bold py-2">{{ contract.vendor.legal_name }} ({{ contract.vendor.vendor_code }})</td>
+                                <td class="fw-bold py-2">{{ contract.vendor.legal_name }}{% if contract.vendor.vendor_number %} ({{ contract.vendor.vendor_number }}){% elif contract.vendor.vendor_code %} ({{ contract.vendor.vendor_code }}){% endif %}</td>
                             </tr>
                             <tr>
                                 <th class="text-muted py-2">Contract Value</th>

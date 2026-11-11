@@ -499,7 +499,7 @@ CELERY_BEAT_SCHEDULE = {
 
     "scan-contract-milestones-and-expirations": {
 
-        "task": "contracts.tasks.scan_contract_expirations_and_milestones",
+        "task": "apps.contracts.tasks.scan_contract_expirations_and_milestones_task",
 
         "schedule": 3600.0,  # every hour
 
@@ -507,7 +507,7 @@ CELERY_BEAT_SCHEDULE = {
 
     "scan-contract-expirations-and-milestones": {
 
-        "task": "contracts.tasks.scan_contract_expirations_and_milestones",
+        "task": "apps.contracts.tasks.scan_contract_expirations_and_milestones_task",
 
         "schedule": 86400.0,  # daily scan for upcoming renewal/milestones
 
@@ -515,7 +515,7 @@ CELERY_BEAT_SCHEDULE = {
 
     "scan-overdue-approvals-and-escalate": {
 
-        "task": "notifications.tasks.scan_overdue_approvals_and_escalate",
+        "task": "apps.notifications.tasks.scan_overdue_approvals_and_escalate",
 
         "schedule": 3600.0,  # hourly scan for approvals exceeding SLA turnaround
 

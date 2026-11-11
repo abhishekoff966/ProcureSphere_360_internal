@@ -22,6 +22,19 @@ from apps.core.views import (
 
 from .healthchecks import health, readyz
 
+
+def api_schema_dispatch_view(request):
+    """
+    Serves Swagger UI (HTML) by default on /api/v1/schema/ and OpenAPI specification
+    when ?format=json (or Accept: application/json) is requested (TC_API_009).
+    """
+    format_param = request.GET.get("format", "").lower()
+    accept_header = request.META.get("HTTP_ACCEPT", "").lower()
+    if format_param in ["json", "yaml"] or ("application/json" in accept_header and "text/html" not in accept_header):
+        return SpectacularAPIView.as_view()(request)
+    return SpectacularSwaggerView.as_view(url_name="schema")(request)
+
+
 def admin_dashboard_dispatch_view(request):
     """
     Intelligent dispatch for /admin/dashboard/:
@@ -112,6 +125,10 @@ urlpatterns = [
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs", SpectacularSwaggerView.as_view(url_name="schema")),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/v1/schema", api_schema_dispatch_view),
+    path("api/v1/schema/", api_schema_dispatch_view, name="v1-schema"),
+    path("api/v1/docs", SpectacularSwaggerView.as_view(url_name="schema")),
+    path("api/v1/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="v1-swagger-ui"),
 
     # Catch-all for unknown /api/ routes ensuring consistent JSON error response
     re_path(r"^api/.*$", custom_api_404_view, name="api_not_found"),
@@ -124,6 +141,9 @@ urlpatterns = [
     ),
     path("media/vendor_documents/<path:file_path>", protected_vendor_document_view, name="protected_vendor_document_alt"),
     re_path(r"^media/(?P<file_path>.*)$", protected_media_view, name="protected_media"),
+
+    # Catch-all fallback for non-existent routes (ensures branded 404 is rendered even in DEBUG mode)
+    re_path(r"^.*$", custom_404_view, name="custom_404_fallback"),
 ]
 
 # Custom HTTP Error Handlers

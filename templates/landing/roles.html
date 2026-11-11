@@ -1,0 +1,60 @@
+{% extends 'landing/base.html' %}
+{% load static %}
+
+{% block json_ld %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Enterprise Roles & Governance — ProcureSphere 360",
+  "description": "Enterprise role-based access control and approval chains in ProcureSphere 360.",
+  "url": "{{ site_url|default:'https://procuresphere.com' }}/roles/",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "ProcureSphere 360",
+    "url": "{{ site_url|default:'https://procuresphere.com' }}"
+  }
+}
+</script>
+{% endblock json_ld %}
+
+{% block content %}
+<div class="page-layout" style="padding-top:76px;">
+  <!-- Roles Hero -->
+  <section class="py-5 bg-dark text-white text-center">
+    <div class="container py-4">
+      <span class="badge bg-primary bg-opacity-25 text-primary border border-primary px-3 py-2 rounded-pill fw-semibold mb-3">
+        GOVERNANCE &amp; RBAC
+      </span>
+      <h1 class="display-5 fw-bold mb-3">Enterprise Roles &amp; Responsibilities</h1>
+      <p class="lead text-muted mx-auto" style="max-width: 720px;">
+        ProcureSphere 360 enforces rigorous role-based access control (RBAC), multi-level approval hierarchies,
+        and separation of duties across all 10 standard enterprise procurement roles.
+      </p>
+    </div>
+  </section>
+
+  <!-- Roles Grid -->
+  <section class="py-5 bg-light">
+    <div class="container py-3">
+      <div class="row g-4">
+        {% for r in roles %}
+        <div class="col-md-6 col-lg-4">
+          <div class="card h-100 shadow-sm border-0 rounded-4 p-4 hover-elevate transition-all">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <span class="badge bg-secondary bg-opacity-10 text-primary fw-bold px-3 py-1 rounded-pill" style="font-size: 0.75rem;">
+                {{ r.code }}
+              </span>
+              <i class="fa-solid fa-shield-halved text-primary opacity-50"></i>
+            </div>
+            <h3 class="h5 fw-bold text-dark mb-2">{{ r.title }}</h3>
+            <p class="text-muted small mb-0">{{ r.desc }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+

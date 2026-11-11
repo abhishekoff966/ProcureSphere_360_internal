@@ -1,9 +1,9 @@
 import uuid
-from decimal import Decimal
 from datetime import timedelta
+from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Prefetch, Q, Sum
 from django.utils import timezone
 
 from apps.accounts.models import Role
@@ -11,7 +11,7 @@ from apps.approvals.models import ApprovalAction
 from apps.audit.models import AuditLog
 from apps.contracts.models import Contract, ContractAlert, ContractObligation
 from apps.invoices.models import MatchException, SupplierInvoice
-from apps.orders.models import PurchaseOrder
+from apps.orders.models import POAmendment, PurchaseOrder
 from apps.requisitions.models import PurchaseRequisition
 from apps.sourcing.models import SourcingEvent, VendorBid
 from apps.vendors.models import Vendor, VendorDocument
@@ -68,6 +68,71 @@ def is_entity_authorized_for_org(target_model: str, target_object_id: str, organ
     return True
 
 
+_ORG_ENTITY_IDS_CACHE: Dict[str, Dict[str, List[str]]] = {}
+
+
+def clear_audit_selector_caches():
+    """Clears in-memory query scoping caches (useful during tests or data migrations)."""
+    _ORG_ENTITY_IDS_CACHE.clear()
+
+
+def get_organization_scoped_entity_ids(organization) -> Dict[str, List[str]]:
+    """
+    Retrieves and caches all authorized entity string IDs for an organization.
+    Caches results within process memory to avoid repeating 6 queries multiple times per request.
+    """
+    if organization is None:
+        return {}
+
+    org_id = str(getattr(organization, "id", organization))
+    if org_id in _ORG_ENTITY_IDS_CACHE:
+        return _ORG_ENTITY_IDS_CACHE[org_id]
+
+    def _to_str_ids(qs_values):
+        raw = [str(x) for x in qs_values]
+        return list(set(raw + [x.replace("-", "") for x in raw]))
+
+    pr_ids = _to_str_ids(
+        PurchaseRequisition.objects.filter(department__organization=organization).values_list("id", flat=True)
+    )
+    po_ids = _to_str_ids(
+        PurchaseOrder.objects.filter(
+            Q(cost_center__department__organization=organization)
+            | Q(requisition__department__organization=organization)
+            | Q(vendor__organization=organization)
+        ).values_list("id", flat=True)
+    )
+    vnd_ids = _to_str_ids(
+        Vendor.objects.filter(organization=organization).values_list("id", flat=True)
+    )
+    inv_ids = _to_str_ids(
+        SupplierInvoice.objects.filter(
+            Q(po__cost_center__department__organization=organization)
+            | Q(vendor__organization=organization)
+        ).values_list("id", flat=True)
+    )
+    con_ids = _to_str_ids(
+        Contract.objects.filter(vendor__organization=organization).values_list("id", flat=True)
+    )
+    se_ids = _to_str_ids(
+        SourcingEvent.objects.filter(requisition__department__organization=organization).values_list("id", flat=True)
+    )
+
+    bundle = {
+        "pr_ids": pr_ids,
+        "po_ids": po_ids,
+        "vnd_ids": vnd_ids,
+        "inv_ids": inv_ids,
+        "con_ids": con_ids,
+        "se_ids": se_ids,
+    }
+
+    if len(_ORG_ENTITY_IDS_CACHE) > 500:
+        _ORG_ENTITY_IDS_CACHE.clear()
+    _ORG_ENTITY_IDS_CACHE[org_id] = bundle
+    return bundle
+
+
 def get_scoped_audit_logs_queryset(base_qs=None, organization=None):
     """
     Applies multi-tenant organization isolation to AuditLog querysets.
@@ -75,38 +140,23 @@ def get_scoped_audit_logs_queryset(base_qs=None, organization=None):
     to their authorized business organization.
     """
     if base_qs is None:
-        base_qs = AuditLog.objects.select_related("actor").all()
+        base_qs = AuditLog.objects.select_related("actor", "actor__role").all()
+    else:
+        base_qs = base_qs.select_related("actor", "actor__role")
+
     if organization is None:
         return base_qs
 
     actor_in_org_q = Q(actor__organization=organization)
-
-    def _to_str_ids(qs_values):
-        raw = [str(x) for x in qs_values]
-        return list(set(raw + [x.replace("-", "") for x in raw]))
-
-    # Tenant entity IDs formatted as string UUIDs for CharField matching
-    pr_ids = _to_str_ids(PurchaseRequisition.objects.filter(department__organization=organization).values_list("id", flat=True))
-    po_ids = _to_str_ids(PurchaseOrder.objects.filter(
-        Q(cost_center__department__organization=organization)
-        | Q(requisition__department__organization=organization)
-        | Q(vendor__organization=organization)
-    ).values_list("id", flat=True))
-    vnd_ids = _to_str_ids(Vendor.objects.filter(organization=organization).values_list("id", flat=True))
-    inv_ids = _to_str_ids(SupplierInvoice.objects.filter(
-        Q(po__cost_center__department__organization=organization)
-        | Q(vendor__organization=organization)
-    ).values_list("id", flat=True))
-    con_ids = _to_str_ids(Contract.objects.filter(vendor__organization=organization).values_list("id", flat=True))
-    se_ids = _to_str_ids(SourcingEvent.objects.filter(requisition__department__organization=organization).values_list("id", flat=True))
+    ids_bundle = get_organization_scoped_entity_ids(organization)
 
     entity_matches_q = (
-        Q(target_model="PurchaseRequisition", target_object_id__in=pr_ids)
-        | Q(target_model="PurchaseOrder", target_object_id__in=po_ids)
-        | Q(target_model="Vendor", target_object_id__in=vnd_ids)
-        | Q(target_model="SupplierInvoice", target_object_id__in=inv_ids)
-        | Q(target_model="Contract", target_object_id__in=con_ids)
-        | Q(target_model="SourcingEvent", target_object_id__in=se_ids)
+        Q(target_model="PurchaseRequisition", target_object_id__in=ids_bundle["pr_ids"])
+        | Q(target_model="PurchaseOrder", target_object_id__in=ids_bundle["po_ids"])
+        | Q(target_model="Vendor", target_object_id__in=ids_bundle["vnd_ids"])
+        | Q(target_model="SupplierInvoice", target_object_id__in=ids_bundle["inv_ids"])
+        | Q(target_model="Contract", target_object_id__in=ids_bundle["con_ids"])
+        | Q(target_model="SourcingEvent", target_object_id__in=ids_bundle["se_ids"])
     )
 
     business_models = ["PurchaseRequisition", "PurchaseOrder", "Vendor", "SupplierInvoice", "Contract", "SourcingEvent"]
@@ -124,7 +174,7 @@ def get_audit_logs(
     start_date: Optional[Any] = None,
     end_date: Optional[Any] = None,
     request_id: Optional[str] = None,
-    limit: int = 100,
+    limit: int = 10,
     offset: int = 0,
     organization: Optional[Any] = None,
 ) -> Dict[str, Any]:
@@ -196,11 +246,19 @@ def get_audit_metrics(period_days: int = 30, organization: Optional[Any] = None)
     action_counts_raw = base_qs.values("action").annotate(count=Count("id")).order_by("-count")
     action_distribution = {item["action"]: item["count"] for item in action_counts_raw}
 
+    # All-time action distribution fallback to ensure charts/KPIs reflect real DB data
+    all_time_action_counts_raw = all_time_qs.values("action").annotate(count=Count("id")).order_by("-count")
+    all_time_action_dist = {item["action"]: item["count"] for item in all_time_action_counts_raw}
+    effective_action_dist = action_distribution if action_distribution else all_time_action_dist
+
     # Target model breakdown
     model_counts_raw = (
         base_qs.values("target_model").annotate(count=Count("id")).order_by("-count")[:10]
     )
     model_distribution = {item["target_model"]: item["count"] for item in model_counts_raw}
+    if not model_distribution:
+        all_time_model_raw = all_time_qs.values("target_model").annotate(count=Count("id")).order_by("-count")[:10]
+        model_distribution = {item["target_model"]: item["count"] for item in all_time_model_raw}
 
     # Top active actors
     top_actors_raw = (
@@ -212,14 +270,24 @@ def get_audit_metrics(period_days: int = 30, organization: Optional[Any] = None)
     top_actors = [
         {"email": item["actor__email"], "count": item["count"]} for item in top_actors_raw
     ]
+    if not top_actors:
+        all_time_actors_raw = (
+            all_time_qs.exclude(actor__isnull=True)
+            .values("actor__email")
+            .annotate(count=Count("id"))
+            .order_by("-count")[:8]
+        )
+        top_actors = [
+            {"email": item["actor__email"], "count": item["count"]} for item in all_time_actors_raw
+        ]
 
-    # Critical security & compliance event counts from action distribution
+    # Critical security & compliance event counts from real database actions
     critical_events = {
-        "approvals": action_distribution.get(AuditLog.ACTION_APPROVE, 0),
-        "rejections": action_distribution.get(AuditLog.ACTION_REJECT, 0),
-        "logins": action_distribution.get(AuditLog.ACTION_LOGIN, 0),
-        "exports": action_distribution.get(AuditLog.ACTION_EXPORT, 0),
-        "cancels": action_distribution.get(AuditLog.ACTION_CANCEL, 0),
+        "approvals": effective_action_dist.get(AuditLog.ACTION_APPROVE, 0),
+        "rejections": effective_action_dist.get(AuditLog.ACTION_REJECT, 0),
+        "logins": effective_action_dist.get(AuditLog.ACTION_LOGIN, 0),
+        "exports": effective_action_dist.get(AuditLog.ACTION_EXPORT, 0),
+        "cancels": effective_action_dist.get(AuditLog.ACTION_CANCEL, 0),
     }
 
     # Daily activity trend aggregated in a single database query using TruncDate
@@ -247,7 +315,7 @@ def get_audit_metrics(period_days: int = 30, organization: Optional[Any] = None)
         "period_days": period_days,
         "total_logs_period": total_logs_period,
         "total_logs_all_time": total_logs_all_time,
-        "action_distribution": action_distribution,
+        "action_distribution": effective_action_dist,
         "model_distribution": model_distribution,
         "top_actors": top_actors,
         "critical_events": critical_events,
@@ -273,8 +341,7 @@ def get_auditor_dashboard_data(period_days: int = 30, user=None, organization=No
         is_fulfilled=False, due_date__lt=timezone.now().date()
     )
     active_contract_alerts_q = ContractAlert.objects.filter(is_processed=False)
-    recent_logs_q = AuditLog.objects.select_related("actor")
-    recent_approvals_q = ApprovalAction.objects.select_related("actor", "policy_step")
+    recent_approvals_q = ApprovalAction.objects.select_related("actor", "actor__role", "policy_step")
     domain_counts = {}
     total_prs_q = PurchaseRequisition.objects.all()
     total_sourcing_q = SourcingEvent.objects.all()
@@ -373,6 +440,10 @@ def get_auditor_dashboard_data(period_days: int = 30, user=None, organization=No
 
     # 3. Domain totals for auditor context
     if scoped_org:
+        v_stats = Vendor.objects.filter(organization=scoped_org).aggregate(
+            total=Count("id"),
+            suspended=Count("id", filter=Q(status__in=["ON_HOLD", "SUSPENDED"])),
+        )
         domain_counts = {
             "total_prs": PurchaseRequisition.objects.filter(department__organization=scoped_org).count(),
             "total_sourcing_events": SourcingEvent.objects.filter(requisition__department__organization=scoped_org).count(),
@@ -387,18 +458,22 @@ def get_auditor_dashboard_data(period_days: int = 30, user=None, organization=No
                 | Q(vendor__organization=scoped_org)
             ).count(),
             "total_contracts": Contract.objects.filter(vendor__organization=scoped_org).count(),
-            "total_vendors": Vendor.objects.filter(organization=scoped_org).count(),
+            "total_vendors": v_stats["total"] or 0,
             "open_exceptions_count": MatchException.objects.filter(
                 Q(invoice__po__cost_center__department__organization=scoped_org)
                 | Q(invoice__vendor__organization=scoped_org),
                 status="OPEN"
             ).count(),
-            "suspended_vendors_count": Vendor.objects.filter(organization=scoped_org, status__in=["ON_HOLD", "SUSPENDED"]).count(),
+            "suspended_vendors_count": v_stats["suspended"] or 0,
             "overdue_obligations_count": ContractObligation.objects.filter(contract__vendor__organization=scoped_org, is_fulfilled=False, due_date__lt=timezone.now().date()).count(),
         }
     elif not is_auditor_or_admin:
         domain_counts = {k: 0 for k in ["total_prs", "total_sourcing_events", "total_bids", "total_pos", "total_invoices", "total_contracts", "total_vendors", "open_exceptions_count", "suspended_vendors_count", "overdue_obligations_count"]}
     else:
+        v_stats = Vendor.objects.aggregate(
+            total=Count("id"),
+            suspended=Count("id", filter=Q(status__in=["ON_HOLD", "SUSPENDED"])),
+        )
         domain_counts = {
             "total_prs": PurchaseRequisition.objects.count(),
             "total_sourcing_events": SourcingEvent.objects.count(),
@@ -406,9 +481,9 @@ def get_auditor_dashboard_data(period_days: int = 30, user=None, organization=No
             "total_pos": PurchaseOrder.objects.count(),
             "total_invoices": SupplierInvoice.objects.count(),
             "total_contracts": Contract.objects.count(),
-            "total_vendors": Vendor.objects.count(),
+            "total_vendors": v_stats["total"] or 0,
             "open_exceptions_count": MatchException.objects.filter(status="OPEN").count(),
-            "suspended_vendors_count": Vendor.objects.filter(status__in=["ON_HOLD", "SUSPENDED"]).count(),
+            "suspended_vendors_count": v_stats["suspended"] or 0,
             "overdue_obligations_count": ContractObligation.objects.filter(is_fulfilled=False, due_date__lt=timezone.now().date()).count(),
         }
 
@@ -490,7 +565,7 @@ def get_vendor_compliance_audit(
     Audits vendor onboarding, verification, KYC statuses, and risk profiles,
     strictly scoped to the authorized organization.
     """
-    qs = Vendor.objects.select_related("category").prefetch_related("documents", "contracts").all()
+    qs = Vendor.objects.select_related("category").prefetch_related("documents", "contracts", "scorecards").all()
 
     if organization:
         qs = qs.filter(organization=organization)
@@ -516,17 +591,21 @@ def get_vendor_compliance_audit(
     total_count = qs.count()
     vendors_page = list(qs.order_by("-created_at")[offset : offset + limit])
 
-    # Compute overall compliance statistics (dynamic over filtered set when filters active, otherwise full base)
+    # Compute overall compliance statistics in a single aggregated query
     base_v_qs = Vendor.objects.filter(organization=organization) if organization else Vendor.objects.all()
     summary_qs = qs if (search or status or kyc_status) else base_v_qs
-    total_vendors = summary_qs.count()
-    active_vendors = summary_qs.filter(status=Vendor.STATUS_ACTIVE).count()
-    suspended_vendors = summary_qs.filter(
-        status__in=[Vendor.STATUS_ON_HOLD, Vendor.STATUS_SUSPENDED]
-    ).count()
-    draft_or_pending = summary_qs.filter(
-        status__in=[Vendor.STATUS_DRAFT, Vendor.STATUS_SUBMITTED, Vendor.STATUS_KYC_REVIEW]
-    ).count()
+
+    v_stats = summary_qs.aggregate(
+        total=Count("id"),
+        active=Count("id", filter=Q(status=Vendor.STATUS_ACTIVE)),
+        suspended=Count("id", filter=Q(status__in=[Vendor.STATUS_ON_HOLD, Vendor.STATUS_SUSPENDED])),
+        draft_or_pending=Count("id", filter=Q(status__in=[Vendor.STATUS_DRAFT, Vendor.STATUS_SUBMITTED, Vendor.STATUS_KYC_REVIEW])),
+    )
+    total_vendors = v_stats["total"] or 0
+    active_vendors = v_stats["active"] or 0
+    suspended_vendors = v_stats["suspended"] or 0
+    draft_or_pending = v_stats["draft_or_pending"] or 0
+
     kyc_verified_count = summary_qs.filter(
         Q(documents__is_verified=True)
         | Q(documents__review_status=VendorDocument.REVIEW_VERIFIED)
@@ -543,7 +622,7 @@ def get_vendor_compliance_audit(
         docs = list(v.documents.all())
         total_docs = len(docs)
         verified_docs = sum(1 for d in docs if d.is_verified)
-        active_contracts_count = v.contracts.filter(status=Contract.STATUS_ACTIVE).count()
+        active_contracts_count = sum(1 for c in v.contracts.all() if c.status == Contract.STATUS_ACTIVE)
 
         is_kyc_verified = (total_docs > 0 and verified_docs == total_docs) or v.status in (
             Vendor.STATUS_ACTIVE,
@@ -557,7 +636,8 @@ def get_vendor_compliance_audit(
             kyc_status_display = "PENDING"
 
         category_name = v.category.name if v.category else "General"
-        scorecard = v.scorecards.order_by("-created_at").first() if hasattr(v, "scorecards") else None
+        scorecards_list = sorted(list(v.scorecards.all()), key=lambda s: s.created_at, reverse=True) if hasattr(v, "scorecards") else []
+        scorecard = scorecards_list[0] if scorecards_list else None
         perf_score = (
             scorecard.composite_score
             if scorecard and scorecard.composite_score is not None
@@ -624,7 +704,7 @@ def get_approval_history_audit(
     strictly scoped to the authorized organization.
     """
     qs = ApprovalAction.objects.select_related(
-        "actor", "policy_step", "policy_step__approver_role"
+        "actor", "actor__role", "policy_step", "policy_step__approver_role"
     ).all()
 
     if organization:
@@ -658,11 +738,18 @@ def get_approval_history_audit(
 
     # Summary metrics scoped
     base_appr_qs = ApprovalAction.objects.filter(Q(actor__organization=organization) | Q(created_by__organization=organization)) if organization else ApprovalAction.objects.all()
-    total_actions = base_appr_qs.count()
-    approved_count = base_appr_qs.filter(action="APPROVED").count()
-    rejected_count = base_appr_qs.filter(action="REJECTED").count()
-    submitted_count = base_appr_qs.filter(action="SUBMITTED").count()
-    delegated_count = base_appr_qs.filter(action="DELEGATED").count()
+    appr_stats = base_appr_qs.aggregate(
+        total=Count("id"),
+        approved=Count("id", filter=Q(action="APPROVED")),
+        rejected=Count("id", filter=Q(action="REJECTED")),
+        submitted=Count("id", filter=Q(action="SUBMITTED")),
+        delegated=Count("id", filter=Q(action="DELEGATED")),
+    )
+    total_actions = appr_stats["total"] or 0
+    approved_count = appr_stats["approved"] or 0
+    rejected_count = appr_stats["rejected"] or 0
+    submitted_count = appr_stats["submitted"] or 0
+    delegated_count = appr_stats["delegated"] or 0
 
     items = []
     for a in actions_page:
@@ -787,18 +874,21 @@ def get_sourcing_activity_audit(
     base_se_qs = SourcingEvent.objects.filter(requisition__department__organization=organization) if organization else SourcingEvent.objects.all()
     base_bids_qs = VendorBid.objects.filter(event__requisition__department__organization=organization) if organization else VendorBid.objects.all()
 
+    se_stats = base_se_qs.aggregate(
+        total=Count("id"),
+        awarded=Count("id", filter=Q(status=SourcingEvent.STATUS_AWARDED)),
+        active_bidding=Count("id", filter=Q(status=SourcingEvent.STATUS_BID_WINDOW)),
+    )
+    total_bids_submitted = base_bids_qs.filter(
+        status=VendorBid.STATUS_SUBMITTED
+    ).count()
+
     return {
         "summary": {
-            "total_events": base_se_qs.count(),
-            "awarded_events": base_se_qs.filter(
-                status=SourcingEvent.STATUS_AWARDED
-            ).count(),
-            "active_bidding": base_se_qs.filter(
-                status=SourcingEvent.STATUS_BID_WINDOW
-            ).count(),
-            "total_bids_submitted": base_bids_qs.filter(
-                status=VendorBid.STATUS_SUBMITTED
-            ).count(),
+            "total_events": se_stats["total"] or 0,
+            "awarded_events": se_stats["awarded"] or 0,
+            "active_bidding": se_stats["active_bidding"] or 0,
+            "total_bids_submitted": total_bids_submitted,
         },
         "count": total_count,
         "next": None,
@@ -830,7 +920,9 @@ def get_po_changes_audit(
     """
     qs = (
         PurchaseOrder.objects.select_related("vendor", "requisition", "cost_center")
-        .prefetch_related("amendments")
+        .prefetch_related(
+            Prefetch("amendments", queryset=POAmendment.objects.select_related("requested_by"))
+        )
         .all()
     )
 
@@ -919,20 +1011,25 @@ def get_po_changes_audit(
         | Q(vendor__organization=organization)
     ) if organization else PurchaseOrder.objects.all()
 
-    # Dynamic summary: If search or filters are applied, compute on qs; otherwise on base_po_qs
+    # Dynamic summary computed in a single aggregated database query
     summary_qs = qs if (search or status or version or compliance_check or min_amount or max_amount or start_date or end_date) else base_po_qs
 
-    total_pos = summary_qs.count()
-    total_amended = summary_qs.filter(version__gt=1).count()
-    cancelled_pos = summary_qs.filter(status=PurchaseOrder.STATUS_CANCELLED).count()
-    completed_pos = summary_qs.filter(status=PurchaseOrder.STATUS_COMPLETED).count()
-
-    committed_qs = summary_qs.exclude(status=PurchaseOrder.STATUS_CANCELLED)
-    committed_val = committed_qs.aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00")
+    po_stats = summary_qs.aggregate(
+        total=Count("id"),
+        amended=Count("id", filter=Q(version__gt=1)),
+        cancelled=Count("id", filter=Q(status=PurchaseOrder.STATUS_CANCELLED)),
+        completed=Count("id", filter=Q(status=PurchaseOrder.STATUS_COMPLETED)),
+        committed=Sum("total_amount", filter=~Q(status=PurchaseOrder.STATUS_CANCELLED)),
+    )
+    total_pos = po_stats["total"] or 0
+    total_amended = po_stats["amended"] or 0
+    cancelled_pos = po_stats["cancelled"] or 0
+    completed_pos = po_stats["completed"] or 0
+    committed_val = po_stats["committed"] or Decimal("0.00")
 
     items = []
     for po in pos_page:
-        amendments = list(po.amendments.select_related("requested_by").all())
+        amendments = list(po.amendments.all())
         items.append(
             {
                 "id": str(po.id),
@@ -997,7 +1094,7 @@ def get_invoice_exceptions_audit(
     strictly scoped to the authorized organization.
     """
     qs = MatchException.objects.select_related(
-        "invoice", "invoice__vendor", "invoice__po", "resolved_by"
+        "invoice", "invoice__vendor", "invoice__po", "resolved_by", "resolved_by__role"
     ).all()
 
     if organization:
@@ -1038,14 +1135,20 @@ def get_invoice_exceptions_audit(
 
     summary_qs = qs if (search or status or exception_type or start_date or end_date) else base_exc_qs
 
-    total_exceptions = summary_qs.count()
-    open_count = summary_qs.filter(status=MatchException.STATUS_OPEN).count()
-    resolved_count = summary_qs.filter(status=MatchException.STATUS_RESOLVED).count()
-    rejected_count = summary_qs.filter(status=MatchException.STATUS_REJECTED).count()
-    price_variance_count = summary_qs.filter(
-        exception_type=MatchException.TYPE_PRICE_VARIANCE
-    ).count()
-    total_variance_val = summary_qs.aggregate(total=Sum("variance_amount"))["total"] or Decimal("0.00")
+    exc_stats = summary_qs.aggregate(
+        total=Count("id"),
+        open_cnt=Count("id", filter=Q(status=MatchException.STATUS_OPEN)),
+        resolved_cnt=Count("id", filter=Q(status=MatchException.STATUS_RESOLVED)),
+        rejected_cnt=Count("id", filter=Q(status=MatchException.STATUS_REJECTED)),
+        price_var=Count("id", filter=Q(exception_type=MatchException.TYPE_PRICE_VARIANCE)),
+        total_var=Sum("variance_amount"),
+    )
+    total_exceptions = exc_stats["total"] or 0
+    open_count = exc_stats["open_cnt"] or 0
+    resolved_count = exc_stats["resolved_cnt"] or 0
+    rejected_count = exc_stats["rejected_cnt"] or 0
+    price_variance_count = exc_stats["price_var"] or 0
+    total_variance_val = exc_stats["total_var"] or Decimal("0.00")
 
     items = []
     for exc in exceptions_page:
@@ -1174,14 +1277,21 @@ def get_contract_changes_audit(
     base_con_qs = Contract.objects.filter(vendor__organization=organization) if organization else Contract.objects.all()
     base_ob_qs = ContractObligation.objects.filter(contract__vendor__organization=organization) if organization else ContractObligation.objects.all()
 
+    con_stats = base_con_qs.aggregate(
+        total=Count("id"),
+        active=Count("id", filter=Q(status=Contract.STATUS_ACTIVE)),
+        amended=Count("id", filter=Q(version__gt=1)),
+    )
+    overdue_ob_count = base_ob_qs.filter(
+        is_fulfilled=False, due_date__lt=today
+    ).count()
+
     return {
         "summary": {
-            "total_contracts": base_con_qs.count(),
-            "active_contracts": base_con_qs.filter(status=Contract.STATUS_ACTIVE).count(),
-            "amended_contracts": base_con_qs.filter(version__gt=1).count(),
-            "total_overdue_obligations": base_ob_qs.filter(
-                is_fulfilled=False, due_date__lt=today
-            ).count(),
+            "total_contracts": con_stats["total"] or 0,
+            "active_contracts": con_stats["active"] or 0,
+            "amended_contracts": con_stats["amended"] or 0,
+            "total_overdue_obligations": overdue_ob_count,
         },
         "count": total_count,
         "next": None,
@@ -1219,7 +1329,7 @@ def get_security_events_audit(
     qs = AuditLog.objects.filter(
         Q(action__in=security_actions)
         | Q(target_model__in=["User", "Role", "ExportJob", "Session", "Permission"])
-    ).select_related("actor")
+    ).select_related("actor", "actor__role")
 
     if organization:
         qs = qs.filter(Q(actor__organization=organization) | Q(actor__department__organization=organization))
@@ -1267,13 +1377,24 @@ def get_security_events_audit(
             }
         )
 
+    sec_stats = qs.aggregate(
+        total=Count("id"),
+        logins=Count("id", filter=Q(action=AuditLog.ACTION_LOGIN)),
+        logouts=Count("id", filter=Q(action=AuditLog.ACTION_LOGOUT)),
+        exports=Count("id", filter=Q(action=AuditLog.ACTION_EXPORT)),
+        overrides=Count("id", filter=Q(action=AuditLog.ACTION_OVERRIDE)),
+    )
     return {
         "summary": {
-            "total_security_events": qs.count(),
-            "logins_count": qs.filter(action=AuditLog.ACTION_LOGIN).count(),
-            "logouts_count": qs.filter(action=AuditLog.ACTION_LOGOUT).count(),
-            "exports_count": qs.filter(action=AuditLog.ACTION_EXPORT).count(),
-            "overrides_count": qs.filter(action=AuditLog.ACTION_OVERRIDE).count(),
+            "total_security_events": sec_stats["total"] or 0,
+            "logins_count": sec_stats["logins"] or 0,
+            "login_count": sec_stats["logins"] or 0,
+            "logouts_count": sec_stats["logouts"] or 0,
+            "logout_count": sec_stats["logouts"] or 0,
+            "exports_count": sec_stats["exports"] or 0,
+            "export_count": sec_stats["exports"] or 0,
+            "overrides_count": sec_stats["overrides"] or 0,
+            "override_count": sec_stats["overrides"] or 0,
         },
         "count": total_count,
         "next": None,

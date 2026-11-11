@@ -1,4 +1,7 @@
+from django.db.models import Q
 from rest_framework import serializers
+
+from apps.audit.models import AuditLog
 
 from .models import (
     AwardDecision,
@@ -19,6 +22,9 @@ class SourcingEventSerializer(serializers.ModelSerializer):
     bid_count = serializers.SerializerMethodField()
     award_readiness = serializers.SerializerMethodField()
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    published_at = serializers.SerializerMethodField()
+    pr_id = serializers.SerializerMethodField()
+    lines = serializers.SerializerMethodField()
 
     class Meta:
         model = SourcingEvent
@@ -30,6 +36,8 @@ class SourcingEventSerializer(serializers.ModelSerializer):
             "status",
             "status_display",
             "requisition",
+            "pr_id",
+            "lines",
             "bid_start_date",
             "bid_end_date",
             "is_sealed",
@@ -43,11 +51,46 @@ class SourcingEventSerializer(serializers.ModelSerializer):
             "submitted_bid_count",
             "bid_count",
             "award_readiness",
+            "published_at",
             "created_at",
             "updated_at",
         ]
         # Status only changes through explicit action endpoints (publish/close/...).
-        read_only_fields = ["id", "event_number", "status", "is_sealed", "created_at", "updated_at"]
+        read_only_fields = ["id", "event_number", "status", "is_sealed", "published_at", "created_at", "updated_at"]
+
+    def get_published_at(self, obj):
+        if obj.status == SourcingEvent.STATUS_DRAFT:
+            return None
+        log = (
+            AuditLog.objects.filter(
+                target_model="SourcingEvent",
+                target_object_id=str(obj.id),
+            )
+            .filter(Q(action="PUBLISH") | Q(new_state__status__in=["PUBLISHED", "BID_WINDOW"]))
+            .order_by("timestamp")
+            .first()
+        )
+        if log:
+            return log.timestamp.isoformat()
+        return obj.created_at.isoformat()
+
+    def get_pr_id(self, obj):
+        return obj.requisition.pr_number if obj.requisition else None
+
+    def get_lines(self, obj):
+        if not obj.requisition:
+            return []
+        return [
+            {
+                "id": str(line.id),
+                "item_description": line.item_description,
+                "quantity": line.quantity,
+                "unit_of_measure": getattr(line, "unit_of_measure", "EA"),
+                "estimated_unit_price": line.estimated_unit_price,
+                "estimated_total": line.estimated_total,
+            }
+            for line in obj.requisition.lines.all()
+        ]
 
     def get_invite_count(self, obj) -> int:
         count = getattr(obj, "invite_count", None)

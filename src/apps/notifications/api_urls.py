@@ -44,6 +44,8 @@ class NotificationSerializer(serializers.ModelSerializer):
         source="get_notification_type_display", read_only=True
     )
     is_high_priority = serializers.SerializerMethodField()
+    read = serializers.BooleanField(source="is_read", required=False)
+    read_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Notification
@@ -56,16 +58,43 @@ class NotificationSerializer(serializers.ModelSerializer):
             "title",
             "message",
             "is_read",
+            "read",
+            "read_at",
             "target_url",
             "is_high_priority",
             "created_at",
             "updated_at",
         ]
 
+    def get_read_at(self, obj):
+        if not obj.is_read:
+            return None
+        return obj.updated_at.isoformat()
+
     def to_internal_value(self, data):
+        allowed_fields = {
+            "recipient",
+            "notification_type",
+            "type",
+            "title",
+            "message",
+            "is_read",
+            "read",
+            "target_url",
+            "is_high_priority",
+            "read_at",
+        }
+        unknown_fields = [k for k in data.keys() if k not in allowed_fields]
+        if unknown_fields:
+            raise serializers.ValidationError(
+                {field: f"Unknown or disallowed field: {field}." for field in unknown_fields}
+            )
+
         data_copy = data.copy() if hasattr(data, "copy") else dict(data)
         if "type" in data_copy and "notification_type" not in data_copy:
             data_copy["notification_type"] = data_copy["type"]
+        if "read" in data_copy and "is_read" not in data_copy:
+            data_copy["is_read"] = data_copy["read"]
         if "recipient" in data_copy and str(data_copy["recipient"]).lower() == "self":
             request = self.context.get("request")
             if request and request.user:

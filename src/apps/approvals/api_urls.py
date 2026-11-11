@@ -33,7 +33,7 @@ class CanManageApprovalPolicy(BasePermission):
         role_code = getattr(request.user, "role_code", None) or (
             request.user.role.code if getattr(request.user, "role", None) else None
         )
-        if not request.user.is_superuser and role_code in [Role.STORES_RECEIVER, Role.LEGAL_MGR]:
+        if not request.user.is_superuser and role_code in [Role.STORES_RECEIVER, Role.LEGAL_MGR, Role.REQUESTER]:
             return False
 
         if request.method in SAFE_METHODS:
@@ -58,6 +58,13 @@ class ApprovalPolicySerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"min_amount": ["Minimum amount cannot be greater than maximum amount."]}
             )
+        if "is_active" in attrs:
+            if attrs["is_active"] is False:
+                attrs["status"] = ApprovalPolicy.STATUS_ARCHIVED
+            elif attrs["is_active"] is True and attrs.get("status") in [None, ApprovalPolicy.STATUS_ARCHIVED]:
+                attrs["status"] = ApprovalPolicy.STATUS_ACTIVE
+        elif attrs.get("status") in [ApprovalPolicy.STATUS_DRAFT, ApprovalPolicy.STATUS_ARCHIVED]:
+            attrs["is_active"] = False
         return attrs
 
 
@@ -146,12 +153,34 @@ class ApprovalActionViewSet(viewsets.ReadOnlyModelViewSet):
             return denied_response
 
         action_obj = self.get_object()
+        if action_obj.action in [ApprovalAction.ACTION_APPROVE, ApprovalAction.ACTION_REJECT]:
+            return Response(
+                {
+                    "error": {
+                        "code": "ALREADY_PROCESSED",
+                        "message": f"This approval action has already been processed (action: {action_obj.action}).",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         comment = request.data.get("comment", "")
         target_obj = None
         for model in apps.get_models():
             if model.__name__.lower() == action_obj.target_model_name.lower():
                 target_obj = model.objects.filter(id=action_obj.target_object_id).first()
                 break
+
+        if target_obj and hasattr(target_obj, "status") and target_obj.status in ["APPROVED", "REJECTED", "CANCELLED"]:
+            return Response(
+                {
+                    "error": {
+                        "code": "ALREADY_PROCESSED",
+                        "message": f"Target object is already in terminal state '{target_obj.status}'.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             if target_obj:
@@ -202,6 +231,17 @@ class ApprovalActionViewSet(viewsets.ReadOnlyModelViewSet):
             return denied_response
 
         action_obj = self.get_object()
+        if action_obj.action in [ApprovalAction.ACTION_APPROVE, ApprovalAction.ACTION_REJECT]:
+            return Response(
+                {
+                    "error": {
+                        "code": "ALREADY_PROCESSED",
+                        "message": f"This approval action has already been processed (action: {action_obj.action}).",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         reason = request.data.get("reason", request.data.get("comment", "")).strip()
         if not reason:
             return Response(

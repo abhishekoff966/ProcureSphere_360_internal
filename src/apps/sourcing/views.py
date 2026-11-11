@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from apps.accounts.models import Role
 from apps.audit.models import AuditLog
 from apps.vendors.models import VendorCategory
 
@@ -338,6 +339,11 @@ def sourcing_detail_view(request, event_id):
         "audit_trail": _event_audit_trail(event),
         "is_deadline_passed": event.bid_end_date < timezone.now(),
     }
+    role_code = getattr(request.user, "role_code", None) or (
+        request.user.role.code if getattr(request.user, "role", None) else None
+    )
+    if role_code in [Role.PROC_MGR, "PROC_MGR"]:
+        context["base_layout"] = "manager/base_manager.html"
     return render(request, "sourcing/sourcing_detail.html", context)
 
 

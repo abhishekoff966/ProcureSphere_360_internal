@@ -364,16 +364,9 @@
                     </td>
                     <td class="text-end pe-3">
                         <div class="d-flex justify-content-end gap-1">
-                            <button class="btn btn-sm btn-outline-success rounded-pill px-2.5 py-1 ${isSelf ? 'disabled' : ''}" 
-                                onclick="openDecisionModal('${pr.id}', '${pr.pr_number}', '${encodeURIComponent(pr.title)}', '${pr.requester_name}', '${pr.cost_center_code}', '$${reqAmt}', '+$${overrunAmt}', 'APPROVE', ${isSelf})"
-                                title="${isSelf ? 'Cannot self-approve' : 'Approve Overrun Exception'}">
-                                <i class="fa-solid fa-check me-1"></i> Approve
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1" 
-                                onclick="openDecisionModal('${pr.id}', '${pr.pr_number}', '${encodeURIComponent(pr.title)}', '${pr.requester_name}', '${pr.cost_center_code}', '$${reqAmt}', '+$${overrunAmt}', 'REJECT', ${isSelf})"
-                                title="Reject Overrun Exception">
-                                <i class="fa-solid fa-xmark me-1"></i> Reject
-                            </button>
+                            <a href="/requisitions/${pr.id}/" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 shadow-2xs fw-semibold" title="View Requisition Details">
+                                <i class="fa-solid fa-eye me-1"></i> View PR
+                            </a>
                         </div>
                     </td>
                 </tr>

@@ -29,11 +29,9 @@ def scope_purchase_orders_queryset(qs, user):
         vendor_id = getattr(user, "vendor_id", None)
         return qs.filter(vendor_id=vendor_id) if vendor_id else qs.none()
 
-    # Requester scoping (department-level)
+    # Requester scoping: only POs originating from own PRs or created by user
     if role_code == Role.REQUESTER:
-        if getattr(user, "department_id", None):
-            return qs.filter(Q(created_by=user) | Q(cost_center__department_id=user.department_id))
-        return qs.filter(created_by=user)
+        return qs.filter(Q(created_by=user) | Q(requisition__requester=user))
 
     # Organization-level scoping for internal roles (Auditor, Procurement Manager, etc.)
     scoped_org = getattr(user, "effective_organization", None)
