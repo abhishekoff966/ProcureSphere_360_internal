@@ -79,10 +79,13 @@ class IsProcurementExec(BasePermission):
 
 class IsProcurementManager(BasePermission):
     def has_permission(self, request, view):
+        role_code = getattr(request.user, "role_code", None) or (
+            request.user.role.code if hasattr(request.user, "role") and request.user.role else None
+        )
         return bool(
             request.user
             and request.user.is_authenticated
-            and (request.user.role_code == Role.PROC_MGR or request.user.is_superuser)
+            and (role_code in [Role.PROC_MGR, Role.SUPER_ADMIN] or request.user.is_superuser)
         )
 
 

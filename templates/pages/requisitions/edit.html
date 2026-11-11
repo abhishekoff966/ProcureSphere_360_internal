@@ -218,7 +218,7 @@
                         <button type="submit" id="save_changes_btn" class="btn btn-primary rounded-pill fw-bold py-2" disabled title="No changes made yet">
                             Save Changes
                         </button>
-                        <a href="{% url 'requisition_detail' pr.pk %}" class="btn btn-light rounded-pill fw-bold py-2 text-muted">
+                        <a href="{% url 'requisition_detail' pr.pk %}" id="pr_edit_cancel_btn" data-action="cancel" class="btn btn-light rounded-pill fw-bold py-2 text-muted">
                             Cancel
                         </a>
                     </div>
@@ -293,7 +293,56 @@
 </div>
 
 <script>
+    function disableCancelButtons() {
+        const cancelBtn = document.getElementById('pr_edit_cancel_btn');
+        if (cancelBtn) {
+            cancelBtn.classList.add('disabled');
+            cancelBtn.setAttribute('aria-disabled', 'true');
+            cancelBtn.setAttribute('tabindex', '-1');
+            cancelBtn.style.pointerEvents = 'none';
+            cancelBtn.style.opacity = '0.5';
+            cancelBtn.style.cursor = 'not-allowed';
+        }
+        const backLink = document.querySelector('a[href*="requisitions"]');
+        if (backLink) {
+            backLink.classList.add('disabled');
+            backLink.setAttribute('aria-disabled', 'true');
+            backLink.style.pointerEvents = 'none';
+        }
+        const modalCancelBtn = document.querySelector('#budgetExceededModal [data-bs-dismiss="modal"]');
+        if (modalCancelBtn) {
+            modalCancelBtn.disabled = true;
+            modalCancelBtn.classList.add('disabled');
+            modalCancelBtn.style.pointerEvents = 'none';
+        }
+    }
+
+    function enableCancelButtons() {
+        const cancelBtn = document.getElementById('pr_edit_cancel_btn');
+        if (cancelBtn) {
+            cancelBtn.classList.remove('disabled');
+            cancelBtn.removeAttribute('aria-disabled');
+            cancelBtn.removeAttribute('tabindex');
+            cancelBtn.style.pointerEvents = '';
+            cancelBtn.style.opacity = '';
+            cancelBtn.style.cursor = '';
+        }
+        const backLink = document.querySelector('a[href*="requisitions"]');
+        if (backLink) {
+            backLink.classList.remove('disabled');
+            backLink.removeAttribute('aria-disabled');
+            backLink.style.pointerEvents = '';
+        }
+        const modalCancelBtn = document.querySelector('#budgetExceededModal [data-bs-dismiss="modal"]');
+        if (modalCancelBtn) {
+            modalCancelBtn.disabled = false;
+            modalCancelBtn.classList.remove('disabled');
+            modalCancelBtn.style.pointerEvents = '';
+        }
+    }
+
     window.forceSubmitForm = function(btn) {
+        disableCancelButtons();
         const modalEl = document.getElementById('budgetExceededModal');
         const form = document.getElementById('pr_edit_form');
         const proceedBtn = btn || (modalEl ? modalEl.querySelector('.btn-warning') : null);
@@ -340,6 +389,7 @@
         if (!hasValidItem || rows.length === 0) {
             e.preventDefault();
             e.stopImmediatePropagation();
+            enableCancelButtons();
             window.PSToast('A purchase requisition must have at least one line item with a description and quantity.', 'warning', 'Line item required');
             const form = document.getElementById('pr_edit_form');
             if (form) {
@@ -358,6 +408,7 @@
         if (hasInvalidPrice) {
             e.preventDefault();
             e.stopImmediatePropagation();
+            enableCancelButtons();
             window.PSToast('Estimated Unit Price must be greater than zero for all line items.', 'danger', 'Invalid Unit Price');
             const form = document.getElementById('pr_edit_form');
             if (form) {
@@ -379,6 +430,7 @@
         if (isOverBudget) {
             e.preventDefault();
             e.stopImmediatePropagation();
+            enableCancelButtons();
 
             const form = document.getElementById('pr_edit_form');
             if (form) {
@@ -541,7 +593,24 @@
         editForm.addEventListener('change', markFormDirty);
     }
 
-    document.getElementById('pr_edit_form').addEventListener('submit', validateBudgetOnSubmit);
+    document.getElementById('pr_edit_form').addEventListener('submit', function(e) {
+        validateBudgetOnSubmit(e);
+        if (!e.defaultPrevented && typeof disableCancelButtons === 'function') {
+            disableCancelButtons();
+        }
+    });
+
+    const prEditCancelBtn = document.getElementById('pr_edit_cancel_btn');
+    if (prEditCancelBtn) {
+        prEditCancelBtn.addEventListener('click', function(e) {
+            const form = document.getElementById('pr_edit_form');
+            if (prEditCancelBtn.classList.contains('disabled') || (form && form.dataset.submitting === 'true')) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                return false;
+            }
+        }, true);
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
         const deliveryDateInput = document.querySelector('input[name="requested_delivery_date"]');

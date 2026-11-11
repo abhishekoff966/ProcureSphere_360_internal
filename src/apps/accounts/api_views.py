@@ -277,6 +277,20 @@ class SessionRefreshView(views.APIView):
     def post(self, request, *args, **kwargs):
         if request.user and request.user.is_authenticated:
             return Response({"status": "ok", "message": "Session refreshed."}, status=status.HTTP_200_OK)
+
+        email = request.data.get("email") or request.data.get("username")
+        password = request.data.get("password")
+        if email and password:
+            matched_user = User.objects.filter(email__iexact=str(email).strip()).first()
+            auth_username = matched_user.email if matched_user else email
+            user = authenticate(request, username=auth_username, password=password)
+            if user and user.is_active:
+                login(request, user)
+                return Response(
+                    {"status": "ok", "message": "Session refreshed.", "user": UserSerializer(user).data},
+                    status=status.HTTP_200_OK,
+                )
+
         return Response(
             {"error": {"code": "NOT_AUTHENTICATED", "message": "Authentication required to refresh session."}},
             status=status.HTTP_401_UNAUTHORIZED,
