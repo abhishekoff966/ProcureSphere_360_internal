@@ -23,7 +23,7 @@ from django.conf import settings
 from django.contrib.auth import logout
 from django.shortcuts import render
 from django.views.decorators.cache import never_cache
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 
 def _site_url():
@@ -220,6 +220,7 @@ ABOUT_SECTION_MAP = {
 
 
 @never_cache
+@require_GET
 def roles(request):
     """Public roles and access overview page."""
     if request.user.is_authenticated:
