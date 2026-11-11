@@ -907,7 +907,7 @@ def vendor_issue_credentials_view(request, vendor_id):
     return redirect("vendor_detail", vendor_id=vendor.id)
 
 
-@csrf_exempt
+@csrf_exempt  # NOSONAR: External transactional webhook authenticated via BREVO_WEBHOOK_SECRET
 def brevo_webhook_view(request):
     """
     Receives transactional email webhook callbacks from Brevo (Sendinblue).
