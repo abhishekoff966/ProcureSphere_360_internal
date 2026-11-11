@@ -16,6 +16,7 @@ from apps.reports.services import (
     get_spend_analytics_report,
     get_supplier_performance_report,
 )
+from apps.requisitions.models import PurchaseRequisition
 from apps.requisitions.services import create_purchase_requisition_service
 from apps.scorecards.services import calculate_vendor_scorecard_service
 from apps.vendors.models import Vendor, VendorCategory
@@ -90,6 +91,8 @@ def test_demo_7_spend_scorecard_and_audited_report_export():
         ],
     )
     check_and_reserve_budget_service(requisition=pr, requested_by_user=proc_mgr)
+    pr.status = PurchaseRequisition.STATUS_APPROVED
+    pr.save(update_fields=["status"])
 
     po = generate_purchase_order_service(
         vendor=vendor,
@@ -108,7 +111,12 @@ def test_demo_7_spend_scorecard_and_audited_report_export():
         po=po,
         received_by=stores_user,
         receipt_items=[
-            {"po_line": po.lines.first(), "quantity_received": 5, "quantity_accepted": 4}
+            {
+                "po_line": po.lines.first(),
+                "quantity_received": 5,
+                "quantity_accepted": 4,
+                "rejection_reason": "1 unit damaged in transit",
+            }
         ],
     )
 

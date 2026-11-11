@@ -174,7 +174,7 @@ def create_supplier_invoice_service(
         .aggregate(total=models.Sum("total_amount"))["total"]
         or Decimal("0.00")
     )
-    if prior_invoiced_total + total > po.total_amount:
+    if enforce_billable_limits and (prior_invoiced_total + total > po.total_amount):
         raise ValidationError(
             f"Cumulative invoiced amount (${prior_invoiced_total + total:,.2f}) would exceed Purchase Order total (${po.total_amount:,.2f})."
         )
