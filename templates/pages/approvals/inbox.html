@@ -13,10 +13,18 @@
             {% endif %}
         </h2>
         <p class="text-muted mb-0">
-            {% if active_tab == 'history' %}
-                Audit record of evaluated, approved, and rejected departmental requisitions.
+            {% if is_legal_inbox %}
+                {% if active_tab == 'history' %}
+                    Audit record of contracts evaluated through Legal Governance review.
+                {% else %}
+                    Track and review contracts awaiting Legal Manager clearance.
+                {% endif %}
             {% else %}
-                Track and process requisitions requiring your authorization review.
+                {% if active_tab == 'history' %}
+                    Audit record of evaluated, approved, and rejected departmental requisitions.
+                {% else %}
+                    Track and process requisitions requiring your authorization review.
+                {% endif %}
             {% endif %}
         </p>
     </div>
@@ -63,13 +71,24 @@
             <div class="col-12 col-md-6 col-lg-7">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa-solid fa-search"></i></span>
-                    <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="Search by PR #, title, requester email..." value="{{ search_q|default:'' }}">
+                    <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="{% if is_legal_inbox %}Search by contract #, title, or vendor...{% else %}Search by PR #, title, requester email...{% endif %}" value="{{ search_q|default:'' }}">
                 </div>
             </div>
             <div class="col-12 col-sm-8 col-md-4 col-lg-3">
                 <select name="status" class="form-select text-secondary fw-medium" style="background-image: url(&quot;data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e&quot;) !important; background-repeat: no-repeat !important; background-position: right 0.85rem center !important; background-size: 16px 12px !important; padding-right: 2.25rem !important;">
                     <option value="">All Statuses</option>
-                    {% if active_tab == 'history' %}
+                    {% if is_legal_inbox %}
+                        {% if active_tab == 'history' %}
+                        <option value="BUSINESS_APPROVAL" {% if status_filter == 'BUSINESS_APPROVAL' %}selected{% endif %}>Business Approval</option>
+                        <option value="ACTIVE" {% if status_filter == 'ACTIVE' %}selected{% endif %}>Active</option>
+                        <option value="DRAFT" {% if status_filter == 'DRAFT' %}selected{% endif %}>Returned to Draft</option>
+                        <option value="RENEWAL_DUE" {% if status_filter == 'RENEWAL_DUE' %}selected{% endif %}>Renewal Due</option>
+                        <option value="RENEWED" {% if status_filter == 'RENEWED' %}selected{% endif %}>Renewed</option>
+                        <option value="TERMINATED" {% if status_filter == 'TERMINATED' %}selected{% endif %}>Terminated</option>
+                        {% else %}
+                        <option value="LEGAL_REVIEW" {% if status_filter == 'LEGAL_REVIEW' %}selected{% endif %}>Pending Legal Review</option>
+                        {% endif %}
+                    {% elif active_tab == 'history' %}
                     <option value="APPROVED" {% if status_filter == 'APPROVED' %}selected{% endif %}>Approved</option>
                     <option value="REJECTED" {% if status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
                     <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending Review</option>
@@ -100,7 +119,97 @@
 
 <div class="card border-0 shadow-sm rounded-4 mb-4">
     <div class="card-body p-0">
-        {% if active_tab == 'history' %}
+        {% if is_legal_inbox %}
+            {% if active_tab == 'history' %}
+                {% if legal_history_contracts %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr class="small text-uppercase text-secondary fw-bold">
+                                <th class="ps-4 py-3">Contract &amp; Title</th>
+                                <th class="py-3">Vendor</th>
+                                <th class="py-3 text-end">Value</th>
+                                <th class="py-3 text-center">Status</th>
+                                <th class="py-3 text-center">Updated</th>
+                                <th class="pe-4 py-3 text-end">Workspace</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in legal_history_contracts %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark"><a href="{% url 'contract_detail' contract_id=c.id %}" class="text-decoration-none text-navy">{{ c.title }}</a></div>
+                                    <div class="text-muted small"><code>{{ c.contract_number }}</code> &bull; v{{ c.version }}</div>
+                                </td>
+                                <td class="small fw-semibold text-dark">{{ c.vendor.legal_name }}</td>
+                                <td class="text-end fw-bold text-navy text-nowrap">₹{{ c.contract_value|floatformat:2 }}</td>
+                                <td class="text-center"><span class="badge bg-secondary-subtle text-dark border rounded-pill px-3 py-1">{{ c.get_status_display }}</span></td>
+                                <td class="text-center text-muted small text-nowrap">{{ c.updated_at|date:"M d, Y" }}</td>
+                                <td class="pe-4 text-end">
+                                    <a href="{% url 'contract_detail' contract_id=c.id %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3 text-nowrap">
+                                        <i class="fa-solid fa-eye me-1"></i> View Contract
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% include 'partials/pagination.html' %}
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                        <i class="fa-solid fa-folder-open text-muted fs-1"></i>
+                    </div>
+                    <h5 class="text-muted fw-bold">No legal review history found</h5>
+                    <p class="text-secondary mb-0">No evaluated contract reviews recorded yet.</p>
+                </div>
+                {% endif %}
+            {% else %}
+                {% if legal_pending_contracts %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr class="small text-uppercase text-secondary fw-bold">
+                                <th class="ps-4 py-3">Contract &amp; Title</th>
+                                <th class="py-3">Vendor</th>
+                                <th class="py-3 text-end">Value</th>
+                                <th class="py-3 text-center">Current Status</th>
+                                <th class="pe-4 py-3 text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in legal_pending_contracts %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark"><a href="{% url 'contract_detail' contract_id=c.id %}" class="text-decoration-none text-navy">{{ c.title }}</a></div>
+                                    <div class="text-muted small"><code>{{ c.contract_number }}</code> &bull; Owner {{ c.contract_owner.email }}</div>
+                                </td>
+                                <td class="small fw-semibold text-dark">{{ c.vendor.legal_name }}</td>
+                                <td class="text-end fw-bold text-navy text-nowrap">₹{{ c.contract_value|floatformat:2 }}</td>
+                                <td class="text-center"><span class="badge bg-warning text-dark rounded-pill px-3 py-1">Legal Review</span></td>
+                                <td class="pe-4 text-end">
+                                    <a href="{% url 'contract_detail' contract_id=c.id %}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm text-nowrap">
+                                        <i class="fa-solid fa-gavel me-1"></i> Review Contract
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% include 'partials/pagination.html' %}
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                        <i class="fa-solid fa-check-double text-success fs-1"></i>
+                    </div>
+                    <h5 class="text-muted fw-bold">All caught up!</h5>
+                    <p class="text-secondary mb-0">No contracts are currently awaiting Legal Review.</p>
+                </div>
+                {% endif %}
+            {% endif %}
+        {% elif active_tab == 'history' %}
             {% if history_prs %}
             <!-- Mobile History Card View (< 768px) -->
             <div class="d-md-none p-3 d-flex flex-column gap-3">

@@ -286,6 +286,10 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         vendor = attrs.get("vendor", getattr(self.instance, "vendor", None))
         if vendor and vendor.status != Vendor.STATUS_ACTIVE:
+            if vendor.status == Vendor.STATUS_SUSPENDED:
+                raise serializers.ValidationError(
+                    {"vendor": [f"Cannot create Purchase Order: Vendor '{vendor.legal_name}' is not ACTIVE (current status: SUSPENDED). POs cannot be issued to suspended vendors."]}
+                )
             raise serializers.ValidationError(
                 {"vendor": [f"Cannot create Purchase Order: Vendor '{vendor.legal_name}' is not ACTIVE (current status: {vendor.status})."]}
             )

@@ -17,9 +17,11 @@
                     <p class="text-white-50 mb-0">Central repository for supplier master agreements, version amendments, SLA milestone tracking, and legal compliance.</p>
                 </div>
                 <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                    {% if request.user.is_superuser or request.user.role_code == 'SUPER_ADMIN' or request.user.role_code == 'LEGAL_MGR' %}
                     <a href="{% url 'contract_create' %}" class="btn btn-primary btn-lg rounded-pill fw-bold px-4 shadow-sm">
                         <i class="fa-solid fa-plus me-1"></i> Draft New Contract
                     </a>
+                    {% endif %}
                 </div>
             </div>
         </div>

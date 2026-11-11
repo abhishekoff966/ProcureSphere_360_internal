@@ -116,9 +116,7 @@ def _run_kyc_action(request, vendor, kyc_action):
         reject_vendor_document_service(document=doc, reviewer=request.user, reason=notes)
         return f"Document '{doc.title}' rejected; the vendor has been notified."
     if kyc_action == "approve":
-        from .permissions import can_legal_verify_vendor
-        if not (can_operate_governance(request.user) or can_legal_verify_vendor(request.user)):
-            raise PermissionDenied("Your role cannot activate vendors.")
+        _require_governance_operate(request.user)
         approve_vendor_service(vendor=vendor, manager=request.user, notes=notes)
         return "Vendor approved and activated."
     if kyc_action == "request-changes":
