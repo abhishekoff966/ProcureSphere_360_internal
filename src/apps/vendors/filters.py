@@ -54,33 +54,55 @@ class VendorFilter(django_filters.FilterSet):
     """
 
     q = django_filters.CharFilter(method="filter_search", label="Search")
-    category = django_filters.ModelChoiceFilter(queryset=VendorCategory.objects.order_by("name"))
-    status = django_filters.ChoiceFilter(choices=Vendor.STATUS_CHOICES)
+    category = django_filters.ModelChoiceFilter(
+        queryset=VendorCategory.objects.order_by("name"),
+        empty_label="-- All Categories --",
+    )
+    status = django_filters.ChoiceFilter(
+        choices=Vendor.STATUS_CHOICES,
+        empty_label="-- All Statuses --",
+    )
     approval_status = django_filters.ChoiceFilter(
         choices=[c for c in Vendor.STATUS_CHOICES if c[0] in APPROVAL_STAGE_STATUSES],
         field_name="status",
         label="Approval status",
+        empty_label="-- All Approval Statuses --",
     )
     operational_status = django_filters.ChoiceFilter(
         choices=[c for c in Vendor.STATUS_CHOICES if c[0] in OPERATIONAL_STATUSES],
         field_name="status",
         label="Operational status",
+        empty_label="-- All Operational Statuses --",
     )
     risk_level = django_filters.ChoiceFilter(
         choices=VendorRiskRecord.RISK_CHOICES + [("NONE", "Not assessed")],
         method="filter_risk",
         label="Risk level",
+        empty_label="-- All Risk Levels --",
     )
     restriction = django_filters.ChoiceFilter(
-        choices=HOLD_SUSPENSION_CHOICES, method="filter_restriction", label="Hold / suspension"
+        choices=HOLD_SUSPENSION_CHOICES,
+        method="filter_restriction",
+        label="Hold / suspension",
+        empty_label="-- All Hold / Suspension --",
     )
     performance = django_filters.ChoiceFilter(
-        choices=PERFORMANCE_CHOICES, method="filter_performance", label="Performance"
+        choices=PERFORMANCE_CHOICES,
+        method="filter_performance",
+        label="Performance",
+        empty_label="-- All Performance --",
     )
 
     class Meta:
         model = Vendor
         fields = []
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.form.fields.values():
+            existing_class = field.widget.attrs.get("class", "")
+            if "form-select" not in existing_class:
+                field.widget.attrs["class"] = f"form-select form-select-sm {existing_class}".strip()
 
     def filter_search(self, queryset, name, value):
         value = value.strip()

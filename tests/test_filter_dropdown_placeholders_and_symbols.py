@@ -7,6 +7,7 @@ from apps.organization.models import CostCenter, Department, Organization
 from apps.core.superadmin_forms import BudgetAdminForm
 from apps.contracts.forms import ContractCreateForm
 from apps.sourcing.forms import SourcingEventForm
+from apps.vendors.filters import VendorFilter
 from apps.vendors.forms import VendorEditForm, VendorRegistrationForm
 
 
@@ -119,3 +120,42 @@ def test_approver_base_layout_has_dropdown_arrow_css(dept_approver_client):
     content = resp.content.decode("utf-8")
     assert "data:image/svg+xml" in content
     assert "appearance: none" in content
+
+
+@pytest.mark.django_db
+def test_vendor_filter_dropdown_placeholders_and_widgets():
+    """Verify VendorFilter dropdown options have meaningful empty labels and form-select classes."""
+    v_filter = VendorFilter()
+    form = v_filter.form
+
+    # Check empty labels on filter form fields
+    assert form.fields["category"].empty_label == "-- All Categories --"
+    assert form.fields["status"].empty_label == "-- All Statuses --"
+    assert form.fields["approval_status"].empty_label == "-- All Approval Statuses --"
+    assert form.fields["operational_status"].empty_label == "-- All Operational Statuses --"
+    assert form.fields["risk_level"].empty_label == "-- All Risk Levels --"
+    assert form.fields["restriction"].empty_label == "-- All Hold / Suspension --"
+    assert form.fields["performance"].empty_label == "-- All Performance --"
+
+    # Check rendered widgets
+    for field_name in ["category", "operational_status", "approval_status", "risk_level", "restriction", "performance"]:
+        rendered = form[field_name].as_widget()
+        assert "---------" not in rendered, f"Field {field_name} contains unmeaningful '---------' placeholder"
+        assert "form-select" in rendered, f"Field {field_name} missing form-select class"
+
+
+@pytest.mark.django_db
+def test_vendor_list_page_renders_meaningful_filter_placeholders(superadmin_client):
+    """Verify GET /vendors/ renders clean filter options without unmeaningful dashes."""
+    client, _ = superadmin_client
+    resp = client.get(reverse("vendor_list"))
+    assert resp.status_code == 200
+    content = resp.content.decode("utf-8")
+    assert "-- All Categories --" in content
+    assert "-- All Operational Statuses --" in content
+    assert "-- All Approval Statuses --" in content
+    assert "-- All Risk Levels --" in content
+    assert "-- All Hold / Suspension --" in content
+    assert "-- All Performance --" in content
+    assert "---------" not in content
+
