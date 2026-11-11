@@ -1,3 +1,5 @@
+import logging
+import mimetypes
 import os
 
 from django.core.exceptions import ValidationError
@@ -44,6 +46,8 @@ from .services import (
     terminate_contract_service,
     upload_contract_document_service,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _clean_error_message(exc):
@@ -481,11 +485,7 @@ class ContractViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if (
-            not document.file
-            or not hasattr(document.file, "path")
-            or not os.path.exists(document.file.path)
-        ):
+        if not document.file or not getattr(document.file, "name", ""):
             return Response(
                 {
                     "error": {
@@ -496,21 +496,60 @@ class ContractViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        AuditLog.objects.create(
-            actor=request.user,
-            action=AuditLog.ACTION_EXPORT,
-            target_model="ContractDocument",
-            target_object_id=str(document.id),
-            new_state={
-                "document_title": document.title,
-                "file_name": os.path.basename(document.file.name),
-            },
+        safe_filename = (
+            os.path.basename(document.file.name).replace("\r", "").replace("\n", "")
+            or f"contract_document_{document.id}"
         )
+        content_type, _ = mimetypes.guess_type(safe_filename)
+
+        try:
+            file_handle = document.file.open("rb")
+        except (FileNotFoundError, ValueError):
+            return Response(
+                {
+                    "error": {
+                        "code": "FILE_NOT_FOUND",
+                        "message": "Document file not found on storage",
+                    }
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception:
+            logger.error(
+                "Storage error opening ContractDocument %s via API.",
+                document.id,
+                exc_info=True,
+            )
+            return Response(
+                {
+                    "error": {
+                        "code": "STORAGE_ERROR",
+                        "message": "Document storage is temporarily unavailable",
+                    }
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            AuditLog.objects.create(
+                actor=request.user,
+                action=AuditLog.ACTION_EXPORT,
+                target_model="ContractDocument",
+                target_object_id=str(document.id),
+                new_state={
+                    "document_title": document.title,
+                    "file_name": safe_filename,
+                },
+            )
+        except Exception:
+            file_handle.close()
+            raise
 
         return FileResponse(
-            open(document.file.path, "rb"),
+            file_handle,
             as_attachment=True,
-            filename=os.path.basename(document.file.name),
+            filename=safe_filename,
+            content_type=content_type or "application/octet-stream",
         )
 
     @action(detail=False, methods=["get"], url_path="alerts")
