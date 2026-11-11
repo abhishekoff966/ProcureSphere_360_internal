@@ -14,6 +14,18 @@ from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.utils.http import url_has_allowed_host_and_scheme
+
+
+def _safe_next_url(request, default="vendor_profile"):
+    next_url = request.POST.get("next")
+    if next_url and url_has_allowed_host_and_scheme(
+        url=next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return next_url
+    return default
 
 from apps.accounts.models import Role
 from apps.audit.models import AuditLog
@@ -259,8 +271,7 @@ def vendor_profile_view(request):
                 if missing_fields:
                     for err in missing_fields:
                         messages.error(request, err)
-                    next_url = request.POST.get("next")
-                    return redirect(next_url if next_url else "vendor_profile")
+                    return redirect(_safe_next_url(request))
 
                 # Prepare documents list for validation and atomic upload
                 files_to_process = [
@@ -323,8 +334,7 @@ def vendor_profile_view(request):
                 if validation_errors:
                     for err in validation_errors:
                         messages.error(request, err)
-                    next_url = request.POST.get("next")
-                    return redirect(next_url if next_url else "vendor_profile")
+                    return redirect(_safe_next_url(request))
 
                 # Validation passed: Upload all documents atomically
                 try:
@@ -354,8 +364,7 @@ def vendor_profile_view(request):
                 except Exception as e:
                     messages.error(request, f"Document upload failed: {str(e)}")
 
-                next_url = request.POST.get("next")
-                return redirect(next_url if next_url else "vendor_profile")
+                return redirect(_safe_next_url(request))
 
             else:
                 # Legacy single-file upload (preserves compatibility for individual endpoints/tests)
@@ -411,8 +420,7 @@ def vendor_profile_view(request):
                         messages.error(
                             request, "Document upload failed. Please verify the file and try again."
                         )
-                next_url = request.POST.get("next")
-                return redirect(next_url if next_url else "vendor_profile")
+                return redirect(_safe_next_url(request))
 
         elif action == "submit_kyc":
             if not vendor.documents.exists():
