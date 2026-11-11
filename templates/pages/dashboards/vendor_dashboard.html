@@ -11,7 +11,7 @@
                 Vendor Portal Dashboard
             </h3>
             <p class="text-muted mb-0 small">
-                Welcome, <strong>{{ vendor.legal_name|default:user.email }}</strong> &bull; Sourcing participation, sealed bids, and purchase order governance.
+                Welcome, <strong>{{ vendor.legal_name|default:user.email }}</strong>{% if vendor.vendor_number %} <span class="badge bg-light text-secondary border ms-1">{{ vendor.vendor_number }}</span>{% endif %} &bull; Sourcing participation, sealed bids, and purchase order governance.
             </p>
         </div>
         <div class="d-flex flex-wrap gap-2">

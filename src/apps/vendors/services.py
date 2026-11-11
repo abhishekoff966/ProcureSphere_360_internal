@@ -1,32 +1,23 @@
 import logging
-
 import secrets
-
+import smtplib
+import socket
 import string
-
+import time
 import uuid
-
 from datetime import timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
-
-
 try:
-
     import requests
-
 except ImportError:
-
     requests = None
-
 from django.conf import settings
-
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied, ValidationError
-
 from django.core.mail import send_mail
-
+from django.core.validators import validate_email
 from django.db import transaction
-
 from django.utils import timezone
 
 
@@ -2113,291 +2104,458 @@ def _credentials_email_body(*, vendor: Vendor, email: str, password: str) -> str
 
 
 
+def is_transient_error(exc: Exception) -> bool:
+    """Classifies whether an email delivery failure is transient (retriable)."""
+    if isinstance(exc, (socket.timeout, TimeoutError, ConnectionResetError, ConnectionRefusedError)):
+        return True
+    if requests is not None:
+        if isinstance(exc, (requests.exceptions.Timeout, requests.exceptions.ConnectionError)):
+            return True
+        if isinstance(exc, requests.exceptions.HTTPError):
+            status_code = getattr(getattr(exc, "response", None), "status_code", 0)
+            if status_code in (429, 500, 502, 503, 504):
+                return True
+            if 400 <= status_code < 500:
+                return False
+    if isinstance(exc, (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected)):
+        return True
+    if isinstance(exc, smtplib.SMTPResponseException):
+        if 400 <= exc.smtp_code < 500:
+            return True
+        if exc.smtp_code >= 500:
+            return False
+
+    err_str = str(exc).lower()
+    permanent_patterns = [
+        "invalid", "syntax error", "bad request", "400", "401", "403", "404",
+        "no such user", "mailbox unavailable", "550", "authentication failed",
+        "not allowed", "permanent rejection",
+    ]
+    for pp in permanent_patterns:
+        if pp in err_str:
+            return False
+    transient_patterns = [
+        "timeout", "timed out", "connection reset", "connection refused",
+        "rate limit", "too many requests", "429", "500", "502", "503", "504",
+        "smtp down", "temporary", "service unavailable", "try again",
+        "connection lost", "broken pipe",
+    ]
+    for tp in transient_patterns:
+        if tp in err_str:
+            return True
+    if isinstance(exc, OSError):
+        return True
+    return False
+
+
+def _dispatch_credential_email_attempt(
+    *,
+    vendor: Vendor,
+    email: str,
+    password: str,
+    subject: str,
+    text_body: str,
+    html_body: str,
+):
+    """Executes a single email delivery attempt via Brevo REST API or Django email backend."""
+    api_key = getattr(settings, "BREVO_API_KEY", "")
+    if api_key.startswith("xkeysib-"):
+        if requests is None:
+            raise RuntimeError("requests library is required for Brevo API integration.")
+        sender_name = getattr(settings, "BREVO_SENDER_NAME", "ProcureSphere 360")
+        sender_email = getattr(settings, "BREVO_SENDER_EMAIL", settings.DEFAULT_FROM_EMAIL)
+        payload = {
+            "sender": {
+                "name": sender_name,
+                "email": sender_email,
+            },
+            "to": [{"email": email}],
+            "subject": subject,
+            "htmlContent": html_body,
+            "textContent": text_body,
+        }
+        response = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            json=payload,
+            headers={
+                "api-key": api_key,
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            timeout=30,
+        )
+        if not response.ok:
+            if response.status_code == 429:
+                raise RuntimeError(f"Brevo API rate limit exceeded ({response.status_code}): {response.text[:250]}")
+            elif response.status_code >= 500:
+                raise RuntimeError(f"Brevo API temporary server error ({response.status_code}): {response.text[:250]}")
+            else:
+                raise RuntimeError(f"Brevo API error {response.status_code}: {response.text[:250]}")
+    else:
+        send_mail(
+            subject=subject,
+            message=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            html_message=html_body,
+            fail_silently=False,
+        )
+
+
 def issue_vendor_credentials_service(
-
-    *, vendor: Vendor, issued_by: User, auto_activate: bool = False
-
+    *,
+    vendor: Vendor,
+    issued_by: User,
+    auto_activate: bool = False,
+    force: bool = False,
+    idempotency_key: Optional[str] = None,
+    max_retries: int = 3,
 ) -> VendorCredentialDispatch:
-
     """
-
     Creates (or resets) the vendor's portal login with a temporary password and emails the
-
     credentials plus portal login link(s) to the vendor's registered email.
 
-
-
     The vendor's portal user account is activated immediately (is_active=True) so newly created vendors
-
     can log in immediately using the credentials sent to their registered email, set their password,
-
     and access the Vendor Dashboard to submit KYC and profile details without waiting for Legal Manager approval.
 
-
-
     The credential dispatch is placed in the Legal Manager's verification queue (legal_verification_status=PENDING)
-
-    to preserve independent legal compliance review. Upon Legal Manager verification & approval, the vendor
-
+    to preserve independent legal compliance review. Upon Legal Manager verification and approval, the vendor
     status transitions to ACTIVE and becomes eligible for sourcing events.
 
-
-
     The password exists only in memory for the email; it is never stored or audited.
-
     Raises ValidationError on rule violations or if the email could not be delivered
+    (the dispatch is recorded as FAILED so the executive can retry).
 
-    (the dispatch is still recorded as FAILED so the executive can retry).
-
+    Enhanced with:
+    - Bounded exponential backoff retry for transient network/provider errors (max 3 retries).
+    - Status tracking across PENDING -> RETRYING -> SENT -> DELIVERED / FAILED.
+    - Fast failure for permanently invalid recipient email addresses (no infinite retries).
+    - Idempotency and duplicate prevention for confirmed DELIVERED dispatches.
+    - Comprehensive AuditLog recording of failures and retries.
     """
-
     if not can_operate_governance(issued_by):
-
         raise PermissionDenied("Only Procurement Executives/Managers can issue vendor credentials.")
-
     if vendor.status in CREDENTIAL_ISSUE_BLOCKED:
-
         raise ValidationError(
-
             f"Credentials cannot be issued to a {vendor.get_status_display()} vendor."
-
         )
 
+    # 1. Idempotency Check: if idempotency key was supplied and cached, return previous result
+    if idempotency_key:
+        cached_id = cache.get(f"vcd_idempotency_{idempotency_key}")
+        if cached_id:
+            cached_dispatch = VendorCredentialDispatch.objects.filter(id=cached_id).first()
+            if cached_dispatch:
+                logger.info("Idempotent credential dispatch request satisfied for key %s", idempotency_key)
+                return cached_dispatch
 
+    # 2. Duplicate Prevention: Check in-flight retries
+    active_in_flight = VendorCredentialDispatch.objects.filter(
+        vendor=vendor, status=VendorCredentialDispatch.STATUS_RETRYING
+    ).first()
+    if active_in_flight:
+        raise ValidationError(
+            f"Credential delivery is currently in progress (retrying) for vendor {vendor.vendor_number}."
+        )
+
+    # 3. Duplicate Prevention: If already delivered and not forced, prevent duplicate email
+    if not force:
+        delivered_dispatch = VendorCredentialDispatch.objects.filter(
+            vendor=vendor, status=VendorCredentialDispatch.STATUS_DELIVERED
+        ).first()
+        if delivered_dispatch:
+            raise ValidationError(
+                f"Portal credentials have already been delivered to {delivered_dispatch.sent_to}. "
+                "Use force=True to reset credentials and resend."
+            )
 
     email = User.objects.normalize_email((vendor.email or "").strip())
-
     if not email:
-
         raise ValidationError(
-
             f"Vendor {vendor.vendor_number} has no email address. Add one (Edit info) before issuing credentials."
-
         )
 
+    legal_status = (
+        VendorCredentialDispatch.LEGAL_STATUS_APPROVED
+        if auto_activate
+        else VendorCredentialDispatch.LEGAL_STATUS_PENDING
+    )
+
+    # 4. Permanent Email Syntax Validation:
+    try:
+        validate_email(email)
+    except ValidationError as val_err:
+        logger.error("Invalid email syntax for vendor %s: %s", vendor.vendor_number, email)
+        with transaction.atomic():
+            user = User.objects.filter(vendor=vendor).first()
+            if not user:
+                role = Role.objects.get(code=Role.VENDOR_USER)
+                user = User.objects.create_user(
+                    email or f"invalid_{vendor.vendor_number}@vendor.invalid",
+                    _generate_temporary_password(),
+                    role=role,
+                    vendor=vendor,
+                    must_change_password=True,
+                    is_active=True,
+                )
+            dispatch = VendorCredentialDispatch.objects.create(
+                vendor=vendor,
+                user=user,
+                sent_to=email,
+                created_by=issued_by,
+                status=VendorCredentialDispatch.STATUS_FAILED,
+                error=f"Permanent error: Invalid recipient email address syntax '{email}'",
+                legal_verification_status=legal_status,
+                legal_verified_by=issued_by if auto_activate else None,
+                legal_verified_at=timezone.now() if auto_activate else None,
+            )
+            create_audit_log_service(
+                actor=issued_by,
+                action=AuditLog.ACTION_UPDATE,
+                target_model="VendorCredentialDispatch",
+                target_object_id=str(dispatch.id),
+                new_state={
+                    "event": "credential_delivery_failed",
+                    "status": VendorCredentialDispatch.STATUS_FAILED,
+                    "vendor_number": vendor.vendor_number,
+                    "login_id": email,
+                    "error": dispatch.error,
+                    "attempts": 0,
+                },
+            )
+        raise ValidationError(
+            f"Invalid recipient email address format: '{email}'. Delivery aborted without retrying."
+        ) from val_err
+
+    # 5. User Account Setup & Initial Dispatch Record
     password = _generate_temporary_password()
 
-
-
     with transaction.atomic():
-
         existing = User.objects.select_for_update().filter(email__iexact=email).first()
-
         if existing and existing.vendor_id != vendor.id:
-
             raise ValidationError(f"A different account already uses {email}.")
-
         role = Role.objects.get(code=Role.VENDOR_USER)
-
         if existing:
-
             existing.set_password(password)
-
             existing.must_change_password = True
-
             existing.is_active = True
-
             existing.save(update_fields=["password", "must_change_password", "is_active"])
-
             user, action = existing, "credentials_reset"
-
         else:
-
             user = User.objects.create_user(
-
                 email,
-
                 password,
-
                 role=role,
-
                 vendor=vendor,
-
                 must_change_password=True,
-
                 is_active=True,
-
             )
-
             action = "credentials_created"
 
-
-
-        legal_status = (
-
-            VendorCredentialDispatch.LEGAL_STATUS_APPROVED
-
-            if auto_activate
-
-            else VendorCredentialDispatch.LEGAL_STATUS_PENDING
-
-        )
-
         dispatch = VendorCredentialDispatch.objects.create(
-
             vendor=vendor,
-
             user=user,
-
             sent_to=email,
-
             created_by=issued_by,
-
+            status=VendorCredentialDispatch.STATUS_PENDING,
             legal_verification_status=legal_status,
-
             legal_verified_by=issued_by if auto_activate else None,
-
             legal_verified_at=timezone.now() if auto_activate else None,
-
         )
-
         create_audit_log_service(
-
             actor=issued_by,
-
             action=AuditLog.ACTION_UPDATE,
-
             target_model="Vendor",
-
             target_object_id=str(vendor.id),
-
             new_state={
-
                 "event": action,
-
                 "login_id": email,
-
                 "vendor_number": vendor.vendor_number,
-
                 "legal_verification_status": legal_status,
-
                 "user_active": True,
-
             },
-
         )
 
+    # 6. Prepare Email Bodies
+    subject = f"ProcureSphere 360 - Your Supplier Portal Access ({vendor.vendor_number})"
+    text_body = _credentials_email_body(vendor=vendor, email=email, password=password)
+    html_body = build_credentials_html(
+        vendor_name=vendor.legal_name,
+        vendor_number=vendor.vendor_number,
+        email=email,
+        password=password,
+    )
 
+    # 7. Bounded Retry Execution with Exponential Backoff
+    max_attempts = getattr(settings, "VENDOR_EMAIL_MAX_RETRIES", max_retries or 3)
+    backoff_base = getattr(settings, "VENDOR_EMAIL_BACKOFF_BASE", 0.5)
+    if getattr(settings, "EMAIL_BACKEND", "").endswith("locmem.EmailBackend"):
+        backoff_base = 0.001
 
-    try:
+    last_error = None
+    attempt_history = []
+    success = False
 
-        # Brevo REST API (HTTPS/443) when a real API key (xkeysib-...) is configured - needed on
+    for attempt in range(1, max_attempts + 1):
+        if attempt > 1:
+            dispatch.status = VendorCredentialDispatch.STATUS_RETRYING
+            dispatch.error = f"Retrying attempt {attempt}/{max_attempts} after error: {last_error}"[:500]
+            dispatch.save(update_fields=["status", "error", "updated_at"])
+            delay = backoff_base * (2 ** (attempt - 2))
+            if delay > 0:
+                time.sleep(delay)
 
-        # hosts such as Render that block SMTP port 587. Otherwise use Django's mail backend
-
-        # (Brevo SMTP relay with the xsmtpsib-... key).
-
-        api_key = getattr(settings, "BREVO_API_KEY", "")
-
-        subject = f"ProcureSphere 360 - Your Supplier Portal Access ({vendor.vendor_number})"
-
-        text_body = _credentials_email_body(vendor=vendor, email=email, password=password)
-
-        html_body = build_credentials_html(
-
-            vendor_name=vendor.legal_name,
-
-            vendor_number=vendor.vendor_number,
-
-            email=email,
-
-            password=password,
-
-        )
-
-        if api_key.startswith("xkeysib-"):
-
-            payload = {
-
-                "sender": {
-
-                    "name": getattr(settings, "BREVO_SENDER_NAME", "ProcureSphere 360"),
-
-                    "email": getattr(settings, "BREVO_SENDER_EMAIL", settings.DEFAULT_FROM_EMAIL),
-
-                },
-
-                "to": [{"email": email}],
-
-                "subject": subject,
-
-                "htmlContent": html_body,
-
-                "textContent": text_body,
-
-            }
-
-            response = requests.post(
-
-                "https://api.brevo.com/v3/smtp/email",
-
-                json=payload,
-
-                headers={
-
-                    "api-key": api_key,
-
-                    "Content-Type": "application/json",
-
-                    "Accept": "application/json",
-
-                },
-
-                timeout=30,
-
-            )
-
-            if not response.ok:
-
-                raise RuntimeError(f"Brevo API error {response.status_code}: {response.text[:300]}")
-
-        else:
-
-            send_mail(
-
+        try:
+            _dispatch_credential_email_attempt(
+                vendor=vendor,
+                email=email,
+                password=password,
                 subject=subject,
-
-                message=text_body,
-
-                from_email=settings.DEFAULT_FROM_EMAIL,
-
-                recipient_list=[email],
-
-                html_message=html_body,
-
-                fail_silently=False,
-
+                text_body=text_body,
+                html_body=html_body,
             )
+            success = True
+            break
+        except Exception as exc:
+            last_error = exc
+            attempt_history.append(f"Attempt {attempt}: {str(exc)[:200]}")
+            logger.warning(
+                "Vendor credential email attempt %d/%d failed for %s: %s",
+                attempt, max_attempts, vendor.vendor_number, exc
+            )
+            if not is_transient_error(exc):
+                logger.error("Permanent error encountered on attempt %d: %s", attempt, exc)
+                break
 
-    except Exception as exc:  # HTTP / network failure: keep evidence, let the executive retry
-
-        logger.exception("Vendor credential email failed for vendor %s", vendor.vendor_number)
-
+    if success:
+        dispatch.status = VendorCredentialDispatch.STATUS_SENT
+        dispatch.sent_at = timezone.now()
+        dispatch.error = ""
+        dispatch.save(update_fields=["status", "sent_at", "error", "updated_at"])
+        if idempotency_key:
+            cache.set(f"vcd_idempotency_{idempotency_key}", str(dispatch.id), timeout=300)
+        create_audit_log_service(
+            actor=issued_by,
+            action=AuditLog.ACTION_UPDATE,
+            target_model="VendorCredentialDispatch",
+            target_object_id=str(dispatch.id),
+            new_state={
+                "event": "credential_dispatched",
+                "status": VendorCredentialDispatch.STATUS_SENT,
+                "vendor_number": vendor.vendor_number,
+                "sent_to": email,
+                "attempts": len(attempt_history) + 1,
+            },
+        )
+        return dispatch
+    else:
         dispatch.status = VendorCredentialDispatch.STATUS_FAILED
-
-        dispatch.error = str(exc)[:500]
-
+        dispatch.error = " | ".join(attempt_history)[-500:] if attempt_history else str(last_error)[:500]
         dispatch.save(update_fields=["status", "error", "updated_at"])
-
+        create_audit_log_service(
+            actor=issued_by,
+            action=AuditLog.ACTION_UPDATE,
+            target_model="VendorCredentialDispatch",
+            target_object_id=str(dispatch.id),
+            new_state={
+                "event": "credential_delivery_failed",
+                "status": VendorCredentialDispatch.STATUS_FAILED,
+                "vendor_number": vendor.vendor_number,
+                "sent_to": email,
+                "error": dispatch.error,
+                "attempts": len(attempt_history),
+            },
+        )
         raise ValidationError(
-
             f"Account created but the email to {email} could not be sent. "
-
-            f"Use Resend to retry. Reason: {exc}"
-
-        ) from exc
+            f"Use Resend to retry. Reason: {last_error}"
+        ) from last_error
 
 
+def process_brevo_webhook_event_service(
+    event_data: dict,
+) -> tuple[bool, str, Optional[VendorCredentialDispatch]]:
+    """
+    Processes transactional email webhook callbacks from Brevo (Sendinblue).
+    Updates VendorCredentialDispatch status to DELIVERED or FAILED based on delivery event.
+    """
+    if not isinstance(event_data, dict):
+        return False, "Invalid payload format; expected JSON object", None
 
-    dispatch.status = VendorCredentialDispatch.STATUS_SENT
+    event = str(event_data.get("event") or "").strip().lower()
+    email = str(event_data.get("email") or "").strip().lower()
+    reason = str(
+        event_data.get("reason")
+        or event_data.get("description")
+        or event_data.get("diag")
+        or ""
+    ).strip()
 
-    dispatch.sent_at = timezone.now()
+    if not email:
+        return False, "Missing 'email' field in webhook payload", None
 
-    dispatch.save(update_fields=["status", "sent_at", "updated_at"])
+    if not event:
+        return False, "Missing 'event' field in webhook payload", None
 
-    return dispatch
+    dispatch = (
+        VendorCredentialDispatch.objects.filter(sent_to__iexact=email)
+        .order_by("-created_at")
+        .first()
+    )
+    if not dispatch:
+        logger.info("No VendorCredentialDispatch found for webhook email: %s", email)
+        return False, f"No dispatch found for {email}", None
 
+    previous_status = dispatch.status
 
+    if event in ("delivered", "opened", "click"):
+        if dispatch.status != VendorCredentialDispatch.STATUS_DELIVERED:
+            dispatch.status = VendorCredentialDispatch.STATUS_DELIVERED
+            dispatch.save(update_fields=["status", "updated_at"])
+            create_audit_log_service(
+                actor=dispatch.created_by or dispatch.user,
+                action=AuditLog.ACTION_UPDATE,
+                target_model="VendorCredentialDispatch",
+                target_object_id=str(dispatch.id),
+                new_state={
+                    "event": "credential_delivered",
+                    "status": VendorCredentialDispatch.STATUS_DELIVERED,
+                    "previous_status": previous_status,
+                    "sent_to": email,
+                    "vendor_number": dispatch.vendor.vendor_number,
+                    "provider_event": event,
+                },
+            )
+            logger.info("Vendor credential delivery confirmed for %s (dispatch %s)", email, dispatch.id)
+        return True, "Delivered", dispatch
+
+    elif event in ("hard_bounce", "soft_bounce", "blocked", "spam", "invalid_email", "error", "deferred"):
+        dispatch.status = VendorCredentialDispatch.STATUS_FAILED
+        dispatch.error = f"Provider event: {event}. Reason: {reason or 'undelivered'}"[:500]
+        dispatch.save(update_fields=["status", "error", "updated_at"])
+        create_audit_log_service(
+            actor=dispatch.created_by or dispatch.user,
+            action=AuditLog.ACTION_UPDATE,
+            target_model="VendorCredentialDispatch",
+            target_object_id=str(dispatch.id),
+            new_state={
+                "event": "credential_provider_bounce",
+                "status": VendorCredentialDispatch.STATUS_FAILED,
+                "previous_status": previous_status,
+                "sent_to": email,
+                "vendor_number": dispatch.vendor.vendor_number,
+                "provider_event": event,
+                "reason": reason,
+            },
+        )
+        logger.warning(
+            "Vendor credential email bounced/failed for %s (event: %s, reason: %s)",
+            email, event, reason
+        )
+        return True, f"Status updated to FAILED ({event})", dispatch
+
+    return False, f"Unhandled webhook event: {event}", dispatch
 
 
 
