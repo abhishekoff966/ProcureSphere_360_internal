@@ -65,6 +65,7 @@ class GoodsReceiptSerializer(serializers.ModelSerializer):
     class Meta:
         model = GoodsReceipt
         fields = "__all__"
+        read_only_fields = ["grn_number"]
 
     def validate(self, attrs):
         if not self.instance:

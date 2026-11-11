@@ -1775,18 +1775,10 @@ class ManagerSupplierCompareAPIView(APIView):
         vendor_b_id = request.GET.get("vendor_b")
 
         if not vendor_a_id or not vendor_b_id:
-            vendors = list(Vendor.objects.all()[:2])
-            if len(vendors) >= 2:
-                vendor_a_id = vendor_a_id or str(vendors[0].id)
-                vendor_b_id = vendor_b_id or str(vendors[1].id)
-            elif len(vendors) == 1:
-                vendor_a_id = vendor_a_id or str(vendors[0].id)
-                vendor_b_id = vendor_b_id or str(vendors[0].id)
-            else:
-                return Response(
-                    {"error": "Both vendor_a and vendor_b query parameters are required."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            return Response(
+                {"error": {"code": "VALIDATION_ERROR", "message": "Both vendor_a and vendor_b query parameters are required."}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         vendor_a = get_object_or_404(Vendor, pk=vendor_a_id)
         vendor_b = get_object_or_404(Vendor, pk=vendor_b_id)
@@ -2263,19 +2255,6 @@ class ManagerApprovalActionAPIView(APIView):
 
         from apps.orders.models import POAmendment
         from apps.requisitions.models import PurchaseRequisition
-
-        if not item_id:
-            if item_type == 'PO_AMENDMENT':
-                fallback_amend = POAmendment.objects.first()
-                if fallback_amend:
-                    item_id = str(fallback_amend.id)
-            else:
-                fallback_pr = PurchaseRequisition.objects.filter(
-                    status=PurchaseRequisition.STATUS_MANAGER_REVIEW
-                ).first() or PurchaseRequisition.objects.first()
-                if fallback_pr:
-                    item_id = str(fallback_pr.id)
-                    item_type = 'PR'
 
         if not item_id:
             return Response(

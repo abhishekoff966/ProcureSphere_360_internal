@@ -113,14 +113,9 @@ def _transition_event(
 
 
 def _next_document_number(model, field: str, prefix: str) -> str:
-    """Sequential document number unique for the given prefix, generated inside the transaction."""
-    year = timezone.now().strftime("%Y")
-    seq = model.objects.count() + 1
-    while True:
-        candidate = f"{prefix}-{year}-{seq:05d}"
-        if not model.objects.filter(**{field: candidate}).exists():
-            return candidate
-        seq += 1
+    """Sequential document number unique for the given prefix, generated using PostgreSQL advisory locking."""
+    from apps.core.services import generate_document_number
+    return generate_document_number(model, field, prefix)
 
 
 def _parse_weight(value, label):
