@@ -523,12 +523,10 @@ def mark_invoice_paid_service(
             "Permission Denied: Only Finance / AP personnel can execute invoice payments."
         )
 
-    if invoice.status not in [
-        SupplierInvoice.STATUS_READY_FOR_PAYMENT,
-        SupplierInvoice.STATUS_APPROVAL,
-    ]:
+    if invoice.status != SupplierInvoice.STATUS_READY_FOR_PAYMENT:
         raise ValidationError(
-            f"Invoice '{invoice.invoice_number}' in status '{invoice.status}' is not ready for payment."
+            f"Invoice '{invoice.invoice_number}' in status '{invoice.status}' is not ready for payment. "
+            "It must be approved (READY_FOR_PAYMENT) before payment."
         )
 
     previous_status = invoice.status

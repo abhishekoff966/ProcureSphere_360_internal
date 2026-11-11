@@ -730,15 +730,40 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(po).data, status=status.HTTP_201_CREATED)
 
     def _run_lifecycle_action(self, fn, *args, **kwargs):
+        from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
+        from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
         try:
             po = fn(*args, **kwargs)
+        except (DjangoPermissionDenied, DRFPermissionDenied) as e:
+            return Response(
+                {
+                    "error": {
+                        "code": "PERMISSION_DENIED",
+                        "message": str(e),
+                        "details": [str(e)],
+                    }
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
         except ValidationError as e:
             msg = e.messages if hasattr(e, "messages") else [str(e)]
+            first_msg = msg[0] if isinstance(msg, list) else str(e)
+            if "permission denied" in first_msg.lower():
+                return Response(
+                    {
+                        "error": {
+                            "code": "PERMISSION_DENIED",
+                            "message": first_msg,
+                            "details": msg,
+                        }
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             return Response(
                 {
                     "error": {
                         "code": "VALIDATION_ERROR",
-                        "message": msg[0] if isinstance(msg, list) else str(e),
+                        "message": first_msg,
                         "details": msg,
                     }
                 },

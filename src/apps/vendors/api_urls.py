@@ -123,6 +123,15 @@ class VendorRiskRecordSerializer(serializers.ModelSerializer):
 
 
 class VendorSerializer(serializers.ModelSerializer):
+    def validate_phone(self, value):
+        if not value:
+            return value
+        import re
+        val = str(value).strip()
+        if re.search(r"[a-zA-Z]", val) or not re.match(r"^[\d\+\-\(\)\s]{7,25}$", val):
+            raise serializers.ValidationError("Enter a valid phone number (digits and standard phone symbols only).")
+        return val
+
     def validate_tax_identification_number(self, value):
         if not value:
             return value
@@ -385,7 +394,7 @@ class VendorRiskAndHistoryPermission(BasePermission):
         role = getattr(user, "role_code", None)
         from apps.accounts.models import Role
         if request.method in SAFE_METHODS:
-            return role in {Role.SUPER_ADMIN, Role.PROC_EXEC, Role.PROC_MGR, Role.AUDITOR}
+            return role in {Role.SUPER_ADMIN, Role.PROC_EXEC, Role.PROC_MGR, Role.AUDITOR, Role.FINANCE_AP, Role.LEGAL_MGR}
         return role in {Role.SUPER_ADMIN, Role.PROC_MGR, Role.PROC_EXEC}
 
 class VendorViewSet(viewsets.ModelViewSet):

@@ -86,11 +86,16 @@ class SessionLoginView(views.APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Resolve user case-insensitively for email matching (DEF-019)
+        from apps.accounts.models import User
+        matched_user = User.objects.filter(email__iexact=str(email).strip()).first()
+        auth_username = matched_user.email if matched_user else email
+
         # Check if client/user is already locked out by Axes
         try:
             from axes.handlers.proxy import AxesProxyHandler
 
-            if not AxesProxyHandler.is_allowed(request, {"username": email}):
+            if not AxesProxyHandler.is_allowed(request, {"username": auth_username}):
                 return Response(
                     {
                         "error": {
@@ -104,12 +109,12 @@ class SessionLoginView(views.APIView):
         except Exception:
             pass
 
-        user = authenticate(request, username=email, password=password)
+        user = authenticate(request, username=auth_username, password=password)
         if user is None:
             try:
                 from axes.handlers.proxy import AxesProxyHandler
 
-                AxesProxyHandler.user_login_failed(request, credentials={"username": email, "email": email})
+                AxesProxyHandler.user_login_failed(request, credentials={"username": auth_username, "email": auth_username})
             except Exception:
                 pass
 

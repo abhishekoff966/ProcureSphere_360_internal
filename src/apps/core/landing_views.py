@@ -36,10 +36,13 @@ def _site_url():
 def landing_home(request):
     """
     Root URL handler.
-
-    The public marketing home page is always rendered cleanly.
-    Existing user sessions are preserved without abrupt sign-outs.
+    Forward authenticated users directly to their role-tailored dashboard (home_view).
+    Anonymous visitors see the public marketing home page.
     """
+    if request.user.is_authenticated:
+        from apps.core.views import home_view
+        return home_view(request)
+
     context = {
         'page_title': 'ProcureSphere 360 — Intelligent Enterprise Procurement Platform',
         'page_description': (

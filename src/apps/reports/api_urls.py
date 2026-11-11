@@ -139,15 +139,15 @@ def dashboard_summary_view(request):
     from apps.vendors.models import Vendor
     from apps.vendors.selectors import scope_vendors_queryset
 
-    pr_data = get_pr_aging_report()
-    spend_data = get_spend_analytics_report()
-    po_data = get_po_status_report()
-    inv_data = get_invoice_exception_aging_report()
+    pr_data = get_pr_aging_report(user=request.user)
+    spend_data = get_spend_analytics_report(user=request.user)
+    po_data = get_po_status_report(user=request.user)
+    inv_data = get_invoice_exception_aging_report(user=request.user)
     contract_data = get_contract_expiry_report(user=request.user)
     scorecard_data = get_supplier_performance_report()
 
     summary = {
-        "total_prs": PurchaseRequisition.objects.count() if request.user.is_superuser else len(pr_data),
+        "total_prs": len(pr_data) if not request.user.is_superuser else PurchaseRequisition.objects.count(),
         "total_pos": scope_purchase_orders_queryset(PurchaseOrder.objects.all(), request.user).count(),
         "total_spend": sum(
             float(item.get("actual_spend") or item.get("actual") or 0.0) for item in spend_data
@@ -164,25 +164,39 @@ def dashboard_summary_view(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, IsNotVendorUser])
 def pr_aging_report_view(request):
-    return Response(get_pr_aging_report(), status=status.HTTP_200_OK)
+    return Response(get_pr_aging_report(user=request.user), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, CanViewSpendAnalytics])
 def spend_analytics_report_view(request):
-    return Response(get_spend_analytics_report(), status=status.HTTP_200_OK)
+    period_days_raw = request.GET.get("period_days")
+    if period_days_raw is not None:
+        try:
+            period_days = int(period_days_raw)
+            if period_days < 0 or period_days > 3650:
+                return Response(
+                    {"error": {"code": "VALIDATION_ERROR", "message": "period_days must be between 0 and 3650."}},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except (ValueError, TypeError, OverflowError):
+            return Response(
+                {"error": {"code": "VALIDATION_ERROR", "message": "period_days must be a valid integer."}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+    return Response(get_spend_analytics_report(user=request.user), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, IsNotVendorUser])
 def sourcing_cycle_report_view(request):
-    return Response(get_sourcing_cycle_time_report(), status=status.HTTP_200_OK)
+    return Response(get_sourcing_cycle_time_report(user=request.user), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, IsNotVendorUser])
 def po_status_report_view(request):
-    return Response(get_po_status_report(), status=status.HTTP_200_OK)
+    return Response(get_po_status_report(user=request.user), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
@@ -224,7 +238,7 @@ def receipt_delivery_summary_view(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, IsNotVendorUser])
 def invoice_exception_report_view(request):
-    return Response(get_invoice_exception_aging_report(), status=status.HTTP_200_OK)
+    return Response(get_invoice_exception_aging_report(user=request.user), status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])
@@ -280,7 +294,7 @@ class CanReadAuditLogReport(permissions.BasePermission):
         role = getattr(request.user, "role_code", None) or (
             request.user.role.code if getattr(request.user, "role", None) else None
         )
-        return role in [Role.SUPER_ADMIN, Role.AUDITOR, Role.PROC_MGR, Role.FINANCE_AP]
+        return role in [Role.SUPER_ADMIN, Role.AUDITOR]
 
 class IsAuditorOrSuperAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -295,7 +309,7 @@ class IsAuditorOrSuperAdmin(permissions.BasePermission):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated, CanReadAuditLogReport])
+@permission_classes([IsAuthenticated, IsAuditorOrSuperAdmin])
 def audit_log_report_view(request):
     return Response(get_audit_log_report(), status=status.HTTP_200_OK)
 

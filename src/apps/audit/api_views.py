@@ -156,11 +156,21 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     )
     @action(detail=False, methods=["get"], url_path="metrics")
     def metrics(self, request):
-        try:
-            period_days = int(request.query_params.get("period_days", 30))
-            if period_days > 3650:
-                period_days = 365
-        except (ValueError, TypeError, OverflowError):
+        period_days_raw = request.query_params.get("period_days")
+        if period_days_raw is not None:
+            try:
+                period_days = int(period_days_raw)
+                if period_days < 0 or period_days > 3650:
+                    return Response(
+                        {"error": {"code": "VALIDATION_ERROR", "message": "period_days must be between 0 and 3650."}},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+            except (ValueError, TypeError, OverflowError):
+                return Response(
+                    {"error": {"code": "VALIDATION_ERROR", "message": "period_days must be a valid integer."}},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
             period_days = 30
 
         org = _get_auditor_org(request)
