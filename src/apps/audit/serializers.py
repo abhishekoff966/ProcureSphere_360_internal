@@ -8,12 +8,14 @@ class AuditLogListSerializer(serializers.ModelSerializer):
         source="actor.email", read_only=True, default="System / Automated"
     )
     action_display = serializers.CharField(source="get_action_display", read_only=True)
+    created_at = serializers.DateTimeField(source="timestamp", read_only=True)
 
     class Meta:
         model = AuditLog
         fields = [
             "id",
             "timestamp",
+            "created_at",
             "actor",
             "actor_email",
             "action",
@@ -30,12 +32,14 @@ class AuditLogDetailSerializer(serializers.ModelSerializer):
         source="actor.email", read_only=True, default="System / Automated"
     )
     action_display = serializers.CharField(source="get_action_display", read_only=True)
+    created_at = serializers.DateTimeField(source="timestamp", read_only=True)
 
     class Meta:
         model = AuditLog
         fields = [
             "id",
             "timestamp",
+            "created_at",
             "actor",
             "actor_email",
             "action",

@@ -920,7 +920,7 @@ class VendorGovernanceStatusAPIView(APIView):
     with the Procurement Manager frontend (vendor_suspension.html) and existing test suites.
     """
 
-    permission_classes = [IsAuthenticated, IsProcurementManager]
+    permission_classes = [IsAuthenticated, GovernanceOperatePermission]
 
     def post(self, request, pk):
         vendor = get_object_or_404(Vendor, pk=pk)

@@ -91,7 +91,7 @@ class ExportJobSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExportJob
         fields = "__all__"
-        read_only_fields = ["requested_by", "status", "result_file", "error_message"]
+        read_only_fields = ["requested_by", "result_file", "error_message"]
 
     def validate_report_type(self, value):
         val = str(value).strip().lower()
