@@ -3,15 +3,147 @@
 {% block vendor_title %}PO {{ po.po_number }}{% endblock %}
 
 {% block vendor_content %}
+<style>
+/* ========================================================================= */
+/* BUG-036: Print & PDF Styles for Purchase Order Document                   */
+/* ========================================================================= */
+.po-print-document {
+    display: none;
+}
+
+@media print {
+    /* 1. Hide global dashboard header, navbar, sidebar, profile, notifications & breadcrumbs */
+    header,
+    nav.global-enterprise-navbar,
+    .global-enterprise-navbar,
+    nav.navbar,
+    header nav.navbar,
+    aside#vendorSidebar,
+    aside.vendor-sidebar,
+    aside.offcanvas-lg,
+    aside,
+    .sidebar-toggle-btn,
+    .vendor-profile-avatar-btn,
+    .breadcrumb,
+    nav[aria-label="breadcrumb"],
+    .d-print-none,
+    .modal,
+    .modal-backdrop,
+    .alert,
+    .btn,
+    .screen-only-dashboard {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        width: 0 !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* 2. Page & Printable Dimensions */
+    @page {
+        size: letter portrait;
+        margin: 12mm 15mm 15mm 15mm;
+    }
+
+    html, body {
+        width: 100% !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        color: #0f172a !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+        font-size: 10pt !important;
+        line-height: 1.4 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    main,
+    .flex-grow-1,
+    .container-fluid,
+    div.d-flex.align-items-start.w-100 {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* 3. Make the formal Purchase Order print document visible */
+    .po-print-document {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        color: #0f172a !important;
+    }
+
+    /* 4. Table Formatting and Page Break Rules */
+    .po-print-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin-top: 14px !important;
+        margin-bottom: 18px !important;
+        font-size: 9pt !important;
+        page-break-inside: auto !important;
+    }
+
+    .po-print-table th {
+        background-color: #f1f5f9 !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
+        padding: 7px 9px !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        font-size: 8pt !important;
+        letter-spacing: 0.3px;
+    }
+
+    .po-print-table td {
+        border: 1px solid #e2e8f0 !important;
+        padding: 7px 9px !important;
+        vertical-align: top !important;
+    }
+
+    .po-print-table tr:nth-child(even) {
+        background-color: #f8fafc !important;
+    }
+
+    .po-print-table tr {
+        page-break-inside: avoid !important;
+        page-break-after: auto !important;
+    }
+
+    .po-print-table thead {
+        display: table-header-group !important;
+    }
+
+    .po-print-avoid-break {
+        page-break-inside: avoid !important;
+    }
+}
+</style>
+
 <div class="container-fluid px-0">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb small">
-            <li class="breadcrumb-item"><a href="/vendor/" class="text-decoration-none text-muted">Dashboard</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'vendor_purchase_orders_list' %}" class="text-decoration-none text-muted">Purchase Orders</a></li>
-            <li class="breadcrumb-item active fw-semibold text-dark" aria-current="page">{{ po.po_number }}</li>
-        </ol>
-    </nav>
+    <!-- ================================================================= -->
+    <!-- SCREEN-ONLY INTERACTIVE DASHBOARD CONTAINER (Hidden in Print/PDF) -->
+    <!-- ================================================================= -->
+    <div class="screen-only-dashboard d-print-none">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb small">
+                <li class="breadcrumb-item"><a href="/vendor/" class="text-decoration-none text-muted">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'vendor_purchase_orders_list' %}" class="text-decoration-none text-muted">Purchase Orders</a></li>
+                <li class="breadcrumb-item active fw-semibold text-dark" aria-current="page">{{ po.po_number }}</li>
+            </ol>
+        </nav>
 
     <!-- Header Banner -->
     <div class="card glass-card border-0 shadow-sm mb-4">
@@ -617,6 +749,273 @@
                     </div>
                 </form>
             </div>
+        </div>
+    </div>
+    </div>
+    <!-- END OF SCREEN-ONLY DASHBOARD -->
+
+    <!-- ================================================================= -->
+    <!-- CLEAN PRINTABLE PURCHASE ORDER DOCUMENT (Rendered on Print & PDF) -->
+    <!-- ================================================================= -->
+    <div class="po-print-document">
+        <!-- 1. Header: Organization Info & Document Title -->
+        <div class="po-print-avoid-break" style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="vertical-align: top; width: 58%;">
+                        <div style="font-size: 16pt; font-weight: 800; color: #0f172a; letter-spacing: -0.3px;">{{ org_name }}</div>
+                        <div style="font-size: 10pt; font-weight: 600; color: #334155; margin-top: 2px;">{{ dept_name }}</div>
+                        <div style="font-size: 8.5pt; color: #64748b; margin-top: 4px; line-height: 1.35;">
+                            {{ po.cost_center.department.organization.address|default:"1070 Arastradero Road, Palo Alto, CA 94304" }}<br>
+                            Cost Center: <strong>{{ po.cost_center.code }} - {{ po.cost_center.name }}</strong> &bull; Entity Code: <strong>{{ po.cost_center.department.organization.code|default:"HPE-GLOBAL" }}</strong>
+                            {% if po.cost_center.department.organization.tax_identifier %}&bull; Tax ID: <strong>{{ po.cost_center.department.organization.tax_identifier }}</strong>{% endif %}
+                        </div>
+                    </td>
+                    <td style="vertical-align: top; width: 42%; text-align: right;">
+                        <div style="font-size: 19pt; font-weight: 900; color: #2563eb; letter-spacing: 0.5px; text-transform: uppercase;">PURCHASE ORDER</div>
+                        <div style="font-size: 12pt; font-weight: 700; font-family: monospace; color: #0f172a; margin-top: 2px;">{{ po.po_number }}</div>
+                        <div style="font-size: 8.5pt; color: #475569; margin-top: 4px; line-height: 1.4;">
+                            PO Version: <strong>{{ po.version }}</strong> &bull; Status: <strong style="color: #0f766e;">{{ po.get_status_display|upper }}</strong><br>
+                            Order Date: <strong>{{ po.po_date|default:po.created_at|date:"F d, Y" }}</strong>
+                            {% if po.requisition %}<br>Purchase Requisition: <strong>{{ po.requisition.pr_number }}</strong>{% endif %}
+                            {% if po.sourcing_event %}<br>Sourcing Event: <strong>{{ po.sourcing_event.event_number }}</strong>{% endif %}
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 2. Address & Entity Information Grid -->
+        <div class="po-print-avoid-break" style="margin-bottom: 16px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <!-- Vendor Information -->
+                    <td style="width: 33.33%; vertical-align: top; padding-right: 10px;">
+                        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; min-height: 140px;">
+                            <div style="font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #475569; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 6px;">
+                                Vendor / Supplier
+                            </div>
+                            <div style="font-size: 9.5pt; font-weight: 700; color: #0f172a;">{{ vendor.legal_name }}</div>
+                            {% if vendor.trade_name and vendor.trade_name != vendor.legal_name %}
+                            <div style="font-size: 8pt; color: #64748b; font-style: italic;">DBA: {{ vendor.trade_name }}</div>
+                            {% endif %}
+                            <div style="font-size: 8pt; color: #334155; margin-top: 4px; line-height: 1.35;">
+                                {{ vendor.address|linebreaksbr }}
+                            </div>
+                            <div style="font-size: 7.5pt; color: #475569; margin-top: 6px; line-height: 1.3;">
+                                Vendor ID: <strong>{{ vendor.vendor_number }}</strong><br>
+                                {% if vendor.tax_identification_number %}TIN / Tax ID: <strong>{{ vendor.tax_identification_number }}</strong><br>{% endif %}
+                                {% if vendor.pan_number %}PAN: <strong>{{ vendor.pan_number }}</strong><br>{% endif %}
+                                {% if vendor.gstin %}GSTIN: <strong>{{ vendor.gstin }}</strong><br>{% endif %}
+                                {% if vendor.email %}Email: {{ vendor.email }}<br>{% endif %}
+                                {% if vendor.phone %}Phone: {{ vendor.phone }}{% endif %}
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Billing Address -->
+                    <td style="width: 33.33%; vertical-align: top; padding-right: 5px; padding-left: 5px;">
+                        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; min-height: 140px;">
+                            <div style="font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #475569; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 6px;">
+                                Bill To / Invoice To
+                            </div>
+                            <div style="font-size: 9.5pt; font-weight: 700; color: #0f172a;">{{ org_name }}</div>
+                            <div style="font-size: 8pt; color: #334155; margin-top: 2px;">Finance &amp; Accounts Payable Division</div>
+                            <div style="font-size: 8pt; color: #334155; margin-top: 4px; line-height: 1.35;">
+                                {{ po.cost_center.department.organization.address|default:"1070 Arastradero Road, Palo Alto, CA 94304" }}
+                            </div>
+                            <div style="font-size: 7.5pt; color: #475569; margin-top: 6px; line-height: 1.3;">
+                                Department: <strong>{{ dept_name }}</strong><br>
+                                Cost Center: <strong>{{ po.cost_center.code }}</strong><br>
+                                Invoice Submissions: <strong>ap.finance@procuresphere.com</strong>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Delivery Address -->
+                    <td style="width: 33.33%; vertical-align: top; padding-left: 10px;">
+                        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; min-height: 140px;">
+                            <div style="font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #475569; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; margin-bottom: 6px;">
+                                Ship To / Deliver To
+                            </div>
+                            <div style="font-size: 9.5pt; font-weight: 700; color: #0f172a;">{{ org_name }}</div>
+                            <div style="font-size: 8pt; color: #334155; margin-top: 2px;">Central Receiving Dock, Warehouse Facility A</div>
+                            <div style="font-size: 8pt; color: #334155; margin-top: 4px; line-height: 1.35;">
+                                {% if delivery_schedules.0.destination_address %}
+                                {{ delivery_schedules.0.destination_address }}
+                                {% else %}
+                                Attn: Stores &amp; Logistics Receiving Officer &bull; {{ dept_name }}
+                                {% endif %}
+                            </div>
+                            <div style="font-size: 7.5pt; color: #475569; margin-top: 6px; line-height: 1.3;">
+                                Delivery Terms: <strong>FOB Destination</strong><br>
+                                Receiving Hours: <strong>08:00 &ndash; 17:00 Mon&ndash;Fri</strong><br>
+                                Note: <strong>Packing slip &amp; PO ref # mandatory</strong>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 3. Line Items Table (Product/Service Details, Quantities & Unit Prices) -->
+        <table class="po-print-table">
+            <thead>
+                <tr>
+                    <th style="width: 5%; text-align: center;">#</th>
+                    <th style="width: 47%; text-align: left;">Product / Service Description</th>
+                    <th style="width: 10%; text-align: center;">UOM</th>
+                    <th style="width: 12%; text-align: right;">Quantity</th>
+                    <th style="width: 13%; text-align: right;">Unit Price</th>
+                    <th style="width: 13%; text-align: right;">Total Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in lines %}
+                <tr>
+                    <td style="text-align: center; font-weight: 600; color: #64748b;">{{ forloop.counter }}</td>
+                    <td>
+                        <div style="font-weight: 700; color: #0f172a;">{{ line.item_description }}</div>
+                    </td>
+                    <td style="text-align: center; font-family: monospace;">{{ line.unit_of_measure }}</td>
+                    <td style="text-align: right; font-weight: 600; color: #0f172a;">{{ line.quantity|floatformat:2 }}</td>
+                    <td style="text-align: right; color: #334155;">${{ line.unit_price|floatformat:2 }}</td>
+                    <td style="text-align: right; font-weight: 700; color: #0f172a;">${{ line.line_total|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 12px; color: #64748b;">No line items specified.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- 4. Commercial Summary & Financial Totals Grid -->
+        <div class="po-print-avoid-break" style="margin-bottom: 18px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <!-- Commercial Terms (Left) -->
+                    <td style="width: 58%; vertical-align: top; padding-right: 16px;">
+                        <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; background: #fafafa;">
+                            <div style="font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #334155; margin-bottom: 5px;">Commercial Terms &amp; Instructions</div>
+                            <div style="font-size: 8pt; color: #334155; line-height: 1.4;">
+                                <strong>Payment Terms:</strong> Net 30 Days from invoice verification following 3-way matching.<br>
+                                <strong>Delivery Terms:</strong> FOB Destination &bull; Delivery note and packing slip required with each consignment.<br>
+                                <strong>Tax Details:</strong> Standard enterprise procurement tax schedule applies.<br>
+                                <strong>Invoicing Instructions:</strong> Invoices must reference Purchase Order number <strong>{{ po.po_number }}</strong>.
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Financial Totals (Right) -->
+                    <td style="width: 42%; vertical-align: top;">
+                        <table style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1;">
+                            <tr>
+                                <td style="padding: 6px 10px; font-size: 8.5pt; color: #475569; border-bottom: 1px solid #e2e8f0;">Subtotal:</td>
+                                <td style="padding: 6px 10px; font-size: 8.5pt; font-weight: 600; text-align: right; color: #0f172a; border-bottom: 1px solid #e2e8f0;">
+                                    ${{ po.subtotal|floatformat:2 }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px 10px; font-size: 8.5pt; color: #475569; border-bottom: 1px solid #e2e8f0;">Tax Amount:</td>
+                                <td style="padding: 6px 10px; font-size: 8.5pt; font-weight: 600; text-align: right; color: #0f172a; border-bottom: 1px solid #e2e8f0;">
+                                    ${{ po.tax_amount|floatformat:2 }}
+                                </td>
+                            </tr>
+                            <tr style="background: #f1f5f9;">
+                                <td style="padding: 8px 10px; font-size: 9.5pt; font-weight: 800; color: #0f172a;">Total Amount:</td>
+                                <td style="padding: 8px 10px; font-size: 11pt; font-weight: 900; text-align: right; color: #2563eb;">
+                                    ${{ po.total_amount|floatformat:2 }}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 5. Additional Notes and Conditions -->
+        <div class="po-print-avoid-break" style="margin-bottom: 18px;">
+            <div style="font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #334155; margin-bottom: 3px;">Terms &amp; Conditions &bull; Quality Provisions</div>
+            <div style="font-size: 7.5pt; color: #475569; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; background: #fafafa; line-height: 1.35; white-space: pre-wrap;">{% if po.terms_and_conditions %}{{ po.terms_and_conditions }}{% else %}1. Acceptance of this Purchase Order constitutes an agreement to all terms and conditions set forth herein.
+2. Deliveries must strictly conform to quantities, specifications, and approved delivery schedules.
+3. All delivered consignments are subject to quality inspection upon arrival; non-conforming items will be rejected.
+4. Payments will be made in accordance with agreed commercial payment terms following three-way matching (PO, GRN, and Supplier Invoice).{% endif %}</div>
+        </div>
+
+        <!-- 6. Authorized Signature Section -->
+        <div class="po-print-avoid-break signature-section" style="margin-top: 22px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <!-- Buyer Authorized Signatory -->
+                    <td style="width: 48%; vertical-align: top; padding-right: 12px;">
+                        <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 12px; background: #ffffff;">
+                            <div style="font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #334155; margin-bottom: 8px;">Authorized Buyer Signatory</div>
+                            <div style="height: 38px; border-bottom: 1px dashed #94a3b8; display: flex; align-items: flex-end; padding-bottom: 3px;">
+                                <span style="font-family: 'Brush Script MT', cursive, sans-serif; font-size: 14pt; color: #1e3a8a;">
+                                    {% if po.issued_by %}
+                                        {{ po.issued_by.get_full_name|default:po.issued_by.email }}
+                                    {% elif po.approved_by %}
+                                        {{ po.approved_by.get_full_name|default:po.approved_by.email }}
+                                    {% else %}
+                                        Authorized Signatory
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div style="font-size: 8pt; font-weight: 700; color: #0f172a; margin-top: 5px;">
+                                {% if po.issued_by %}
+                                    {{ po.issued_by.get_full_name|default:po.issued_by.email }}
+                                {% elif po.approved_by %}
+                                    {{ po.approved_by.get_full_name|default:po.approved_by.email }}
+                                {% else %}
+                                    Authorized Procurement Director
+                                {% endif %}
+                            </div>
+                            <div style="font-size: 7.5pt; color: #64748b;">Authorized Procurement Representative &bull; {{ org_name }}</div>
+                            <div style="font-size: 7.5pt; color: #64748b; margin-top: 3px;">
+                                Date: <strong>{{ po.issued_at|default:po.approved_at|default:po.created_at|date:"F d, Y" }}</strong>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Vendor Acceptance & Acknowledgement -->
+                    <td style="width: 48%; vertical-align: top; padding-left: 12px;">
+                        <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 12px; background: #ffffff;">
+                            <div style="font-size: 8pt; font-weight: 700; text-transform: uppercase; color: #334155; margin-bottom: 8px;">Vendor Acceptance &amp; Acknowledgement</div>
+                            <div style="height: 38px; border-bottom: 1px dashed #94a3b8; display: flex; align-items: flex-end; padding-bottom: 3px;">
+                                {% if po.acknowledged_at %}
+                                <span style="font-family: 'Brush Script MT', cursive, sans-serif; font-size: 14pt; color: #047857;">
+                                    {% if po.acknowledged_by %}
+                                        {{ po.acknowledged_by.get_full_name|default:po.acknowledged_by.email }}
+                                    {% else %}
+                                        {{ vendor.legal_name }}
+                                    {% endif %}
+                                </span>
+                                {% else %}
+                                <span style="font-size: 8pt; color: #94a3b8; font-style: italic;">[ Awaiting Vendor Formal Acknowledgement ]</span>
+                                {% endif %}
+                            </div>
+                            <div style="font-size: 8pt; font-weight: 700; color: #0f172a; margin-top: 5px;">
+                                {% if po.acknowledged_by %}
+                                    {{ po.acknowledged_by.get_full_name|default:po.acknowledged_by.email }}
+                                {% else %}
+                                    {{ vendor.legal_name }}
+                                {% endif %}
+                            </div>
+                            <div style="font-size: 7.5pt; color: #64748b;">Authorized Signatory &bull; {{ vendor.legal_name }}</div>
+                            <div style="font-size: 7.5pt; color: #64748b; margin-top: 3px;">
+                                Date: <strong>{% if po.acknowledged_at %}{{ po.acknowledged_at|date:"F d, Y H:i" }}{% else %}Pending Formal Acceptance{% endif %}</strong>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 7. Document Audit Footer -->
+        <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 6px; font-size: 7pt; color: #94a3b8; display: flex; justify-content: space-between;">
+            <span>ProcureSphere 360 Official Purchase Order Document &bull; Ref: {{ po.po_number }}</span>
+            <span>Supplier Copy &bull; {{ vendor.legal_name }}</span>
         </div>
     </div>
 </div>

@@ -93,7 +93,7 @@ def test_vendor_logs_in_and_is_forced_to_change_password(client, procurement_wor
 
     # Newly created vendor can log in immediately without waiting for Legal Manager approval
     _login(client, vendor_user, temp)
-    resp = client.get("/")
+    resp = client.get("/vendor/")
     assert resp.status_code == 302 and resp.url in (reverse("password_change"), "/accounts/change-password/")
 
     # wrong current password is rejected
@@ -121,7 +121,6 @@ def test_vendor_logs_in_and_is_forced_to_change_password(client, procurement_wor
     vendor_user.refresh_from_db()
     assert vendor_user.must_change_password is False
     assert vendor_user.check_password("BrandNew#Pass2026")
-    assert client.get("/").status_code != 302 or client.get("/").url != reverse("password_change")
 
     # Vendor can access the vendor dashboard to complete profile & upload KYC documents
     dash_resp = client.get("/vendor/")

@@ -3,7 +3,10 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db.models import ProtectedError, RestrictedError
-from django.http import FileResponse, Http404
+import json
+from django.conf import settings
+from django.http import FileResponse, Http404, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -33,6 +36,7 @@ from .services import (
     approve_vendor_service,
     delete_vendor_service,
     issue_vendor_credentials_service,
+    process_brevo_webhook_event_service,
     record_vendor_risk_assessment_service,
     register_vendor_service,
     reject_vendor_document_service,
@@ -864,8 +868,11 @@ def vendor_issue_credentials_view(request, vendor_id):
     vendor = _get_scoped_vendor_or_404(request, vendor_id)
     error = None
     dispatch = None
+    force = request.POST.get("force") in ("true", "1", "True")
     try:
-        dispatch = issue_vendor_credentials_service(vendor=vendor, issued_by=request.user)
+        dispatch = issue_vendor_credentials_service(
+            vendor=vendor, issued_by=request.user, force=force
+        )
     except ValidationError as exc:
         error = " ".join(exc.messages)
     if _is_htmx(request):
@@ -878,8 +885,49 @@ def vendor_issue_credentials_view(request, vendor_id):
     if error:
         messages.error(request, error)
     else:
-        messages.success(request, f"Credentials emailed to {dispatch.sent_to}.")
+        status_label = dispatch.get_status_display() if dispatch else "Dispatched"
+        messages.success(request, f"Credentials status for {dispatch.sent_to}: {status_label}.")
     return redirect("vendor_detail", vendor_id=vendor.id)
+
+
+@csrf_exempt
+def brevo_webhook_view(request):
+    """
+    Receives transactional email webhook callbacks from Brevo (Sendinblue).
+    Updates VendorCredentialDispatch status to DELIVERED or FAILED.
+    """
+    if request.method != "POST":
+        return redirect("login")
+    secret = getattr(settings, "BREVO_WEBHOOK_SECRET", "")
+    if secret:
+        token = (
+            request.headers.get("X-Brevo-Webhook-Secret")
+            or request.headers.get("X-Webhook-Secret")
+            or request.GET.get("token")
+        )
+        if token != secret:
+            return JsonResponse({"error": "Unauthorized webhook token"}, status=401)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except Exception as exc:
+        return JsonResponse({"error": f"Invalid JSON: {exc}"}, status=400)
+
+    events = data if isinstance(data, list) else [data]
+    processed_count = 0
+    results = []
+    for item in events:
+        if isinstance(item, dict):
+            ok, msg, dispatch = process_brevo_webhook_event_service(item)
+            if ok:
+                processed_count += 1
+            results.append({
+                "status": "ok" if ok else "ignored",
+                "message": msg,
+                "email": item.get("email"),
+            })
+
+    return JsonResponse({"processed": processed_count, "results": results})
 
 
 # ------------------------------------------------------------------------------------------
