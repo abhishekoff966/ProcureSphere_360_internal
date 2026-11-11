@@ -6,7 +6,7 @@ import string
 import time
 import uuid
 from datetime import timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 try:
     import requests
@@ -20,67 +20,38 @@ from django.core.validators import validate_email
 from django.db import transaction
 from django.utils import timezone
 
-
-
 from apps.accounts.models import Role, User
-
 from apps.audit.models import AuditLog
-
 from apps.audit.services import create_audit_log_service
-
 from apps.core.validators import (
-
     check_upload_rate_limit,
-
     extract_pan_from_gstin,
-
     is_valid_gstin,
-
     is_valid_pan,
-
     normalize_tax_identifier,
-
     validate_file_upload,
-
     validate_gstin,
-
+    validate_legal_name,
+    validate_optional_phone_number,
     validate_pan_gstin_consistency,
-
     validate_pan_number,
-
+    validate_tax_id_number,
 )
-
 from apps.notifications.models import Notification
-
 from apps.notifications.services import notify_users, notify_vendor_users
 
-
-
 from .brevo_email import build_credentials_html
-
 from .kyc_policy import ProvisionalKYCPolicy
-
 from .models import (
-
     Vendor,
-
     VendorCategory,
-
     VendorContact,
-
     VendorCredentialDispatch,
-
     VendorDocument,
-
     VendorDocumentReviewHistory,
-
     VendorRiskRecord,
-
 )
-
 from .permissions import can_legal_verify_vendor, can_operate_governance
-
-
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +110,11 @@ def register_vendor_service(
         organization = getattr(created_by_user, "effective_organization", None)
 
 
+
+    legal_name = validate_legal_name(legal_name)
+    tax_identification_number = validate_tax_id_number(tax_identification_number)
+    if phone:
+        phone = validate_optional_phone_number(phone)
 
     if Vendor.objects.filter(tax_identification_number=tax_identification_number).exists():
 
@@ -313,6 +289,10 @@ def update_vendor_service(
         raise PermissionDenied("Only Procurement Executives/Managers can edit vendor information.")
 
 
+
+    legal_name = validate_legal_name(legal_name)
+    if phone:
+        phone = validate_optional_phone_number(phone)
 
     previous_state = {
 
@@ -907,37 +887,19 @@ def verify_vendor_document_decision_service(
         target_object_id=str(document.id),
 
         previous_state={
-
             "status": previous_status,
-
             "review_status": previous_review_status,
-
             "is_verified": previous_is_verified,
-
-            "review_status": document.review_status,
-
             "document_type": document.document_type,
-
             "vendor": document.vendor.legal_name,
-
         },
-
         new_state={
-
             "status": new_status,
-
             "review_status": document.review_status,
-
             "is_verified": document.is_verified,
-
-            "review_status": document.review_status,
-
             "decision": decision,
-
             "notes": resolved_notes,
-
             "vendor": document.vendor.legal_name,
-
         },
 
     )
@@ -1198,7 +1160,6 @@ def approve_vendor_service(*, vendor: Vendor, manager: User, notes: str = "") ->
     """
 
     from .permissions import can_operate_governance
-
     from .selectors import get_vendor_kyc_summary
 
 
@@ -1392,7 +1353,6 @@ def set_vendor_status_governance_service(
     """
 
     from .permissions import can_operate_governance, can_suspend_vendor
-
     from .selectors import get_vendor_open_transactions
 
 
@@ -1455,7 +1415,7 @@ def set_vendor_status_governance_service(
 
     vendor.status_notes = notes.strip()
 
-    
+
     if new_status == Vendor.STATUS_SUSPENDED:
         vendor.is_event_eligible = False
         vendor.event_eligibility_status = Vendor.ELIGIBILITY_SUSPENDED
@@ -3445,7 +3405,7 @@ def scan_vendor_document_expirations_service(now=None) -> dict:
 
                         message=f"Vendor '{vendor.legal_name}' mandatory document '{doc.title}' expired. Eligibility revoked.",
 
-                        target_url="/contracts/dashboard/",
+                        target_url=f"/vendors/{vendor.id}/",
 
                     )
 
@@ -4094,7 +4054,6 @@ def bulk_import_vendors_from_csv_service(*, csv_file, target_org, actor=None) ->
     """
 
     import csv
-
     import io
 
     from apps.core.services import generate_document_number

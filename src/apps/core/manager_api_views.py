@@ -8,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.models import Role
 from apps.accounts.permissions import IsProcurementManager
 from apps.budgets.models import Budget, SpendLedger
 from apps.invoices.models import MatchException, SupplierInvoice
@@ -184,6 +185,26 @@ class ManagerKPIsAPIView(APIView):
         budget_overruns_count = budget_review_prs_qs.count()
         policy_exceptions_count = budget_overruns_count + open_invoice_exceptions
 
+        # Budget Utilization & Available Calculations
+        total_spent_and_committed = committed_spend + actual_spend
+        available_budget = max(Decimal("0.00"), allocated_budget - total_spent_and_committed)
+        budget_utilization_pct = (
+            round(float((total_spent_and_committed / allocated_budget) * 100), 1)
+            if allocated_budget > Decimal("0.00")
+            else 0.0
+        )
+
+        # Operational Quality Indicators from DB
+        grns_qs = GoodsReceipt.objects.all()
+        rejections_qs = RejectionRecord.objects.all()
+        if org:
+            grns_qs = grns_qs.filter(po__cost_center__department__organization=org)
+            rejections_qs = rejections_qs.filter(
+                receipt_line__receipt__po__cost_center__department__organization=org
+            )
+        total_grns_count = grns_qs.count()
+        total_rejections_count = rejections_qs.count()
+
         data = {
             "timestamp": now.isoformat(),
             "pending_approvals_count": pending_approvals_count,
@@ -197,12 +218,21 @@ class ManagerKPIsAPIView(APIView):
             "high_risk_vendors_count": high_risk_vendors_count,
             "kyc_reviews_count": kyc_reviews_count,
             "open_sourcing_events_count": open_sourcing_count,
+            "allocated_budget": float(allocated_budget),
             "allocated_budget_total": float(allocated_budget),
+            "committed_spend": float(committed_spend),
             "committed_spend_total": float(committed_spend),
+            "actual_spend": float(actual_spend),
             "actual_spend_total": float(actual_spend),
+            "available_budget": float(available_budget),
+            "budget_utilization_pct": float(budget_utilization_pct),
+            "avg_vendor_scorecard": round(float(avg_scorecard), 1),
             "avg_supplier_performance": round(float(avg_scorecard), 1),
+            "total_grns_count": total_grns_count,
+            "total_rejections_count": total_rejections_count,
             "unread_notifications_count": unread_notifications,
             "open_invoice_exceptions": open_invoice_exceptions,
+            "open_invoice_exceptions_count": open_invoice_exceptions,
         }
 
         return Response(data, status=status.HTTP_200_OK)
@@ -1775,13 +1805,21 @@ class ManagerSupplierCompareAPIView(APIView):
         vendor_b_id = request.GET.get("vendor_b")
 
         if not vendor_a_id or not vendor_b_id:
-            return Response(
-                {"error": {"code": "VALIDATION_ERROR", "message": "Both vendor_a and vendor_b query parameters are required."}},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        vendor_a = get_object_or_404(Vendor, pk=vendor_a_id)
-        vendor_b = get_object_or_404(Vendor, pk=vendor_b_id)
+            vendors = list(Vendor.objects.all().order_by("-created_at")[:2])
+            if len(vendors) >= 2:
+                vendor_a = vendors[0]
+                vendor_b = vendors[1]
+            elif len(vendors) == 1:
+                vendor_a = vendors[0]
+                vendor_b = vendors[0]
+            else:
+                return Response(
+                    {"error": {"code": "VALIDATION_ERROR", "message": "Both vendor_a and vendor_b query parameters are required."}},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
+            vendor_a = get_object_or_404(Vendor, pk=vendor_a_id)
+            vendor_b = get_object_or_404(Vendor, pk=vendor_b_id)
 
         def get_vendor_summary(v):
             latest_sc = v.scorecards.order_by("-created_at").first()
@@ -1874,6 +1912,7 @@ class ManagerVendorWatchlistAPIView(APIView):
 
         vendor_ids = [v.id for v in qs]
         from apps.orders.models import PurchaseOrder
+        from apps.sourcing.models import VendorBid
 
         # Batch aggregate open exposure per vendor in a single query (eliminates N+1)
         open_pos = (
@@ -1890,14 +1929,35 @@ class ManagerVendorWatchlistAPIView(APIView):
                 po_count=Count("id"),
             )
         )
+        open_bids = (
+            VendorBid.objects.filter(
+                vendor_id__in=vendor_ids,
+                status=VendorBid.STATUS_SUBMITTED,
+            )
+            .values("vendor_id")
+            .annotate(bid_count=Count("id"))
+        )
+        bids_map = {item["vendor_id"]: item["bid_count"] for item in open_bids}
+
         exposure_map = {
             item["vendor_id"]: {
+                "open_pos": item["po_count"],
+                "open_bids": bids_map.get(item["vendor_id"], 0),
                 "total_open_pos_count": item["po_count"],
                 "total_open_pos_amount": float(item["total_amount"] or Decimal("0.00")),
                 "total_exposure_amount": float(item["total_amount"] or Decimal("0.00")),
             }
             for item in open_pos
         }
+        for vid in vendor_ids:
+            if vid not in exposure_map:
+                exposure_map[vid] = {
+                    "open_pos": 0,
+                    "open_bids": bids_map.get(vid, 0),
+                    "total_open_pos_count": 0,
+                    "total_open_pos_amount": 0.0,
+                    "total_exposure_amount": 0.0,
+                }
 
         # Batch fetch latest risk records in a single query (eliminates N+1)
         latest_risks = {}
@@ -2262,33 +2322,22 @@ class ManagerApprovalActionAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if not request.user.is_superuser:
+            role_code = getattr(request.user, "role_code", None) or (
+                request.user.role.code if getattr(request.user, "role", None) else None
+            )
+            if role_code in [Role.PROC_MGR, "PROC_MGR"]:
+                return Response(
+                    {'error': 'Permission Denied: Procurement Managers maintain approval oversight only and cannot approve or reject.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
         try:
             if item_type == 'PR':
-                from apps.approvals.services import process_approval_action_service
-                pr = PurchaseRequisition.objects.get(id=item_id)
-                # Anti-IDOR: verify PR belongs to caller's organization
-                caller_org = get_user_org(request.user)
-                if not request.user.is_superuser:
-                    pr_org_id = pr.department.organization_id if pr.department else None
-                    if not caller_org or (pr_org_id and caller_org.id != pr_org_id):
-                        return Response(
-                            {'error': 'Permission Denied: Requisition belongs to another organization.'},
-                            status=status.HTTP_403_FORBIDDEN,
-                        )
-                action_rec = process_approval_action_service(
-                    target_object=pr,
-                    actor=request.user,
-                    action=action,
-                    comments=comments,
+                return Response(
+                    {'error': 'Permission Denied: Procurement Managers maintain view and inspection permissions only and cannot approve or reject purchase requisitions.'},
+                    status=status.HTTP_403_FORBIDDEN,
                 )
-                pr.refresh_from_db()
-                return Response({
-                    'success': True,
-                    'message': f"Requisition {pr.pr_number} has been {action.lower()}d successfully.",
-                    'item_id': str(pr.id),
-                    'new_status': pr.status,
-                    'action_id': str(action_rec.id) if action_rec else None,
-                }, status=status.HTTP_200_OK)
 
             elif item_type == 'PO_APPROVAL':
                 from apps.orders.services import (

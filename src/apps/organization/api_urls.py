@@ -62,14 +62,17 @@ class IsAdminOrReadOnly(BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
+        role_code = getattr(request.user, "role_code", None) or (
+            request.user.role.code if getattr(request.user, "role", None) else None
+        )
         if (
             getattr(request.user, "is_vendor", False)
-            or getattr(request.user, "role_code", None) == Role.VENDOR_USER
+            or role_code in [Role.VENDOR_USER, Role.REQUESTER]
         ):
             return False
         if (
             request.user.is_superuser
-            or getattr(request.user, "role_code", None) == Role.SUPER_ADMIN
+            or role_code == Role.SUPER_ADMIN
         ):
             return True
         return request.method in SAFE_METHODS

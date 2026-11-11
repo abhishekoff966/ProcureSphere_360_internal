@@ -209,3 +209,27 @@ def test_create_view_rejects_invalid_file_format(pr_magic_setup):
 
     msgs = [str(m) for m in get_messages(response.wsgi_request)]
     assert "Invalid file format." in msgs
+
+
+def test_tc_cpr_018_validate_pr_attachment_with_advanced_pointer():
+    """
+    TC-CPR-018 / DEF-001:
+    Valid PDF whose stream pointer is not at byte 0 (e.g. already partly read
+    by an earlier consumer) is uploaded as a PR attachment.
+    1. Build a valid PDF upload (starts with %PDF-).
+    2. Advance the file pointer (file.seek(4)).
+    3. Call validate_pr_attachment(file).
+    Expected: File accepted and file pointer preserved.
+    """
+    valid_pdf = SimpleUploadedFile(
+        "test_pr_attachment.pdf",
+        b"%PDF-1.4\nSome sample PDF content for testing stream pointer restoration.",
+        content_type="application/pdf",
+    )
+    valid_pdf.seek(4)
+    assert valid_pdf.tell() == 4
+
+    result = validate_pr_attachment(valid_pdf)
+    assert result == valid_pdf
+    assert valid_pdf.tell() == 4
+

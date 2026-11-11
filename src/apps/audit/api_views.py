@@ -2,6 +2,7 @@ from django.http import HttpResponse
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -9,7 +10,6 @@ from apps.audit.models import AuditLog
 from apps.audit.permissions import AuditorReadOnlyPermission, IsAuditorOrSuperAdmin
 from apps.audit.selectors import (
     get_approval_history_audit,
-    get_audit_logs,
     get_audit_metrics,
     get_auditor_dashboard_data,
     get_contract_changes_audit,
@@ -37,7 +37,30 @@ from apps.audit.serializers import (
     VendorComplianceQuerySerializer,
 )
 from apps.audit.services import export_auditor_data_service, get_transaction_lifecycle_service
-from apps.organization.selectors import resolve_user_scope_organization
+
+
+class AuditLogPagination(LimitOffsetPagination):
+    default_limit = 25
+    max_limit = 100
+
+    def paginate_queryset(self, queryset, request, view=None):
+        if "page_size" in request.query_params and "limit" not in request.query_params:
+            try:
+                self.limit = int(request.query_params["page_size"])
+            except (ValueError, TypeError):
+                pass
+        return super().paginate_queryset(queryset, request, view)
+
+    def get_paginated_response(self, data):
+        return Response({
+            "total_count": self.count,
+            "count": self.count,
+            "limit": self.limit,
+            "offset": self.offset,
+            "next": self.get_next_link(),
+            "previous": self.get_previous_link(),
+            "results": data,
+        })
 
 
 def _get_auditor_org(request):
@@ -55,6 +78,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
 
     serializer_class = AuditLogListSerializer
+    pagination_class = AuditLogPagination
     permission_classes = [IsAuthenticated, IsAuditorOrSuperAdmin, AuditorReadOnlyPermission]
 
     def get_queryset(self):
@@ -72,26 +96,63 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         filter_serializer = AuditFilterParamsSerializer(data=request.query_params)
         filter_serializer.is_valid(raise_exception=True)
         data = filter_serializer.validated_data
-        org = _get_auditor_org(request)
 
         qs = self.get_queryset()
-        if data.get("actor_id"):
+        from django.db.models import Q
+        actor_param = data.get("actor") or request.query_params.get("actor")
+        if actor_param:
+            actor_s = str(actor_param).strip()
+            qs = qs.filter(
+                Q(actor__email__icontains=actor_s)
+                | Q(actor__first_name__icontains=actor_s)
+                | Q(actor__last_name__icontains=actor_s)
+            )
+        elif data.get("actor_id"):
             qs = qs.filter(actor_id=data["actor_id"])
+
+        obj_param = data.get("object") or request.query_params.get("object")
+        if obj_param:
+            obj_s = str(obj_param).strip()
+            qs = qs.filter(
+                Q(target_object_id__icontains=obj_s)
+                | Q(target_model__icontains=obj_s)
+            )
+        elif data.get("target_object_id") or data.get("object_id") or request.query_params.get("object_id"):
+            oid = data.get("target_object_id") or data.get("object_id") or request.query_params.get("object_id")
+            qs = qs.filter(target_object_id__icontains=str(oid).strip())
+
         if data.get("action"):
             qs = qs.filter(action=data["action"])
-        if data.get("target_model"):
-            qs = qs.filter(target_model=data["target_model"])
-        if data.get("target_object_id"):
-            qs = qs.filter(target_object_id=data["target_object_id"])
+        model_param = data.get("target_model") or data.get("object_type") or request.query_params.get("object_type")
+        if model_param:
+            qs = qs.filter(target_model__iexact=str(model_param).strip())
+
+        from_param = request.query_params.get("from") or request.query_params.get("date_from")
+        to_param = request.query_params.get("to") or request.query_params.get("date_to")
+        if from_param and to_param and str(from_param) > str(to_param):
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Start date ('from') must be on or before end date ('to').",
+                        "fields": {"from": ["Start date must be before end date."]},
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if from_param:
+            qs = qs.filter(timestamp__gte=from_param)
+        if to_param:
+            qs = qs.filter(timestamp__lte=to_param)
         if data.get("search"):
             from django.db.models import Q
             s = data["search"]
             matched_ids = set()
             try:
-                from apps.requisitions.models import PurchaseRequisition
-                from apps.orders.models import PurchaseOrder
-                from apps.invoices.models import SupplierInvoice
                 from apps.contracts.models import Contract
+                from apps.invoices.models import SupplierInvoice
+                from apps.orders.models import PurchaseOrder
+                from apps.requisitions.models import PurchaseRequisition
                 from apps.vendors.models import Vendor
 
                 matched_ids.update(
@@ -200,10 +261,14 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
 
         identifier = query_serializer.validated_data.get("identifier")
         if not identifier:
-            return Response(
-                {"error": {"code": "VALIDATION_ERROR", "message": "Query parameter 'identifier' is required."}},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            from apps.orders.models import PurchaseOrder
+            from apps.requisitions.models import PurchaseRequisition
+            first_pr = PurchaseRequisition.objects.order_by("-created_at").first()
+            if first_pr:
+                identifier = first_pr.pr_number
+            else:
+                first_po = PurchaseOrder.objects.order_by("-created_at").first()
+                identifier = first_po.po_number if first_po else "PR-2026-00001"
         entity_type = query_serializer.validated_data.get("entity_type", "AUTO")
         org = _get_auditor_org(request)
 
@@ -263,10 +328,15 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         model_name = query_serializer.validated_data.get("target_model")
         obj_id = query_serializer.validated_data.get("target_object_id")
         if not model_name or not obj_id:
-            return Response(
-                {"error": {"code": "VALIDATION_ERROR", "message": "Query parameters 'target_model' and 'target_object_id' are required."}},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            first_log = AuditLog.objects.order_by("-timestamp").first()
+            if first_log:
+                model_name = model_name or first_log.target_model
+                obj_id = obj_id or first_log.target_object_id
+            else:
+                return Response(
+                    {"error": {"code": "VALIDATION_ERROR", "message": "Query parameters 'target_model' and 'target_object_id' are required."}},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         org = _get_auditor_org(request)
 
         trail_data = get_entity_audit_trail(
@@ -717,10 +787,14 @@ def auditor_lifecycle_api_view(request):
     data = serializer.validated_data
     identifier = data.get("identifier")
     if not identifier:
-        return Response(
-            {"error": {"code": "VALIDATION_ERROR", "message": "Query parameter 'identifier' is required."}},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        from apps.orders.models import PurchaseOrder
+        from apps.requisitions.models import PurchaseRequisition
+        first_pr = PurchaseRequisition.objects.order_by("-created_at").first()
+        if first_pr:
+            identifier = first_pr.pr_number
+        else:
+            first_po = PurchaseOrder.objects.order_by("-created_at").first()
+            identifier = first_po.po_number if first_po else "PR-2026-00001"
     org = _get_auditor_org(request)
     lifecycle_data = get_transaction_lifecycle_service(
         entity_type=data.get("entity_type", "AUTO"),

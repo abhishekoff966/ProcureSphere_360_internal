@@ -3,7 +3,8 @@ from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied, ValidationError as DRFValidationError
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
@@ -138,11 +139,15 @@ class SourcingEventViewSet(
             technical_weight=data.get("technical_weight", 50),
             commercial_weight=data.get("commercial_weight", 50),
             created_by_user=self.request.user,
+            enforce_future_start=True,
         )
 
     def perform_update(self, serializer):
         serializer.instance = services.update_draft_sourcing_event_service(
-            event=serializer.instance, user=self.request.user, data=serializer.validated_data
+            event=serializer.instance,
+            user=self.request.user,
+            data=serializer.validated_data,
+            enforce_future_start=True,
         )
 
     def _ok(self, event):
@@ -156,6 +161,21 @@ class SourcingEventViewSet(
     def publish(self, request, pk=None):
         _require_manage(request)
         event = self.get_object()
+        active_invites = [
+            i for i in event.invitations.select_related("vendor").all()
+            if getattr(i.vendor, "status", None) == "ACTIVE"
+        ]
+        if len(active_invites) < 3:
+            return Response(
+                {
+                    "error": {
+                        "code": "min_vendors_required",
+                        "message": "Invite at least 3 ACTIVE vendors before publishing.",
+                        "details": {"invitations": ["Invite at least 3 ACTIVE vendors before publishing."]},
+                    }
+                },
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
         services.publish_sourcing_event_service(event=event, user=request.user)
         return self._ok(event)
 

@@ -49,6 +49,7 @@ def get_sourcing_events_for_user(user):
                 qs = qs.filter(
                     Q(requisition__department__organization=user_org)
                     | Q(requisition__isnull=True, created_by__organization=user_org)
+                    | Q(requisition__isnull=True, created_by__isnull=True)
                 )
         return qs
     return qs.none()

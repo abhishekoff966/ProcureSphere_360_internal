@@ -104,25 +104,52 @@ def create_contract_service(
         contract_number = str(contract_number).strip()
         if Contract.objects.filter(contract_number=contract_number).exists():
             raise ValidationError(f"Contract with number '{contract_number}' already exists.")
+        contract = Contract.objects.create(
+            contract_number=contract_number,
+            title=title.strip(),
+            version=1,
+            vendor=vendor,
+            sourcing_event=sourcing_event,
+            po=po,
+            status=Contract.STATUS_DRAFT,
+            contract_value=contract_value,
+            start_date=start_date,
+            end_date=end_date,
+            renewal_notice_days=renewal_notice_days,
+            contract_owner=contract_owner,
+        )
     else:
+        import random
+        import time
+
+        from django.db import IntegrityError
+
         from apps.core.services import generate_document_number
 
-        contract_number = generate_document_number(Contract, "contract_number", "CON")
-
-    contract = Contract.objects.create(
-        contract_number=contract_number,
-        title=title.strip(),
-        version=1,
-        vendor=vendor,
-        sourcing_event=sourcing_event,
-        po=po,
-        status=Contract.STATUS_DRAFT,
-        contract_value=contract_value,
-        start_date=start_date,
-        end_date=end_date,
-        renewal_notice_days=renewal_notice_days,
-        contract_owner=contract_owner,
-    )
+        contract = None
+        for attempt in range(15):
+            cand_number = generate_document_number(Contract, "contract_number", "CON", offset=attempt)
+            try:
+                with transaction.atomic():
+                    contract = Contract.objects.create(
+                        contract_number=cand_number,
+                        title=title.strip(),
+                        version=1,
+                        vendor=vendor,
+                        sourcing_event=sourcing_event,
+                        po=po,
+                        status=Contract.STATUS_DRAFT,
+                        contract_value=contract_value,
+                        start_date=start_date,
+                        end_date=end_date,
+                        renewal_notice_days=renewal_notice_days,
+                        contract_owner=contract_owner,
+                    )
+                    break
+            except IntegrityError:
+                if attempt == 14:
+                    raise
+                time.sleep(random.uniform(0.01, 0.05))
 
     # Initial Version 1 Snapshot
     ContractVersion.objects.create(

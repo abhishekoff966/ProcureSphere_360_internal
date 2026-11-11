@@ -303,6 +303,18 @@ class AwardApproveAPIView(APIView):
         )
 
 
+def sourcing_event_direct_detail(request, pk):
+    return SourcingEventViewSet.as_view({"get": "retrieve", "put": "update", "patch": "partial_update"})(request, pk=pk)
+
+
+def sourcing_event_direct_publish(request, pk):
+    return SourcingEventViewSet.as_view({"post": "publish"})(request, pk=pk)
+
+
+def sourcing_event_direct_bids(request, pk):
+    return SourcingEventViewSet.as_view({"get": "bids", "post": "bids"})(request, pk=pk)
+
+
 router = DefaultRouter()
 router.register(r"events", SourcingEventViewSet, basename="sourcing-event")
 router.register(r"bids", VendorBidViewSet, basename="vendor-bid")
@@ -314,4 +326,10 @@ urlpatterns = [
     path(
         "events/<uuid:pk>/award-approve/", AwardApproveAPIView.as_view(), name="award-approve-api"
     ),
+    path("<uuid:pk>/publish/", sourcing_event_direct_publish, name="sourcing-event-publish-direct"),
+    path("<uuid:pk>/publish", sourcing_event_direct_publish),
+    path("<uuid:pk>/bids/", sourcing_event_direct_bids, name="sourcing-event-bids-direct"),
+    path("<uuid:pk>/bids", sourcing_event_direct_bids),
+    path("<uuid:pk>/", sourcing_event_direct_detail, name="sourcing-event-detail-direct"),
+    path("<uuid:pk>", sourcing_event_direct_detail),
 ] + router.urls

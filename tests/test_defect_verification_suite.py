@@ -1,5 +1,6 @@
 import datetime
 from decimal import Decimal
+
 import pytest
 from django.core.exceptions import ValidationError
 from django.test import Client, RequestFactory
@@ -8,13 +9,13 @@ from rest_framework.test import APIClient
 from apps.accounts.models import Role, User
 from apps.audit.models import AuditLog
 from apps.budgets.models import Budget
+from apps.budgets.selectors import scope_budgets_queryset
 from apps.contracts.models import Contract
 from apps.contracts.services import create_contract_service
-from apps.orders.models import PurchaseOrder, POLine
+from apps.orders.models import POLine, PurchaseOrder
 from apps.orders.selectors import scope_purchase_orders_queryset
-from apps.budgets.selectors import scope_budgets_queryset
 from apps.organization.models import CostCenter, Department, FiscalPeriod, Organization
-from apps.requisitions.models import PurchaseRequisition, PRLine
+from apps.requisitions.models import PRLine, PurchaseRequisition
 from apps.requisitions.services import submit_purchase_requisition_service
 from apps.vendors.models import Vendor, VendorCategory
 
@@ -37,6 +38,7 @@ def suite_data(db):
 
     r_admin, _ = Role.objects.get_or_create(code=Role.SUPER_ADMIN, defaults={"name": "Super Admin"})
     r_req, _ = Role.objects.get_or_create(code=Role.REQUESTER, defaults={"name": "Requester"})
+    r_dept, _ = Role.objects.get_or_create(code=Role.DEPT_APPROVER, defaults={"name": "Department Approver"})
     r_mgr, _ = Role.objects.get_or_create(code=Role.PROC_MGR, defaults={"name": "Procurement Manager"})
     r_fin, _ = Role.objects.get_or_create(code=Role.FINANCE_AP, defaults={"name": "Finance AP"})
     r_stores, _ = Role.objects.get_or_create(code=Role.STORES_RECEIVER, defaults={"name": "Stores"})
@@ -70,6 +72,14 @@ def suite_data(db):
         email="suite.req2@hpe.local",
         password="Password123!",
         role=r_req,
+        department=dept,
+        cost_center=cc,
+        organization=org,
+    )
+    dept_user = User.objects.create_user(
+        email="suite.dept@hpe.local",
+        password="Password123!",
+        role=r_dept,
         department=dept,
         cost_center=cc,
         organization=org,
@@ -133,7 +143,7 @@ def suite_data(db):
     ApprovalStep.objects.create(
         policy=policy,
         step_number=1,
-        approver_role=r_mgr,
+        approver_role=r_dept,
     )
 
     return {
@@ -146,6 +156,7 @@ def suite_data(db):
         "superrole": super_admin_role_only,
         "req1": req_user,
         "req2": req_user2,
+        "dept_approver": dept_user,
         "mgr": mgr_user,
         "fin": fin_user,
         "aud": aud_user,
@@ -325,7 +336,13 @@ class TestDefectVerificationSuite:
         )
 
         api = APIClient()
+        # Procurement Manager has view permission only - approving returns 403 Forbidden
         api.force_authenticate(user=suite_data["mgr"])
+        res_mgr = api.post(f"/api/v1/requisitions/{pr.id}/approve/", {"comments": "Approved"}, format="json")
+        assert res_mgr.status_code == 403
+
+        # Authorized Department Approver approves successfully
+        api.force_authenticate(user=suite_data["dept_approver"])
         res1 = api.post(f"/api/v1/requisitions/{pr.id}/approve/", {"comments": "Approved"}, format="json")
         assert res1.status_code == 200
 

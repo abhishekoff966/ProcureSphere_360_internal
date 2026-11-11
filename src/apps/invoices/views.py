@@ -165,11 +165,26 @@ def invoice_detail_view(request, invoice_id):
     is_proc = user_role in [Role.PROC_EXEC, Role.PROC_MGR, "PROC_EXEC", "PROC_MGR"]
 
     has_open_exceptions = invoice.exceptions.filter(status=MatchException.STATUS_OPEN).exists()
+    layout_map = {
+        Role.PROC_MGR: "manager/base_manager.html",
+        Role.SUPER_ADMIN: "layouts/superadmin_base.html",
+        Role.AUDITOR: "audit/base_auditor.html",
+        Role.PROC_EXEC: "layouts/proc_exec_base.html",
+        Role.FINANCE_AP: "layouts/finance_base.html",
+        "PROC_MGR": "manager/base_manager.html",
+        "SUPER_ADMIN": "layouts/superadmin_base.html",
+        "AUDITOR": "audit/base_auditor.html",
+        "PROC_EXEC": "layouts/proc_exec_base.html",
+        "FINANCE_AP": "layouts/finance_base.html",
+    }
+    base_layout = layout_map.get(user_role, "layouts/finance_base.html")
     return render(
         request,
         "pages/invoices/detail.html",
         {
             "invoice": invoice,
+            "base_layout": base_layout,
+            "user_role": user_role,
             "is_finance": is_finance,
             "is_proc": is_proc,
             "can_validate": is_finance and invoice.status in [

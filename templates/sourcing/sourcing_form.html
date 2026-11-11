@@ -23,12 +23,12 @@
 
         {% if form.non_field_errors %}<div class="alert alert-danger small">{% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}</div>{% endif %}
 
-        <form method="post" class="glass-card p-4 shadow-sm" novalidate>
+        <form method="post" class="glass-card p-4 p-md-5 shadow-sm" novalidate>
             {% csrf_token %}
             <h6 class="fw-bold text-uppercase text-muted small mb-3">Event</h6>
             <div class="row g-3 mb-4">
                 <div class="col-md-8">{% include 'sourcing/partials/form_field.html' with field=form.title %}</div>
-                <div class="col-md-4">{% include 'sourcing/partials/form_field.html' with field=form.event_type %}</div>
+                <div class="col-md-4 pe-md-2">{% include 'sourcing/partials/form_field.html' with field=form.event_type %}</div>
                 <div class="col-12">{% include 'sourcing/partials/form_field.html' with field=form.description %}</div>
                 <div class="col-12">{% include 'sourcing/partials/form_field.html' with field=form.requisition %}</div>
             </div>
@@ -60,4 +60,62 @@
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var startInput = document.getElementById('id_bid_start_date');
+    var endInput = document.getElementById('id_bid_end_date');
+    if (!startInput) return;
+
+    function getNowLocalIso() {
+        var now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        return now.toISOString().slice(0, 16);
+    }
+
+    var nowIso = getNowLocalIso();
+    startInput.min = nowIso;
+    if (startInput.value && startInput.value < nowIso) {
+        startInput.value = nowIso;
+    }
+    if (endInput) {
+        var minEnd = startInput.value || nowIso;
+        endInput.min = minEnd;
+        if (endInput.value && endInput.value <= minEnd) {
+            endInput.value = '';
+        }
+    }
+
+    function checkStart() {
+        var curNow = getNowLocalIso();
+        startInput.min = curNow;
+        if (startInput.value && startInput.value < curNow) {
+            startInput.value = curNow;
+        }
+        if (endInput) {
+            var minAllowed = startInput.value || curNow;
+            endInput.min = minAllowed;
+            if (endInput.value && endInput.value <= minAllowed) {
+                endInput.value = '';
+            }
+        }
+    }
+
+    startInput.addEventListener('input', checkStart);
+    startInput.addEventListener('change', checkStart);
+
+    if (endInput) {
+        function checkEnd() {
+            var curNow = getNowLocalIso();
+            var minAllowed = startInput.value || curNow;
+            if (endInput.value && endInput.value < minAllowed) {
+                endInput.value = minAllowed;
+            }
+        }
+        endInput.addEventListener('input', checkEnd);
+        endInput.addEventListener('change', checkEnd);
+    }
+});
+</script>
+
 {% endblock %}

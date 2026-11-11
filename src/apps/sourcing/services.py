@@ -131,7 +131,8 @@ def _parse_weight(value, label):
 
 
 def _validate_event_fields(
-    *, title, event_type, bid_start_date, bid_end_date, description, weights
+    *, title, event_type, bid_start_date, bid_end_date, description, weights,
+    enforce_future_start: bool = False,
 ):
     errors = []
     if not (title or "").strip():
@@ -144,9 +145,26 @@ def _validate_event_fields(
         errors.append("Bid start and bid deadline are required.")
     elif bid_start_date >= bid_end_date:
         errors.append("Bid start must be earlier than the bid deadline.")
+    from datetime import timedelta
+
     from django.utils import timezone
-    if bid_end_date and bid_end_date < timezone.now():
-        errors.append("Bid deadline cannot be in the past.")
+    now_buffer = timezone.now() - timedelta(minutes=5)
+    if enforce_future_start and bid_start_date:
+        start_cmp = (
+            bid_start_date
+            if timezone.is_aware(bid_start_date)
+            else timezone.make_aware(bid_start_date)
+        )
+        if start_cmp < now_buffer:
+            errors.append("Bid start date cannot be in the past.")
+    if bid_end_date:
+        end_cmp = (
+            bid_end_date
+            if timezone.is_aware(bid_end_date)
+            else timezone.make_aware(bid_end_date)
+        )
+        if end_cmp < now_buffer:
+            errors.append("Bid deadline cannot be in the past.")
     tech_w, comm_w = weights
     if tech_w + comm_w != Decimal("100"):
         errors.append("Technical and commercial weights must add up to 100.")
@@ -169,6 +187,7 @@ def create_sourcing_event_service(
     technical_weight=Decimal("50.00"),
     commercial_weight=Decimal("50.00"),
     created_by_user: User = None,
+    enforce_future_start: bool = False,
 ) -> SourcingEvent:
     """
     Creates a new RFQ/RFP sourcing event in DRAFT status.
@@ -182,6 +201,7 @@ def create_sourcing_event_service(
         bid_end_date=bid_end_date,
         description=description,
         weights=(tech_w, comm_w),
+        enforce_future_start=enforce_future_start,
     )
 
     if requisition:
@@ -249,7 +269,9 @@ EDITABLE_DRAFT_FIELDS = [
 
 
 @transaction.atomic
-def update_draft_sourcing_event_service(*, event: SourcingEvent, user: User, data: dict):
+def update_draft_sourcing_event_service(
+    *, event: SourcingEvent, user: User, data: dict, enforce_future_start: bool = False
+):
     """
     Edits a DRAFT event. Published events are immutable (vendors may already be bidding).
     """
@@ -277,6 +299,7 @@ def update_draft_sourcing_event_service(*, event: SourcingEvent, user: User, dat
         bid_end_date=event.bid_end_date,
         description=event.description,
         weights=(event.technical_weight, event.commercial_weight),
+        enforce_future_start=enforce_future_start,
     )
     event.title = event.title.strip()
     if event.requisition:
@@ -369,7 +392,12 @@ def publish_sourcing_event_service(*, event: SourcingEvent, user: User) -> Sourc
     if errors:
         raise ValidationError(errors)
 
-    _transition_event(event=event, to_status=SourcingEvent.STATUS_PUBLISHED, actor=user)
+    _transition_event(
+        event=event,
+        to_status=SourcingEvent.STATUS_PUBLISHED,
+        actor=user,
+        action=AuditLog.ACTION_PUBLISH,
+    )
 
     if event.requisition:
         from apps.requisitions.models import PurchaseRequisition

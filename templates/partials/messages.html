@@ -1,8 +1,28 @@
 {% if messages %}
+<div class="ps-flash-messages">
     {% for message in messages %}
-        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show rounded-3 small" role="alert">
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show rounded-3 small" role="alert">
             {{ message }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     {% endfor %}
+</div>
+<script>
+(function() {
+    setTimeout(function() {
+        document.querySelectorAll('.ps-flash-messages .alert-success, .ps-flash-messages .alert-info').forEach(function(el) {
+            try {
+                if (window.bootstrap && window.bootstrap.Alert) {
+                    window.bootstrap.Alert.getOrCreateInstance(el).close();
+                } else {
+                    el.classList.remove('show');
+                    setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 250);
+                }
+            } catch (e) {
+                el.remove();
+            }
+        });
+    }, 4000);
+})();
+</script>
 {% endif %}

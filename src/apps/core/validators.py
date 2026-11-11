@@ -99,6 +99,149 @@ def validate_pan_gstin_consistency(pan: str, gstin: str) -> None:
 
 
 
+
+CORPORATE_NAME_SUFFIXES = re.compile(
+    r"\b(Inc|Incorporated|Corp|Corporation|Ltd|Limited|LLC|LC|Pvt|Private|LLP|GmbH|Co|Company|Enterprise|Enterprises|Solutions|Technologies|Services|Systems|International|Group|Industries|Holdings|Ventures|Labs|Logistics|Networks|Security|Associates|Consulting|Agency|Desk|Supply|Supplies)\b",
+    re.IGNORECASE,
+)
+
+TAX_ID_PATTERN = re.compile(
+    r"^(?:"
+    r"[A-Za-z]{2,6}(?:-[A-Za-z0-9]+){1,3}|"
+    r"\d{2}-\d{7}|"
+    r"[A-Za-z]{5}\d{4}[A-Za-z]{1}|"
+    r"\d{2}[A-Za-z]{5}\d{4}[A-Za-z]{1}[1-9A-Za-z]{1}Z[0-9A-Za-z]{1}|"
+    r"[A-Za-z]{2}\d{8,12}"
+    r")$",
+    re.IGNORECASE,
+)
+
+
+def validate_legal_name(value: str) -> str:
+    """
+    Validates corporate legal name standards:
+    - Must be between 3 and 200 characters.
+    - Must contain alphabetic characters.
+    - Cannot contain character-digit soup (e.g. tdgdtgd12).
+    - Cannot be a single random word without a recognized corporate entity suffix (e.g. rejects 'sameer', 'ahdqhh', 'fsacdare').
+    """
+    val = (value or "").strip()
+    if len(val) < 3 or len(val) > 200:
+        raise ValidationError(_("Legal name must be between 3 and 200 characters."))
+    if not any(c.isalpha() for c in val):
+        raise ValidationError(_("Legal name must contain alphabetic characters."))
+    if re.search(r"[^A-Za-z0-9\s\.&,'\-/()]", val):
+        raise ValidationError(
+            _("Legal name contains invalid special characters.")
+        )
+    if re.search(r"(?:[a-zA-Z]{2,}\d+|\d+[a-zA-Z]{2,})", val):
+        raise ValidationError(
+            _("Legal name cannot contain arbitrary character-digit soup (e.g. tdgdtgd12).")
+        )
+    if re.search(r"\b\d{4,}\b", val):
+        raise ValidationError(
+            _("Legal name cannot contain long numeric sequences (e.g. 12345678).")
+        )
+    for token in re.findall(r"[a-zA-Z]+", val):
+        if len(token) >= 4 and not re.search(r"[aeiouy]", token, re.IGNORECASE):
+            raise ValidationError(
+                _("Legal name contains invalid or unvocalized character patterns.")
+            )
+    words = val.split()
+    if len(words) < 2 and not CORPORATE_NAME_SUFFIXES.search(val):
+        raise ValidationError(
+            _(
+                "Legal name must be a corporate business name (e.g. Acme Corp, Cisco Systems Inc) or contain a recognized business entity suffix (Ltd, Inc, LLC, Corp, Solutions)."
+            )
+        )
+    return val
+
+
+def validate_tax_id_number(value: str) -> str:
+    """
+    Validates Tax Identification Number:
+    - Must be between 5 and 30 characters.
+    - No consecutive hyphens (--) or slashes (//) or leading/trailing hyphens.
+    - Pure raw unformatted digits (e.g. 142423153 or 1234567890) are rejected.
+    - Must follow standard format (e.g. TAX-12345678, US EIN 12-3456789, PAN, or GSTIN).
+    """
+    val = (value or "").strip()
+    if not val:
+        raise ValidationError(_("Tax identification number is required."))
+    if len(val) < 5 or len(val) > 30:
+        raise ValidationError(
+            _("Tax identification number must be between 6 and 30 characters.")
+        )
+    if "--" in val or "//" in val or val.startswith("-") or val.endswith("-"):
+        raise ValidationError(
+            _("Tax identification number cannot contain consecutive hyphens (--) or leading/trailing hyphens.")
+        )
+    if val.isdigit():
+        raise ValidationError(
+            _("Tax ID cannot be a raw unformatted number. Must follow a standard formatted tax identifier: e.g. TAX-12345678, US EIN (12-3456789), PAN, or GSTIN.")
+        )
+    if not TAX_ID_PATTERN.match(val):
+        raise ValidationError(
+            _("Invalid Tax ID format. Use standard format: e.g. TAX-12345678, US EIN (12-3456789), PAN (ABCDE1234F), or GSTIN (29ABCDE1234F1Z5).")
+        )
+    return val
+
+
+
+def validate_optional_phone_number(value: str) -> str:
+    r"""
+    Validates optional vendor phone number:
+    - Blank / whitespace -> returns "".
+    - Strictly rejects alphabetic characters (e.g. 'abcde12345') or invalid punctuation.
+    - Rejects consecutive dashes '--' or invalid separators.
+    - Enforces strictly 10 subscriber digits (with optional +91 / 91 country prefix), starting with 6-9:
+      * 9876543210 -> +919876543210
+      * +91 9876543210 / 919876543210 -> +919876543210
+      * Rejects 7-digit, 9-digit (even with +91, e.g. +91799358617), 11-digit, 13-digit, etc.
+    """
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    if re.search(r"[A-Za-z]", raw):
+        raise ValidationError(
+            _("Phone number cannot contain letters or alphabetic characters.")
+        )
+    if not re.match(r"^[0-9+\s\-().]+$", raw):
+        raise ValidationError(
+            _("Phone number contains invalid characters. Enter a valid 10-digit mobile number (e.g. 9876543210 or +91 9876543210).")
+        )
+    if "--" in raw or ".." in raw or raw.endswith("-") or raw.startswith("-"):
+        raise ValidationError(
+            _("Invalid phone number format. Enter a valid 10-digit mobile number (e.g. 9876543210 or +91 9876543210).")
+        )
+
+    digits = re.sub(r"\D", "", raw)
+    compact = re.sub(r"[\s\-().]", "", raw)
+
+    # Extract 10 subscriber digits (allow bare 10-digit OR +91 / 91 followed by 10 digits)
+    if compact.startswith("+91"):
+        subscriber = compact[3:]
+    elif compact.startswith("91") and len(digits) == 12:
+        subscriber = digits[2:]
+    elif compact.startswith("+"):
+        raise ValidationError(
+            _("Phone number must be 10 digits (e.g. 9876543210 or +91 9876543210).")
+        )
+    else:
+        subscriber = digits
+
+    if not re.match(r"^\d{10}$", subscriber):
+        raise ValidationError(
+            _("Phone number must contain exactly 10 digits (e.g. 9876543210 or +91 9876543210).")
+        )
+    if len(set(subscriber)) == 1:
+        raise ValidationError(_("Please enter a valid, non-repeating 10-digit mobile number."))
+    if not re.match(r"^[6-9]\d{9}$", subscriber):
+        raise ValidationError(
+            _("10-digit mobile number must start with 6, 7, 8, or 9 (e.g. 9876543210).")
+        )
+    return "+91" + subscriber
+
 def check_upload_rate_limit(key: str, max_requests: int = 10, window_seconds: int = 60):
     """
     Validates upload rate limiting using Django's caching backend.
@@ -371,14 +514,20 @@ def validate_pr_attachment(file):
         except (AttributeError, OSError):
             initial_pos = None
 
+    if hasattr(file, "seek"):
+        try:
+            file.seek(0)
+        except (AttributeError, OSError):
+            pass
+
     try:
         header = file.read(8)
     except Exception:
         raise ValidationError(_("Invalid file format."))
     finally:
-        if hasattr(file, "seek") and initial_pos is not None:
+        if hasattr(file, "seek"):
             try:
-                file.seek(initial_pos)
+                file.seek(initial_pos if initial_pos is not None else 0)
             except (AttributeError, OSError):
                 pass
 
