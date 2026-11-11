@@ -43,6 +43,18 @@ def _doc(vendor, user, doc_type="TAX_CLEARANCE", title="Tax certificate"):
     )
 
 
+def _upload_and_verify_mandatory_docs(
+    vendor, uploader, verifier, doc_types=("INC_CERT", "BANK_LETTER")
+):
+    """Upload and verify remaining DEF-006 mandatory KYC document types."""
+    created = []
+    for doc_type in doc_types:
+        doc = _doc(vendor, uploader, doc_type=doc_type, title=f"{doc_type} document")
+        verify_vendor_document_service(document=doc, verifier=verifier)
+        created.append(doc)
+    return created
+
+
 def _set_status(vendor, status):
     Vendor.objects.filter(pk=vendor.pk).update(status=status)
     vendor.refresh_from_db()
@@ -274,6 +286,10 @@ def test_tc_kyc_007_legal_rejects_document_with_reason_and_vendor_can_correct(
     with pytest.raises(ValidationError):
         approve_vendor_service(vendor=vendor, manager=world["exec"])  # replacement still pending
     verify_vendor_document_service(document=replacement, verifier=world["legal"])
+    # Missing remaining mandatory DEF-006 documents still blocks activation
+    with pytest.raises(ValidationError, match="Mandatory documents missing"):
+        approve_vendor_service(vendor=vendor, manager=world["exec"], notes="incomplete")
+    _upload_and_verify_mandatory_docs(vendor, vendor_user, world["legal"])
     approve_vendor_service(vendor=vendor, manager=world["exec"], notes="ok")
     vendor.refresh_from_db()
     assert vendor.status == Vendor.STATUS_ACTIVE
@@ -478,6 +494,13 @@ def test_tc_kyc_012_and_013_full_authorised_workflow_with_audit_and_replay(
     vendor.refresh_from_db()
     assert vendor.status == Vendor.STATUS_KYC_REVIEW
 
+    # DEF-006 negative check: activation is blocked while INC_CERT and BANK_LETTER are missing
+    client.post(_kyc_url(vendor, "approve"), {"notes": "Incomplete KYC"})
+    vendor.refresh_from_db()
+    assert vendor.status == Vendor.STATUS_KYC_REVIEW
+
+    _upload_and_verify_mandatory_docs(vendor, world["exec"], world["legal"])
+
     before = timezone.now()
     assert client.post(_kyc_url(vendor, "approve"), {"notes": "KYC complete"}).status_code == 302
     vendor.refresh_from_db()
@@ -557,6 +580,9 @@ def test_tc_kyc_014_vendor_becomes_invitable_only_after_kyc_activation(world, su
             event=event, vendor_ids=[vendor.id], invited_by=world["exec"]
         )
     verify_vendor_document_service(document=doc, verifier=world["legal"])
+    with pytest.raises(ValidationError, match="Mandatory documents missing"):
+        approve_vendor_service(vendor=vendor, manager=world["mgr"], notes="incomplete")
+    _upload_and_verify_mandatory_docs(vendor, world["exec"], world["legal"])
     approve_vendor_service(vendor=vendor, manager=world["mgr"], notes="ok")
     invites = sourcing_svc.invite_vendors_to_event_service(
         event=event, vendor_ids=[vendor.id], invited_by=world["exec"]
@@ -706,15 +732,15 @@ def test_both_vendor_dashboard_upload_interfaces_display_all_document_types(clie
 
 def test_kyc_approval_gating_preserves_rules_without_silent_mandatory_enforcement(world, settings):
     """
-    Verify that adding new document types does not silently make them all mandatory.
-    When VENDOR_MANDATORY_KYC_DOC_TYPES is empty (default), verifying uploaded documents allows approval.
-    When a specific mandatory type is configured, only that type is required.
+    Verify ProvisionalKYCPolicy mandatory equivalence groups (CERT, TAX, BANK) are preserved
+    without requiring optional document types (ADDRESS_PROOF, SIGNATORY_PROOF, OTHER).
+    When VENDOR_MANDATORY_KYC_DOC_TYPES is empty, DEF-006 falls back to KYCPolicy mandatory groups.
     """
     vendor = world["vendor_draft"]
     user = world["user_a"]
     _set_status(vendor, Vendor.STATUS_SUBMITTED)
 
-    # Upload only PAN and GST_CERT
+    # Upload PAN (CERT equivalence group) and GST_CERT (TAX equivalence group)
     pan_doc = upload_vendor_document_service(
         vendor=vendor,
         user=user,
@@ -735,12 +761,25 @@ def test_kyc_approval_gating_preserves_rules_without_silent_mandatory_enforcemen
     with pytest.raises(ValidationError, match="awaiting verification"):
         approve_vendor_service(vendor=vendor, manager=world["mgr"], notes="Approve")
 
-    # Now verify GST_CERT: all uploaded documents are now verified
+    # Verify GST_CERT: CERT (via PAN) and TAX (via GST_CERT) are satisfied,
+    # but DEF-006 KYCPolicy fallback still requires BANK_LETTER when setting is empty.
     verify_vendor_document_service(document=gst_doc, verifier=world["legal"])
-
-    # With default settings (no mandatory types configured), vendor can be approved
-    # without requiring the remaining 6 document types!
     settings.VENDOR_MANDATORY_KYC_DOC_TYPES = []
+    with pytest.raises(
+        ValidationError, match="Mandatory documents missing: Bank Verification Document"
+    ):
+        approve_vendor_service(vendor=vendor, manager=world["mgr"], notes="Missing bank doc")
+
+    # Once BANK_LETTER is also uploaded and verified, vendor approves without needing
+    # non-mandatory optional document types (ADDRESS_PROOF, SIGNATORY_PROOF, OTHER).
+    bank_doc = upload_vendor_document_service(
+        vendor=vendor,
+        user=user,
+        file=_pdf("bank.pdf"),
+        document_type=VendorDocument.DOC_TYPE_BANK,
+        title="Bank Verification",
+    )
+    verify_vendor_document_service(document=bank_doc, verifier=world["legal"])
     approved_vendor = approve_vendor_service(vendor=vendor, manager=world["mgr"], notes="Approved")
     assert approved_vendor.status == Vendor.STATUS_ACTIVE
 

@@ -1,3 +1,5 @@
+import logging
+import mimetypes
 import os
 
 from django.core.exceptions import ValidationError
@@ -44,6 +46,20 @@ from .services import (
     terminate_contract_service,
     upload_contract_document_service,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _clean_error_message(exc):
+    if hasattr(exc, "messages") and exc.messages:
+        return exc.messages[0]
+    if hasattr(exc, "message_dict") and exc.message_dict:
+        first_val = next(iter(exc.message_dict.values()))
+        return first_val[0] if isinstance(first_val, list) and first_val else str(first_val)
+    msg = str(exc)
+    if (msg.startswith("['") and msg.endswith("']")) or (msg.startswith('["') and msg.endswith('"]')):
+        return msg[2:-2]
+    return msg
 
 
 class ContractViewSet(viewsets.ModelViewSet):
@@ -115,7 +131,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_TRANSITION", "message": str(e)}},
+                {"error": {"code": "INVALID_TRANSITION", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -135,7 +151,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_TRANSITION", "message": str(e)}},
+                {"error": {"code": "INVALID_TRANSITION", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -160,7 +176,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_TRANSITION", "message": str(e)}},
+                {"error": {"code": "INVALID_TRANSITION", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -178,7 +194,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_TRANSITION", "message": str(e)}},
+                {"error": {"code": "INVALID_TRANSITION", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -228,7 +244,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(ContractVersionSerializer(version).data, status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_AMENDMENT", "message": str(e)}},
+                {"error": {"code": "INVALID_AMENDMENT", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -278,7 +294,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             )
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_MILESTONE", "message": str(e)}},
+                {"error": {"code": "INVALID_MILESTONE", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -326,7 +342,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             )
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_OBLIGATION", "message": str(e)}},
+                {"error": {"code": "INVALID_OBLIGATION", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -392,7 +408,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_RENEWAL", "message": str(e)}},
+                {"error": {"code": "INVALID_RENEWAL", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -417,7 +433,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_TERMINATION", "message": str(e)}},
+                {"error": {"code": "INVALID_TERMINATION", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -445,7 +461,7 @@ class ContractViewSet(viewsets.ModelViewSet):
             )
         except ValidationError as e:
             return Response(
-                {"error": {"code": "INVALID_DOCUMENT", "message": str(e)}},
+                {"error": {"code": "INVALID_DOCUMENT", "message": _clean_error_message(e)}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -469,11 +485,7 @@ class ContractViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if (
-            not document.file
-            or not hasattr(document.file, "path")
-            or not os.path.exists(document.file.path)
-        ):
+        if not document.file or not getattr(document.file, "name", ""):
             return Response(
                 {
                     "error": {
@@ -484,21 +496,60 @@ class ContractViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        AuditLog.objects.create(
-            actor=request.user,
-            action=AuditLog.ACTION_EXPORT,
-            target_model="ContractDocument",
-            target_object_id=str(document.id),
-            new_state={
-                "document_title": document.title,
-                "file_name": os.path.basename(document.file.name),
-            },
+        safe_filename = (
+            os.path.basename(document.file.name).replace("\r", "").replace("\n", "")
+            or f"contract_document_{document.id}"
         )
+        content_type, _ = mimetypes.guess_type(safe_filename)
+
+        try:
+            file_handle = document.file.open("rb")
+        except (FileNotFoundError, ValueError):
+            return Response(
+                {
+                    "error": {
+                        "code": "FILE_NOT_FOUND",
+                        "message": "Document file not found on storage",
+                    }
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception:
+            logger.error(
+                "Storage error opening ContractDocument %s via API.",
+                document.id,
+                exc_info=True,
+            )
+            return Response(
+                {
+                    "error": {
+                        "code": "STORAGE_ERROR",
+                        "message": "Document storage is temporarily unavailable",
+                    }
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            AuditLog.objects.create(
+                actor=request.user,
+                action=AuditLog.ACTION_EXPORT,
+                target_model="ContractDocument",
+                target_object_id=str(document.id),
+                new_state={
+                    "document_title": document.title,
+                    "file_name": safe_filename,
+                },
+            )
+        except Exception:
+            file_handle.close()
+            raise
 
         return FileResponse(
-            open(document.file.path, "rb"),
+            file_handle,
             as_attachment=True,
-            filename=os.path.basename(document.file.name),
+            filename=safe_filename,
+            content_type=content_type or "application/octet-stream",
         )
 
     @action(detail=False, methods=["get"], url_path="alerts")

@@ -24,6 +24,22 @@ from apps.vendors.models import Vendor
 from .selectors import scope_invoices_queryset
 
 
+INTERNAL_INVOICE_ROLES = [
+    Role.FINANCE_AP,
+    Role.SUPER_ADMIN,
+    Role.AUDITOR,
+    Role.PROC_MGR,
+    Role.PROC_EXEC,
+    Role.STORES_RECEIVER,
+    "FINANCE_AP",
+    "SUPER_ADMIN",
+    "AUDITOR",
+    "PROC_MGR",
+    "PROC_EXEC",
+    "STORES_RECEIVER",
+]
+
+
 def _enforce_internal_invoice_access(request, allowed_roles=None):
     user = request.user
     role_code = getattr(user, "role_code", None) or (
@@ -37,7 +53,8 @@ def _enforce_internal_invoice_access(request, allowed_roles=None):
     if getattr(user, "is_vendor", False) or role_code in [Role.VENDOR_USER, "VENDOR_USER"]:
         from django.core.exceptions import PermissionDenied
         raise PermissionDenied("External vendors are not authorized to access internal invoice workflows.")
-    if allowed_roles and role_code not in allowed_roles:
+    target_roles = allowed_roles if allowed_roles is not None else INTERNAL_INVOICE_ROLES
+    if role_code not in target_roles:
         from django.core.exceptions import PermissionDenied
         raise PermissionDenied("Permission denied: insufficient role privileges for this invoice operation.")
 
@@ -148,11 +165,26 @@ def invoice_detail_view(request, invoice_id):
     is_proc = user_role in [Role.PROC_EXEC, Role.PROC_MGR, "PROC_EXEC", "PROC_MGR"]
 
     has_open_exceptions = invoice.exceptions.filter(status=MatchException.STATUS_OPEN).exists()
+    layout_map = {
+        Role.PROC_MGR: "manager/base_manager.html",
+        Role.SUPER_ADMIN: "layouts/superadmin_base.html",
+        Role.AUDITOR: "audit/base_auditor.html",
+        Role.PROC_EXEC: "layouts/proc_exec_base.html",
+        Role.FINANCE_AP: "layouts/finance_base.html",
+        "PROC_MGR": "manager/base_manager.html",
+        "SUPER_ADMIN": "layouts/superadmin_base.html",
+        "AUDITOR": "audit/base_auditor.html",
+        "PROC_EXEC": "layouts/proc_exec_base.html",
+        "FINANCE_AP": "layouts/finance_base.html",
+    }
+    base_layout = layout_map.get(user_role, "layouts/finance_base.html")
     return render(
         request,
         "pages/invoices/detail.html",
         {
             "invoice": invoice,
+            "base_layout": base_layout,
+            "user_role": user_role,
             "is_finance": is_finance,
             "is_proc": is_proc,
             "can_validate": is_finance and invoice.status in [

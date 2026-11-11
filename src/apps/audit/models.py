@@ -5,6 +5,28 @@ from django.db import models
 from django.db.models.signals import pre_delete, pre_save
 from django.dispatch import receiver
 
+_TARGET_MODEL_MAP = {
+    "PurchaseRequisition": ("requisitions", "PurchaseRequisition"),
+    "PRLine": ("requisitions", "PRLine"),
+    "PurchaseOrder": ("orders", "PurchaseOrder"),
+    "POLine": ("orders", "POLine"),
+    "POAmendment": ("orders", "POAmendment"),
+    "Vendor": ("vendors", "Vendor"),
+    "VendorDocument": ("vendors", "VendorDocument"),
+    "SupplierInvoice": ("invoices", "SupplierInvoice"),
+    "InvoiceLine": ("invoices", "InvoiceLine"),
+    "MatchException": ("invoices", "MatchException"),
+    "Contract": ("contracts", "Contract"),
+    "ContractVersion": ("contracts", "ContractVersion"),
+    "ContractObligation": ("contracts", "ContractObligation"),
+    "SourcingEvent": ("sourcing", "SourcingEvent"),
+    "VendorBid": ("sourcing", "VendorBid"),
+    "User": ("accounts", "User"),
+    "Role": ("accounts", "Role"),
+    "Budget": ("budgets", "Budget"),
+}
+_READABLE_TARGET_CACHE = {}
+
 
 class AuditLogQuerySet(models.QuerySet):
     """
@@ -44,6 +66,7 @@ class AuditLog(models.Model):
     ACTION_ACKNOWLEDGE = "ACKNOWLEDGE"
     ACTION_VERIFY = "VERIFY"
     ACTION_LOGIN_FAILED = "LOGIN_FAILED"
+    ACTION_PUBLISH = "PUBLISH"
 
     objects = AuditLogQuerySet.as_manager()
 
@@ -63,6 +86,7 @@ class AuditLog(models.Model):
         (ACTION_OVERRIDE, "Override Exception"),
         (ACTION_ACKNOWLEDGE, "Acknowledge"),
         (ACTION_VERIFY, "Verify KYC / Compliance"),
+        (ACTION_PUBLISH, "Publish Event"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -118,35 +142,87 @@ class AuditLog(models.Model):
 
     @property
     def readable_target(self):
+        # 1. Fast path from state snapshot without any DB query
+        state = self.new_state or self.previous_state
+        if isinstance(state, dict):
+            for key in (
+                "pr_number",
+                "po_number",
+                "vendor_number",
+                "invoice_number",
+                "contract_number",
+                "event_number",
+                "email",
+                "legal_name",
+                "name",
+                "title",
+            ):
+                val = state.get(key)
+                if val:
+                    return f"{self.target_model} {val}"
+
+        tid_str = str(self.target_object_id or "").strip()
+        if not tid_str:
+            return self.target_model
+
+        # 2. Fast path if ID is already an explicit business number or email
+        if any(tid_str.startswith(prefix) for prefix in ("PR-", "PO-", "VND-", "INV-", "CON-", "RFQ-", "RFP-", "SE-")):
+            return f"{self.target_model} {tid_str}"
+        if "@" in tid_str:
+            return f"{self.target_model} {tid_str}"
+
+        # 3. Check in-memory cache
+        cache_key = (self.target_model, tid_str)
+        if cache_key in _READABLE_TARGET_CACHE:
+            return _READABLE_TARGET_CACHE[cache_key]
+
+        # 4. Direct model lookup with caching
         from django.apps import apps
         from django.contrib.auth import get_user_model
 
+        resolved = None
         try:
             user_model = get_user_model()
             if self.target_model in ("User", user_model._meta.object_name):
                 try:
-                    obj = user_model.objects.get(pk=self.target_object_id)
-                    return f"{self.target_model} {str(obj)}"
+                    obj = user_model.objects.get(pk=tid_str)
+                    resolved = f"{self.target_model} {str(obj)}"
                 except (user_model.DoesNotExist, ValueError):
                     pass
 
-            for app_config in apps.get_app_configs():
-                try:
-                    model = app_config.get_model(self.target_model)
-                    if getattr(model._meta, "swapped", False):
+            if not resolved:
+                app_info = _TARGET_MODEL_MAP.get(self.target_model)
+                if app_info:
+                    try:
+                        model = apps.get_model(app_info[0], app_info[1])
+                        obj = model.objects.get(pk=tid_str)
+                        resolved = f"{self.target_model} {str(obj)}"
+                    except Exception:
+                        pass
+
+            if not resolved:
+                for app_config in apps.get_app_configs():
+                    try:
+                        model = app_config.get_model(self.target_model)
+                        if getattr(model._meta, "swapped", False):
+                            continue
+                        obj = model.objects.get(pk=tid_str)
+                        resolved = f"{self.target_model} {str(obj)}"
+                        break
+                    except (LookupError, AttributeError, model.DoesNotExist):
                         continue
-                    obj = model.objects.get(pk=self.target_object_id)
-                    return f"{self.target_model} {str(obj)}"
-                except (LookupError, AttributeError):
-                    continue
-                except model.DoesNotExist:
-                    break
         except Exception:
             pass
 
-        # Fallback: model name + first 8 characters of UUID
-        short_id = str(self.target_object_id)[:8]
-        return f"{self.target_model} #{short_id}"
+        if not resolved:
+            short_id = tid_str[:8]
+            resolved = f"{self.target_model} #{short_id}"
+
+        # Cache resolved string (bounded cache size to prevent memory leak)
+        if len(_READABLE_TARGET_CACHE) > 5000:
+            _READABLE_TARGET_CACHE.clear()
+        _READABLE_TARGET_CACHE[cache_key] = resolved
+        return resolved
 
     @property
     def actor_email(self):
@@ -192,6 +268,14 @@ class AuditLog(models.Model):
                 req_id = get_current_request_id()
                 if req_id:
                     self.request_id = req_id
+            except Exception:
+                pass
+        if not self.user_agent:
+            try:
+                from apps.core.middleware import get_current_user_agent
+                ua = get_current_user_agent()
+                if ua:
+                    self.user_agent = ua
             except Exception:
                 pass
         super().save(*args, **kwargs)

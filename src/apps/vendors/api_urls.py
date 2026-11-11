@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import path
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
@@ -35,6 +36,7 @@ from apps.vendors.selectors import get_vendor_change_history
 from apps.vendors.services import (
     allowed_governance_transitions,
     approve_vendor_service,
+    delete_vendor_service,
     record_vendor_risk_assessment_service,
     set_vendor_status_governance_service,
 )
@@ -123,6 +125,15 @@ class VendorRiskRecordSerializer(serializers.ModelSerializer):
 
 
 class VendorSerializer(serializers.ModelSerializer):
+    def validate_phone(self, value):
+        if not value:
+            return value
+        import re
+        val = str(value).strip()
+        if re.search(r"[a-zA-Z]", val) or not re.match(r"^[\d\+\-\(\)\s]{7,25}$", val):
+            raise serializers.ValidationError("Enter a valid phone number (digits and standard phone symbols only).")
+        return val
+
     def validate_tax_identification_number(self, value):
         if not value:
             return value
@@ -144,6 +155,7 @@ class VendorSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
     category_code = serializers.CharField(source="category.code", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    vendor_code = serializers.CharField(source="vendor_number", read_only=True)
 
     documents = VendorDocumentSerializer(many=True, read_only=True)
     contacts = VendorContactSerializer(many=True, read_only=True)
@@ -200,6 +212,7 @@ class VendorSerializer(serializers.ModelSerializer):
             "legal_name",
             "trade_name",
             "vendor_number",
+            "vendor_code",
             "tax_identification_number",
             "pan_number",
             "gstin",
@@ -235,7 +248,7 @@ class VendorSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["status", "vendor_number"]
+        read_only_fields = ["status", "vendor_number", "vendor_code"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -382,10 +395,12 @@ class VendorRiskAndHistoryPermission(BasePermission):
             return False
         if user.is_superuser:
             return True
-        role = getattr(user, "role_code", None)
+        role = getattr(user, "role_code", None) or (
+            user.role.code if getattr(user, "role", None) else None
+        )
         from apps.accounts.models import Role
         if request.method in SAFE_METHODS:
-            return role in {Role.SUPER_ADMIN, Role.PROC_EXEC, Role.PROC_MGR, Role.AUDITOR}
+            return role in {Role.SUPER_ADMIN, Role.PROC_EXEC, Role.PROC_MGR, Role.AUDITOR, Role.FINANCE_AP, Role.LEGAL_MGR}
         return role in {Role.SUPER_ADMIN, Role.PROC_MGR, Role.PROC_EXEC}
 
 class VendorViewSet(viewsets.ModelViewSet):
@@ -515,6 +530,38 @@ class VendorViewSet(viewsets.ModelViewSet):
 
         return qs
 
+
+    def destroy(self, request, *args, **kwargs):
+        from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
+        from django.db.models import ProtectedError, RestrictedError
+
+        vendor = self.get_object()
+        try:
+            delete_vendor_service(vendor=vendor, actor=request.user)
+        except DjangoPermissionDenied as exc:
+            return Response(
+                {"error": {"code": "FORBIDDEN", "message": str(exc), "details": {}}},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        except DjangoValidationError as exc:
+            msg = exc.messages[0] if hasattr(exc, "messages") and exc.messages else str(exc)
+            return Response(
+                {"error": {"code": "VALIDATION_ERROR", "message": msg, "details": {}}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except (ProtectedError, RestrictedError):
+            return Response(
+                {
+                    "error": {
+                        "code": "CONFLICT",
+                        "message": "Vendor cannot be deleted because linked records still reference it.",
+                        "details": {},
+                    }
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     def perform_create(self, serializer):
         user = self.request.user if self.request.user.is_authenticated else None
         scoped_org = (
@@ -556,14 +603,38 @@ class VendorViewSet(viewsets.ModelViewSet):
         risk_level = str(request.data.get("risk_level", "")).upper()
         risk_flags = request.data.get("risk_flags", [])
         notes = str(request.data.get("notes", request.data.get("assessment_notes", ""))).strip()
-        record = record_vendor_risk_assessment_service(
-            vendor=vendor,
-            assessor=request.user,
-            risk_level=risk_level,
-            risk_flags=risk_flags,
-            notes=notes,
-        )
-        return Response(VendorRiskRecordSerializer(record).data, status=status.HTTP_201_CREATED)
+        if not notes:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Assessment notes are mandatory.",
+                        "details": {"notes": ["This field is required."]},
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            record = record_vendor_risk_assessment_service(
+                vendor=vendor,
+                assessor=request.user,
+                risk_level=risk_level,
+                risk_flags=risk_flags,
+                notes=notes,
+            )
+            return Response(VendorRiskRecordSerializer(record).data, status=status.HTTP_201_CREATED)
+        except (DjangoValidationError, DRFValidationError) as exc:
+            msg = exc.messages if hasattr(exc, "messages") else [str(exc)]
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": msg[0] if isinstance(msg, list) else str(exc),
+                        "details": {"notes": msg} if "notes" in str(msg).lower() else {"risk_level": msg},
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     @action(
         detail=True,
@@ -867,12 +938,7 @@ class VendorAssessRiskAPIView(APIView):
                 Vendor.STATUS_REJECTED,
             ]:
                 try:
-                    if gov_status_upper == Vendor.STATUS_ACTIVE and vendor.status in [
-                        Vendor.STATUS_DRAFT,
-                        Vendor.STATUS_SUBMITTED,
-                        Vendor.STATUS_KYC_REVIEW,
-                        Vendor.STATUS_CHANGES_REQUIRED,
-                    ]:
+                    if gov_status_upper == Vendor.STATUS_ACTIVE:
                         # Activation is only possible through the KYC-gated service.
                         approve_vendor_service(vendor=vendor, manager=request.user, notes=assessment_notes)
                     else:
@@ -911,7 +977,7 @@ class VendorGovernanceStatusAPIView(APIView):
     with the Procurement Manager frontend (vendor_suspension.html) and existing test suites.
     """
 
-    permission_classes = [IsAuthenticated, IsProcurementManager]
+    permission_classes = [IsAuthenticated, GovernanceOperatePermission]
 
     def post(self, request, pk):
         vendor = get_object_or_404(Vendor, pk=pk)
@@ -926,12 +992,7 @@ class VendorGovernanceStatusAPIView(APIView):
             )
 
         try:
-            if new_status == Vendor.STATUS_ACTIVE and vendor.status in [
-                Vendor.STATUS_DRAFT,
-                Vendor.STATUS_SUBMITTED,
-                Vendor.STATUS_KYC_REVIEW,
-                Vendor.STATUS_CHANGES_REQUIRED,
-            ]:
+            if new_status == Vendor.STATUS_ACTIVE:
                 # Activation is only possible through the KYC-gated service.
                 approve_vendor_service(vendor=vendor, manager=request.user, notes=notes)
                 vendor.refresh_from_db()

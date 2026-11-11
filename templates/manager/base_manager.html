@@ -197,9 +197,6 @@
                 <div class="d-flex align-items-center min-width-0">
                     <span class="text-truncate">Pending Approvals</span>
                 </div>
-                {% if pending_approvals_count and pending_approvals_count > 0 %}
-                <span class="badge bg-warning text-dark rounded-pill fw-bold ms-auto flex-shrink-0" style="font-size: 0.68rem;">{{ pending_approvals_count }}</span>
-                {% endif %}
             </a>
             <a href="/manager/pipeline/" class="manager-nav-link {% if '/manager/pipeline/' in request.path %}active{% endif %}">
                 <span>Procurement Pipeline</span>
@@ -223,11 +220,7 @@
             <!-- SUPPLIERS SECTION -->
             <div class="nav-section-label">Suppliers</div>
             <a href="/manager/vendor-risk/" class="manager-nav-link {% if '/manager/vendor-risk/' in request.path %}active{% endif %}">
-                
-                <span>Vendor Risk</span>
-            </a>
-            <a href="/manager/vendor-risk/suspension/" class="manager-nav-link {% if '/manager/vendor-risk/suspension/' in request.path %}active{% endif %}">
-                <span>Vendor Suspension</span>
+                <span>Vendor Risk &amp; Suspension</span>
             </a>
 
             <a href="/manager/performance/" class="manager-nav-link {% if '/manager/performance/' in request.path %}active{% endif %}">

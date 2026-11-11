@@ -1,13 +1,19 @@
+import json
+
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db.models import ProtectedError, RestrictedError
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from apps.accounts.models import Role
 from apps.scorecards.models import band_for_composite
 
 from .filters import APPROVAL_STAGE_STATUSES, VendorFilter
@@ -33,6 +39,7 @@ from .services import (
     approve_vendor_service,
     delete_vendor_service,
     issue_vendor_credentials_service,
+    process_brevo_webhook_event_service,
     record_vendor_risk_assessment_service,
     register_vendor_service,
     reject_vendor_document_service,
@@ -112,9 +119,7 @@ def _run_kyc_action(request, vendor, kyc_action):
         reject_vendor_document_service(document=doc, reviewer=request.user, reason=notes)
         return f"Document '{doc.title}' rejected; the vendor has been notified."
     if kyc_action == "approve":
-        from .permissions import can_legal_verify_vendor
-        if not (can_operate_governance(request.user) or can_legal_verify_vendor(request.user)):
-            raise PermissionDenied("Your role cannot activate vendors.")
+        _require_governance_operate(request.user)
         approve_vendor_service(vendor=vendor, manager=request.user, notes=notes)
         return "Vendor approved and activated."
     if kyc_action == "request-changes":
@@ -151,6 +156,7 @@ def _performance_band(score):
     return band_for_composite(score).lower()
 
 
+@never_cache
 def _vendor_register(request, *, mode):
     _require_governance_view(request.user)
     queryset = get_governance_vendor_queryset(user=request.user)
@@ -159,7 +165,7 @@ def _vendor_register(request, *, mode):
     vendor_filter = VendorFilter(request.GET or None, queryset=queryset)
     for name, field in vendor_filter.form.fields.items():
         field.widget.attrs["class"] = (
-            "form-control form-control-sm" if name == "q" else ("form-select form-select-sm")
+            "form-control" if name == "q" else "form-select"
         )
     filtered = vendor_filter.qs if vendor_filter.is_bound else queryset
     if vendor_filter.is_bound and not vendor_filter.is_valid():
@@ -183,18 +189,21 @@ def _vendor_register(request, *, mode):
     return render(request, "pages/vendors/list.html", context)
 
 
+@never_cache
 @login_required(login_url="/login/")
 def vendor_list_view(request):
     """Vendor Master & Risk register (all vendors)."""
     return _vendor_register(request, mode="master")
 
 
+@never_cache
 @login_required(login_url="/login/")
 def vendor_governance_view(request):
     """Vendor Governance: KPI dashboard + governance register."""
     return _vendor_register(request, mode="governance")
 
 
+@never_cache
 @login_required(login_url="/login/")
 def vendor_onboarding_view(request):
     """Vendor Onboarding & KYC queue (approval-stage vendors)."""
@@ -204,7 +213,10 @@ def vendor_onboarding_view(request):
 @login_required(login_url="/login/")
 def vendor_create_view(request):
     _require_governance_operate(request.user)
-    form = VendorRegistrationForm(request.POST or None)
+    if request.method == "POST":
+        form = VendorRegistrationForm(request.POST)
+    else:
+        form = VendorRegistrationForm()
     if request.method == "POST" and form.is_valid():
         try:
             vendor = register_vendor_service(
@@ -298,6 +310,11 @@ def _vendor_page_base(request, vendor_id, page):
     if caps["can_operate"]:
         context["last_dispatch"] = vendor.credential_dispatches.first()
     context["latest_risk"] = vendor.risk_records.order_by("-created_at").first()
+    role_code = getattr(request.user, "role_code", None) or (
+        request.user.role.code if getattr(request.user, "role", None) else None
+    )
+    if role_code in [Role.PROC_MGR, "PROC_MGR"]:
+        context["base_layout"] = "manager/base_manager.html"
     return vendor, context
 
 
@@ -832,7 +849,10 @@ def vendor_kyc_htmx_view(request, vendor_id, kyc_action):
 def vendor_register_modal_view(request):
     """HTMX modal: register a vendor (DRAFT) with basic details, then offer credential issue."""
     _require_governance_operate(request.user)
-    form = VendorRegistrationForm(request.POST or None)
+    if request.method == "POST":
+        form = VendorRegistrationForm(request.POST)
+    else:
+        form = VendorRegistrationForm()
     if request.method == "POST" and form.is_valid():
         try:
             vendor = register_vendor_service(
@@ -848,11 +868,12 @@ def vendor_register_modal_view(request):
             )
             response["HX-Trigger"] = "vendor-updated"
             return response
+    is_htmx = getattr(request, "htmx", False) or request.headers.get("HX-Request") == "true"
     return render(
         request,
         "vendors/partials/htmx_register_modal.html",
         {"form": form},
-        status=400 if request.method == "POST" else 200,
+        status=200 if is_htmx else (400 if request.method == "POST" else 200),
     )
 
 
@@ -864,8 +885,11 @@ def vendor_issue_credentials_view(request, vendor_id):
     vendor = _get_scoped_vendor_or_404(request, vendor_id)
     error = None
     dispatch = None
+    force = request.POST.get("force") in ("true", "1", "True")
     try:
-        dispatch = issue_vendor_credentials_service(vendor=vendor, issued_by=request.user)
+        dispatch = issue_vendor_credentials_service(
+            vendor=vendor, issued_by=request.user, force=force
+        )
     except ValidationError as exc:
         error = " ".join(exc.messages)
     if _is_htmx(request):
@@ -878,8 +902,49 @@ def vendor_issue_credentials_view(request, vendor_id):
     if error:
         messages.error(request, error)
     else:
-        messages.success(request, f"Credentials emailed to {dispatch.sent_to}.")
+        status_label = dispatch.get_status_display() if dispatch else "Dispatched"
+        messages.success(request, f"Credentials status for {dispatch.sent_to}: {status_label}.")
     return redirect("vendor_detail", vendor_id=vendor.id)
+
+
+@csrf_exempt  # NOSONAR: External transactional webhook authenticated via BREVO_WEBHOOK_SECRET
+def brevo_webhook_view(request):
+    """
+    Receives transactional email webhook callbacks from Brevo (Sendinblue).
+    Updates VendorCredentialDispatch status to DELIVERED or FAILED.
+    """
+    if request.method != "POST":
+        return redirect("login")
+    secret = getattr(settings, "BREVO_WEBHOOK_SECRET", "")
+    if secret:
+        token = (
+            request.headers.get("X-Brevo-Webhook-Secret")
+            or request.headers.get("X-Webhook-Secret")
+            or request.GET.get("token")
+        )
+        if token != secret:
+            return JsonResponse({"error": "Unauthorized webhook token"}, status=401)
+
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except Exception as exc:
+        return JsonResponse({"error": f"Invalid JSON: {exc}"}, status=400)
+
+    events = data if isinstance(data, list) else [data]
+    processed_count = 0
+    results = []
+    for item in events:
+        if isinstance(item, dict):
+            ok, msg, dispatch = process_brevo_webhook_event_service(item)
+            if ok:
+                processed_count += 1
+            results.append({
+                "status": "ok" if ok else "ignored",
+                "message": msg,
+                "email": item.get("email"),
+            })
+
+    return JsonResponse({"processed": processed_count, "results": results})
 
 
 # ------------------------------------------------------------------------------------------
@@ -928,11 +993,12 @@ def vendor_edit_view(request, vendor_id):
                 return response
             return redirect("vendor_detail", vendor_id=vendor.id)
 
-    status_code = 400 if (request.method == "POST" and not form.is_valid()) else 200
+    is_htmx = getattr(request, "htmx", False) or request.headers.get("HX-Request") == "true"
+    status_code = 200 if is_htmx else (400 if (request.method == "POST" and not form.is_valid()) else 200)
     return render(
         request,
         "vendors/partials/htmx_edit_modal.html",
-        {"form": form, "vendor": vendor},
+        {"form": form, "vendor": vendor, "saved_initial": initial},
         status=status_code,
     )
 

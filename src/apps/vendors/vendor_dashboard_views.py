@@ -14,6 +14,18 @@ from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.utils.http import url_has_allowed_host_and_scheme
+
+
+def _safe_next_url(request, default="vendor_profile"):
+    next_url = request.POST.get("next")
+    if next_url and url_has_allowed_host_and_scheme(
+        url=next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return next_url
+    return default
 
 from apps.accounts.models import Role
 from apps.audit.models import AuditLog
@@ -259,8 +271,7 @@ def vendor_profile_view(request):
                 if missing_fields:
                     for err in missing_fields:
                         messages.error(request, err)
-                    next_url = request.POST.get("next")
-                    return redirect(next_url if next_url else "vendor_profile")
+                    return redirect(_safe_next_url(request))
 
                 # Prepare documents list for validation and atomic upload
                 files_to_process = [
@@ -294,9 +305,9 @@ def vendor_profile_view(request):
                     files_to_process.append(("Other Document", other_file, other_type, other_title, other_expiry))
 
                 DISALLOWED_IMAGE_EXTENSIONS = {
-                    "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "tiff", "ico", "avif", "heic", "heif"
+                    "gif", "webp", "bmp", "svg", "tiff", "ico", "avif", "heic", "heif"
                 }
-                SUPPORTED_DOCUMENT_EXTENSIONS = {"pdf", "doc", "docx", "xlsx", "csv"}
+                SUPPORTED_DOCUMENT_EXTENSIONS = {"pdf", "doc", "docx", "xlsx", "csv", "png", "jpg", "jpeg"}
                 MAX_FILE_SIZE = 10 * 1024 * 1024
 
                 validation_errors = []
@@ -311,20 +322,19 @@ def vendor_profile_view(request):
                     elif file_size > MAX_FILE_SIZE:
                         validation_errors.append(f"{label}: File '{file_name}' exceeds the maximum allowed limit of 10 MB.")
 
-                    if ext in DISALLOWED_IMAGE_EXTENSIONS or raw_content_type.startswith("image/"):
+                    if (ext in DISALLOWED_IMAGE_EXTENSIONS) or (raw_content_type.startswith("image/") and ext not in {"png", "jpg", "jpeg"}):
                         validation_errors.append(
-                            f"{label}: Image files (.{ext or 'image'}) are not allowed. Please upload a supported document format (PDF, DOC, DOCX, XLSX, CSV)."
+                            f"{label}: Image file format (.{ext or 'image'}) is not allowed. Please upload a supported format (PDF, DOC, DOCX, XLSX, CSV, PNG, JPG)."
                         )
                     elif ext not in SUPPORTED_DOCUMENT_EXTENSIONS:
                         validation_errors.append(
-                            f"{label}: File extension '.{ext}' is not permitted. Only PDF, DOC, DOCX, XLSX, CSV are allowed."
+                            f"{label}: File extension '.{ext}' is not permitted. Only PDF, DOC, DOCX, XLSX, CSV, PNG, JPG are allowed."
                         )
 
                 if validation_errors:
                     for err in validation_errors:
                         messages.error(request, err)
-                    next_url = request.POST.get("next")
-                    return redirect(next_url if next_url else "vendor_profile")
+                    return redirect(_safe_next_url(request))
 
                 # Validation passed: Upload all documents atomically
                 try:
@@ -354,8 +364,7 @@ def vendor_profile_view(request):
                 except Exception as e:
                     messages.error(request, f"Document upload failed: {str(e)}")
 
-                next_url = request.POST.get("next")
-                return redirect(next_url if next_url else "vendor_profile")
+                return redirect(_safe_next_url(request))
 
             else:
                 # Legacy single-file upload (preserves compatibility for individual endpoints/tests)
@@ -373,20 +382,20 @@ def vendor_profile_view(request):
                         raw_content_type = (getattr(doc_file, "content_type", "") or "").split(";")[0].strip().lower()
 
                         DISALLOWED_IMAGE_EXTENSIONS = {
-                            "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "tiff", "ico", "avif"
+                            "gif", "webp", "bmp", "svg", "tiff", "ico", "avif"
                         }
-                        SUPPORTED_DOCUMENT_EXTENSIONS = {"pdf", "doc", "docx", "xlsx", "csv"}
+                        SUPPORTED_DOCUMENT_EXTENSIONS = {"pdf", "doc", "docx", "xlsx", "csv", "png", "jpg", "jpeg"}
 
-                        if ext in DISALLOWED_IMAGE_EXTENSIONS or raw_content_type.startswith("image/"):
+                        if (ext in DISALLOWED_IMAGE_EXTENSIONS) or (raw_content_type.startswith("image/") and ext not in {"png", "jpg", "jpeg"}):
                             raise ValidationError(
-                                f"Image files (.{ext or 'image'}) are not supported for KYC compliance documents. "
-                                "Please upload supported document files only (PDF, DOC, DOCX, XLSX, CSV)."
+                                f"Image file format (.{ext or 'image'}) is not supported. "
+                                "Please upload supported formats (PDF, DOC, DOCX, XLSX, CSV, PNG, JPG)."
                             )
 
                         if ext not in SUPPORTED_DOCUMENT_EXTENSIONS:
                             raise ValidationError(
                                 f"File extension '.{ext}' is not permitted. "
-                                "Please upload a supported document file (PDF, DOC, DOCX, XLSX, CSV)."
+                                "Please upload a supported document file (PDF, DOC, DOCX, XLSX, CSV, PNG, JPG)."
                             )
 
                         upload_vendor_document_service(
@@ -411,8 +420,7 @@ def vendor_profile_view(request):
                         messages.error(
                             request, "Document upload failed. Please verify the file and try again."
                         )
-                next_url = request.POST.get("next")
-                return redirect(next_url if next_url else "vendor_profile")
+                return redirect(_safe_next_url(request))
 
         elif action == "submit_kyc":
             if not vendor.documents.exists():
@@ -450,7 +458,7 @@ def vendor_profile_view(request):
         elif action == "edit_contact":
             contact_id = request.POST.get("contact_id")
             contact = get_object_or_404(VendorContact, pk=contact_id, vendor=vendor)
-            form = VendorContactForm(request.POST)
+            form = VendorContactForm(request.POST, contact=contact)
             if not form.is_valid():
                 for field, error_list in form.errors.items():
                     for err in error_list:

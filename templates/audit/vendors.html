@@ -67,6 +67,7 @@
                 <select name="status" class="form-select form-select-sm">
                     <option value="">-- All Statuses --</option>
                     <option value="ACTIVE" {% if status_filter == 'ACTIVE' %}selected{% endif %}>ACTIVE</option>
+                    <option value="ON_HOLD" {% if status_filter == 'ON_HOLD' %}selected{% endif %}>ON_HOLD</option>
                     <option value="SUSPENDED" {% if status_filter == 'SUSPENDED' %}selected{% endif %}>SUSPENDED</option>
                     <option value="ONBOARDING" {% if status_filter == 'ONBOARDING' %}selected{% endif %}>ONBOARDING</option>
                     <option value="INACTIVE" {% if status_filter == 'INACTIVE' %}selected{% endif %}>INACTIVE</option>

@@ -29,13 +29,13 @@ from apps.vendors.services import (
 pytestmark = [pytest.mark.django_db, pytest.mark.regression]
 
 
-def upload_doc(world, vendor_key, user_key, name="kyc.pdf"):
+def upload_doc(world, vendor_key, user_key, name="kyc.pdf", doc_type="TAX_CLEARANCE", title=None):
     return upload_vendor_document_service(
         vendor=world[vendor_key],
         user=world[user_key],
         file=SimpleUploadedFile(name, b"%PDF-1.4 test", content_type="application/pdf"),
-        document_type="TAX_CLEARANCE",
-        title=f"{vendor_key} tax",
+        document_type=doc_type,
+        title=title or f"{vendor_key} tax",
     )
 
 
@@ -390,10 +390,37 @@ class TestRiskAndStatusGovernance:
         client.post(f"/vendors/{vendor.id}/kyc/verify-document/", {"document_id": str(doc.id)})
         doc.refresh_from_db()
         assert doc.is_verified and doc.verified_by == w["exec"]
+
+        # DEF-006 negative check: missing mandatory INC_CERT and BANK_LETTER blocks activation
+        client.post(f"/vendors/{vendor.id}/kyc/approve/", {"notes": "Incomplete KYC"})
+        vendor.refresh_from_db()
+        assert vendor.status == Vendor.STATUS_KYC_REVIEW
+
+        # Upload and verify remaining mandatory documents before final governance activation
+        for doc_type, filename, label in (
+            ("INC_CERT", "inc.pdf", "Certificate of Incorporation"),
+            ("BANK_LETTER", "bank.pdf", "Bank Verification Document"),
+        ):
+            extra_doc = upload_doc(
+                w, "vendor_kyc", "exec", name=filename, doc_type=doc_type, title=label
+            )
+            client.post(
+                f"/vendors/{vendor.id}/kyc/verify-document/",
+                {"document_id": str(extra_doc.id)},
+            )
+
+        # Document verification alone must not bypass governance activation
+        vendor.refresh_from_db()
+        assert vendor.status == Vendor.STATUS_KYC_REVIEW
+
         client.post(f"/vendors/{vendor.id}/kyc/approve/", {"notes": "KYC complete"})
         vendor.refresh_from_db()
         assert vendor.status == Vendor.STATUS_ACTIVE
+        assert vendor.status_notes == "KYC complete"
         assert AuditLog.objects.filter(target_model="VendorDocument", action="VERIFY").exists()
+        assert AuditLog.objects.filter(
+            target_model="Vendor", target_object_id=str(vendor.id), action=AuditLog.ACTION_APPROVE
+        ).exists()
 
 
 class TestPerformance:

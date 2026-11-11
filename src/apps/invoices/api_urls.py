@@ -44,27 +44,30 @@ class CanManageSupplierInvoice(BasePermission):
             or role_code == Role.VENDOR_USER
         )
 
-        # Vendors cannot pay, run match, create line-item invoices via internal endpoint, or mutate exceptions
+        # Vendors cannot pay, run match, create line-item invoices via internal endpoint, or access match exceptions
         if is_vendor:
             basename = getattr(view, "basename", "")
             action = getattr(view, "action", "")
             if "exception" in basename or "exception" in action:
-                return request.method in SAFE_METHODS
-            if action == "create_invoice":
                 return False
             if action in ["pay_invoice", "pay", "run_match", "run_3_way_match"]:
                 return False
             if request.method in SAFE_METHODS:
                 return True
-            if request.method == "POST" and basename == "invoice" and action in ["create", None]:
-                return True
             return False
 
-        # Internal read-only roles on invoices
+        # Roles with no invoice access in the RBAC matrix (Requester, Dept Approver, Legal Mgr)
         if not request.user.is_superuser and role_code in [
+            Role.REQUESTER,
             Role.DEPT_APPROVER,
             Role.LEGAL_MGR,
-            Role.REQUESTER,
+        ]:
+            return False
+
+        # Internal read-only roles on invoices per RBAC matrix (Proc Exec, Proc Mgr, Stores Receiver, Auditor)
+        if not request.user.is_superuser and role_code in [
+            Role.PROC_EXEC,
+            Role.PROC_MGR,
             Role.STORES_RECEIVER,
             Role.AUDITOR,
         ]:
@@ -133,18 +136,37 @@ class SupplierInvoiceSerializer(serializers.ModelSerializer):
         read_only_fields = ["status", "created_at", "updated_at"]
 
     def validate(self, attrs):
+        if self.instance and self.instance.status in [
+            SupplierInvoice.STATUS_PAID,
+            SupplierInvoice.STATUS_READY_FOR_PAYMENT,
+            SupplierInvoice.STATUS_APPROVAL,
+        ]:
+            raise serializers.ValidationError(
+                {"status": [f"Invoices in '{self.instance.status}' status cannot be edited."]}
+            )
         vendor = attrs.get("vendor", getattr(self.instance, "vendor", None))
         po = attrs.get("po", getattr(self.instance, "po", None))
-        if po and po.status in [PurchaseOrder.STATUS_DRAFT, PurchaseOrder.STATUS_CANCELLED]:
-            raise serializers.ValidationError(
-                {"po": [f"Cannot create invoice against PO in status '{po.status}'. Invoices can only be issued against approved/issued POs."]}
-            )
+        if po:
+            if po.status not in [
+                PurchaseOrder.STATUS_ISSUED,
+                PurchaseOrder.STATUS_ACKNOWLEDGED,
+                PurchaseOrder.STATUS_PARTIAL_RECEIPT,
+                PurchaseOrder.STATUS_COMPLETED,
+            ]:
+                raise serializers.ValidationError(
+                    {"po": [f"Cannot create invoice against PO in status '{po.status}'. Invoices require an issued purchase order."]}
+                )
         if not vendor and po:
             vendor = po.vendor
         if not vendor and hasattr(self, "context") and "request" in self.context:
             req_user = self.context["request"].user
             if getattr(req_user, "vendor", None):
                 vendor = req_user.vendor
+
+        if vendor and getattr(vendor, "status", None) != "ACTIVE":
+            raise serializers.ValidationError(
+                {"vendor": [f"Cannot create invoice: Vendor '{vendor.legal_name}' is in status '{vendor.status}'. Vendor must be ACTIVE."]}
+            )
 
         invoice_number = attrs.get("invoice_number", getattr(self.instance, "invoice_number", None))
         if invoice_number:
@@ -173,18 +195,43 @@ class SupplierInvoiceSerializer(serializers.ModelSerializer):
                 }
             )
 
-        subtotal = attrs.get("subtotal")
-        total_amount = attrs.get("total_amount")
+        subtotal = attrs.get("subtotal", getattr(self.instance, "subtotal", None))
+        tax_amount = attrs.get("tax_amount", getattr(self.instance, "tax_amount", Decimal("0.00")))
+        if tax_amount is None:
+            tax_amount = Decimal("0.00")
+        total_amount = attrs.get("total_amount", getattr(self.instance, "total_amount", None))
         if subtotal is not None and subtotal < Decimal("0.00"):
             raise serializers.ValidationError({"subtotal": ["Subtotal cannot be negative."]})
+        if tax_amount is not None and tax_amount < Decimal("0.00"):
+            raise serializers.ValidationError({"tax_amount": ["Tax amount cannot be negative."]})
         if total_amount is not None and total_amount < Decimal("0.00"):
             raise serializers.ValidationError(
                 {"total_amount": ["Total amount cannot be negative."]}
             )
-        if subtotal is not None and total_amount is not None and total_amount < subtotal:
-            raise serializers.ValidationError(
-                {"total_amount": ["Total amount must be greater than or equal to subtotal."]}
-            )
+        if subtotal is not None and total_amount is not None:
+            expected_total = subtotal + tax_amount
+            if abs(total_amount - expected_total) > Decimal("0.01"):
+                raise serializers.ValidationError(
+                    {
+                        "total_amount": [
+                            f"Total amount ({total_amount}) must equal subtotal ({subtotal}) plus tax ({tax_amount}) = {expected_total}."
+                        ]
+                    }
+                )
+            if po and total_amount:
+                from django.db.models import Sum
+                prior_inv_qs = SupplierInvoice.objects.filter(po=po).exclude(status=SupplierInvoice.STATUS_REJECTED)
+                if self.instance:
+                    prior_inv_qs = prior_inv_qs.exclude(pk=self.instance.pk)
+                prior_sum = prior_inv_qs.aggregate(s=Sum("total_amount"))["s"] or Decimal("0.00")
+                if prior_sum + total_amount > po.total_amount:
+                    raise serializers.ValidationError(
+                        {
+                            "total_amount": [
+                                f"Cumulative invoiced amount (${prior_sum + total_amount:,.2f}) would exceed Purchase Order total (${po.total_amount:,.2f})."
+                            ]
+                        }
+                    )
 
         invoice_date = attrs.get("invoice_date", getattr(self.instance, "invoice_date", None))
         due_date = attrs.get("due_date", getattr(self.instance, "due_date", None))
@@ -254,6 +301,25 @@ class SupplierInvoiceViewSet(viewsets.ModelViewSet):
                 {"status": [f"Invoices in '{instance.status}' status cannot be edited."]}
             )
         serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.status in [
+            SupplierInvoice.STATUS_PAID,
+            SupplierInvoice.STATUS_READY_FOR_PAYMENT,
+            SupplierInvoice.STATUS_APPROVAL,
+        ]:
+            return Response(
+                {
+                    "error": {
+                        "code": "INVALID_STATE",
+                        "message": f"Invoices in '{instance.status}' status cannot be deleted.",
+                        "details": {"status": [f"Invoices in '{instance.status}' status cannot be deleted."]},
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().destroy(request, *args, **kwargs)
 
     def perform_destroy(self, instance):
         if instance.status in [SupplierInvoice.STATUS_PAID, SupplierInvoice.STATUS_READY_FOR_PAYMENT, SupplierInvoice.STATUS_APPROVAL]:

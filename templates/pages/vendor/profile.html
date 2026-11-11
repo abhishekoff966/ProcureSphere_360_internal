@@ -802,93 +802,114 @@
 </div>
 
 <!-- Modal: Edit Profile -->
-<div class="modal fade" id="editProfileModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
-        <div class="modal-content glass-card">
-            <form method="POST" action="{% url 'vendor_profile' %}" id="vendorProfileForm">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="update_profile">
-                <div class="modal-header border-bottom">
-                    <h5 class="modal-title fw-bold text-dark">Update Company & Settlement Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg" style="max-height: calc(100vh - 2rem);">
+        <form method="POST" action="{% url 'vendor_profile' %}" id="vendorProfileForm" class="modal-content glass-card shadow-lg border-0" style="max-height: calc(100vh - 3.5rem); display: flex; flex-direction: column; overflow: hidden;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_profile">
+            <div class="modal-header border-bottom bg-white py-3 px-4" style="flex-shrink: 0; position: sticky; top: 0; z-index: 1055;">
+                <h5 class="modal-title fw-bold text-dark mb-0" id="editProfileModalLabel">
+                    <i class="fa-solid fa-pen-to-square text-primary me-2"></i>Update Company &amp; Settlement Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" style="overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1 1 auto; min-height: 0;">
+                <div class="alert alert-info py-2 small mb-3">
+                    <i class="fa-solid fa-info-circle me-1"></i> Legal Name and Tax ID cannot be changed directly as they affect active procurement contracts.
                 </div>
-                <div class="modal-body p-4">
-                    <div class="alert alert-info py-2 small mb-3">
-                        <i class="fa-solid fa-info-circle me-1"></i> Legal Name and Tax ID cannot be changed directly as they affect active procurement contracts.
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Trade / Doing Business As Name</label>
+                        <input type="text" name="trade_name" class="form-control form-control-sm" value="{{ vendor.trade_name }}">
                     </div>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Trade / Doing Business As Name</label>
-                            <input type="text" name="trade_name" class="form-control form-control-sm" value="{{ vendor.trade_name }}">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold" for="vendorPhoneDigits">Contact Telephone (10 digits) <span class="text-danger">*</span></label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light text-muted border-end-0 fw-semibold" id="phoneAddon">
+                                <i class="fa-solid fa-phone text-primary me-1"></i>+91
+                            </span>
+                            <input type="tel" 
+                                   id="vendorPhoneDigits" 
+                                   class="form-control form-control-sm font-monospace border-start-0" 
+                                   value="{{ phone_digits }}" 
+                                   placeholder="9876543210" 
+                                   maxlength="10" 
+                                   minlength="10" 
+                                   pattern="[6-9][0-9]{9}" 
+                                   inputmode="numeric" 
+                                   required 
+                                   autocomplete="tel-national">
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold" for="vendorPhoneDigits">Contact Telephone (10 digits) <span class="text-danger">*</span></label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-light text-muted border-end-0" id="phoneAddon">
-                                    <i class="fa-solid fa-phone text-primary"></i>
-                                </span>
-                                <input type="tel" 
-                                       id="vendorPhoneDigits" 
-                                       class="form-control form-control-sm font-monospace border-start-0" 
-                                       value="{{ phone_digits }}" 
-                                       placeholder="9876543210" 
-                                       maxlength="10" 
-                                       minlength="10" 
-                                       pattern="[0-9]{10}" 
-                                       inputmode="numeric" 
-                                       required 
-                                       autocomplete="tel-national">
+                        <!-- Hidden input carrying full +91XXXXXXXXXX to backend -->
+                        <input type="hidden" name="phone" id="vendorPhoneFull" value="{{ vendor.phone }}">
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <div class="form-text text-muted" style="font-size: 0.72rem;">
+                                Enter <strong>10 numbers starting with 6, 7, 8, or 9</strong> (e.g. 9876543210).
                             </div>
-                            <!-- Hidden input carrying full +91XXXXXXXXXX to backend -->
-                            <input type="hidden" name="phone" id="vendorPhoneFull" value="{{ vendor.phone }}">
-                            <div class="d-flex justify-content-between align-items-center mt-1">
-                                <div class="form-text text-muted" style="font-size: 0.72rem;">
-                                    Enter <strong>10 numbers only</strong> (e.g. 9876543210).
-                                </div>
-                                <div id="phoneDigitCounter" class="badge bg-light text-muted border" style="font-size: 0.7rem;">
-                                    <span id="digitCount">0</span>/10 digits
-                                </div>
+                            <div id="phoneDigitCounter" class="badge bg-light text-muted border" style="font-size: 0.7rem;">
+                                <span id="digitCount">0</span>/10 digits
                             </div>
-                            <div id="phoneErrorFeedback" class="text-danger small mt-1 fw-semibold" style="display: none; font-size: 0.75rem;"></div>
                         </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-semibold">Registered Office Address</label>
-                            <textarea name="address" rows="2" class="form-control form-control-sm" required>{{ vendor.address }}</textarea>
-                        </div>
-                        <div class="col-12"><hr class="my-2"></div>
-                        <h6 class="fw-bold text-dark small mb-0">Tax &amp; Identification Credentials</h6>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Permanent Account Number (PAN)</label>
-                            <input type="text" name="pan_number" class="form-control form-control-sm font-monospace text-uppercase" maxlength="10" placeholder="e.g. ABCDE1234F" value="{{ vendor.pan_number }}">
-                            <div class="form-text text-muted" style="font-size: 0.72rem;">10-character alphanumeric PAN</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">GSTIN</label>
-                            <input type="text" name="gstin" class="form-control form-control-sm font-monospace text-uppercase" maxlength="15" placeholder="e.g. 29ABCDE1234F1Z5" value="{{ vendor.gstin }}">
-                            <div class="form-text text-muted" style="font-size: 0.72rem;">15-character GST identification number</div>
-                        </div>
-                        <div class="col-12"><hr class="my-2"></div>
-                        <h6 class="fw-bold text-dark small mb-0">Bank Remittance Credentials</h6>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold">Bank Name</label>
-                            <input type="text" name="bank_name" class="form-control form-control-sm" value="{{ vendor.bank_name }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold">Bank Account Number</label>
-                            <input type="text" name="bank_account_number" class="form-control form-control-sm font-monospace" value="{{ vendor.bank_account_number }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-semibold">Routing / SWIFT / IFSC Code</label>
-                            <input type="text" name="bank_routing_code" class="form-control form-control-sm font-monospace" value="{{ vendor.bank_routing_code }}">
-                        </div>
+                        <div id="phoneErrorFeedback" class="text-danger small mt-1 fw-semibold" style="display: none; font-size: 0.75rem;"></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold" for="vendorAddressInput">Registered Office Address <span class="text-danger">*</span></label>
+                        <textarea id="vendorAddressInput" name="address" rows="2" class="form-control form-control-sm" required placeholder="Enter registered office address...">{{ vendor.address }}</textarea>
+                        <div id="addressErrorFeedback" class="text-danger small mt-1 fw-semibold" style="display: none; font-size: 0.75rem;"></div>
+                    </div>
+                    <div class="col-12"><hr class="my-2"></div>
+                    <h6 class="fw-bold text-dark small mb-0">Tax &amp; Identification Credentials</h6>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold" for="vendorPanInput">Permanent Account Number (PAN)</label>
+                        <input type="text" 
+                               id="vendorPanInput" 
+                               name="pan_number" 
+                               class="form-control form-control-sm font-monospace text-uppercase" 
+                               maxlength="10" 
+                               pattern="[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}"
+                               placeholder="e.g. ABCDE1234F" 
+                               value="{{ vendor.pan_number }}">
+                        <div class="form-text text-muted" style="font-size: 0.72rem;">10 characters: 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F)</div>
+                        <div id="panErrorFeedback" class="text-danger small mt-1 fw-semibold" style="display: none; font-size: 0.75rem;"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold" for="vendorGstinInput">GSTIN</label>
+                        <input type="text" 
+                               id="vendorGstinInput" 
+                               name="gstin" 
+                               class="form-control form-control-sm font-monospace text-uppercase" 
+                               maxlength="15" 
+                               pattern="[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}[1-9A-Za-z]{1}[Zz][0-9A-Za-z]{1}"
+                               placeholder="e.g. 29ABCDE1234F1Z5" 
+                               value="{{ vendor.gstin }}">
+                        <div class="form-text text-muted" style="font-size: 0.72rem;">15 characters (e.g. 29ABCDE1234F1Z5)</div>
+                        <div id="gstinErrorFeedback" class="text-danger small mt-1 fw-semibold" style="display: none; font-size: 0.75rem;"></div>
+                    </div>
+                    <div class="col-12"><hr class="my-2"></div>
+                    <h6 class="fw-bold text-dark small mb-0">Bank Remittance Credentials</h6>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Bank Name</label>
+                        <input type="text" name="bank_name" class="form-control form-control-sm" value="{{ vendor.bank_name }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Bank Account Number</label>
+                        <input type="text" name="bank_account_number" class="form-control form-control-sm font-monospace" value="{{ vendor.bank_account_number }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Routing / SWIFT / IFSC Code</label>
+                        <input type="text" name="bank_routing_code" class="form-control form-control-sm font-monospace" value="{{ vendor.bank_routing_code }}">
                     </div>
                 </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm">Save Changes</button>
-                </div>
-            </form>
-        </div>
+            </div>
+            <div class="modal-footer border-top bg-light py-3 px-4 d-flex justify-content-end align-items-center gap-2" style="flex-shrink: 0; position: sticky; bottom: 0; z-index: 1055;">
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-medium" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-xmark me-1"></i> Cancel
+                </button>
+                <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm fw-semibold" id="saveVendorProfileBtn">
+                    <i class="fa-solid fa-check me-1"></i> Save Changes
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -1129,7 +1150,7 @@
 <div class="modal fade" id="addContactModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content glass-card">
-            <form method="POST" action="{% url 'vendor_profile' %}">
+            <form method="POST" action="{% url 'vendor_profile' %}" id="addContactForm">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="add_contact">
                 <div class="modal-header border-bottom">
@@ -1139,16 +1160,19 @@
                 <div class="modal-body p-4">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">First Name <span class="text-danger">*</span></label>
-                            <input type="text" name="first_name" class="form-control form-control-sm" required>
+                            <label class="form-label small fw-semibold" for="addContactFirstName">First Name <span class="text-danger">*</span></label>
+                            <input type="text" id="addContactFirstName" name="first_name" class="form-control form-control-sm" placeholder="e.g. Jane" required>
+                            <div id="addContactFirstNameError" class="text-danger small mt-1 fw-semibold" style="display: none; font-size: 0.75rem;"></div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Last Name <span class="text-danger">*</span></label>
-                            <input type="text" name="last_name" class="form-control form-control-sm" required>
+                            <label class="form-label small fw-semibold" for="addContactLastName">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" id="addContactLastName" name="last_name" class="form-control form-control-sm" placeholder="e.g. Doe" required>
+                            <div id="addContactLastNameError" class="text-danger small mt-1 fw-semibold" style="display: none; font-size: 0.75rem;"></div>
                         </div>
                         <div class="col-12">
-                            <label class="form-label small fw-semibold">Email Address <span class="text-danger">*</span></label>
-                            <input type="email" name="email" class="form-control form-control-sm" required>
+                            <label class="form-label small fw-semibold" for="addContactEmail">Email Address <span class="text-danger">*</span></label>
+                            <input type="email" id="addContactEmail" name="email" class="form-control form-control-sm" placeholder="e.g. contact@vendor.com" required>
+                            <div id="addContactEmailError" class="text-danger small mt-1 fw-semibold" style="display: none; font-size: 0.75rem;"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold">Designation / Role</label>
@@ -1166,11 +1190,12 @@
                                        class="form-control form-control-sm font-monospace border-start-0" 
                                        placeholder="9876543210"
                                        maxlength="10"
-                                       pattern="[0-9]{10}"
+                                       pattern="[6-9][0-9]{9}"
                                        inputmode="numeric"
                                        autocomplete="tel-national">
                             </div>
-                            <small class="text-muted" style="font-size: 0.7rem;">Format: 10-digit mobile number (e.g. 9876543210)</small>
+                            <small class="text-muted" style="font-size: 0.7rem;">Format: 10-digit mobile number (starts with 6-9)</small>
+                            <div id="addContactPhoneError" class="text-danger small mt-1 fw-semibold" style="display: none; font-size: 0.75rem;"></div>
                         </div>
                         <div class="col-12">
                             <div class="form-check form-switch mt-2">
@@ -1198,7 +1223,7 @@
 <div class="modal fade" id="editContactModal{{ c.id }}" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content glass-card">
-            <form method="POST" action="{% url 'vendor_profile' %}">
+            <form method="POST" action="{% url 'vendor_profile' %}" id="editContactForm{{ c.id }}" class="edit-contact-form" data-contact-id="{{ c.id }}">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="edit_contact">
                 <input type="hidden" name="contact_id" value="{{ c.id }}">
@@ -1209,16 +1234,19 @@
                 <div class="modal-body p-4">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">First Name <span class="text-danger">*</span></label>
-                            <input type="text" name="first_name" class="form-control form-control-sm" value="{{ c.first_name }}" required>
+                            <label class="form-label small fw-semibold" for="editContactFirstName{{ c.id }}">First Name <span class="text-danger">*</span></label>
+                            <input type="text" id="editContactFirstName{{ c.id }}" name="first_name" class="form-control form-control-sm" value="{{ c.first_name }}" required>
+                            <div id="editContactFirstNameError{{ c.id }}" class="text-danger small mt-1 fw-semibold" style="display: none; font-size: 0.75rem;"></div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Last Name <span class="text-danger">*</span></label>
-                            <input type="text" name="last_name" class="form-control form-control-sm" value="{{ c.last_name }}" required>
+                            <label class="form-label small fw-semibold" for="editContactLastName{{ c.id }}">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" id="editContactLastName{{ c.id }}" name="last_name" class="form-control form-control-sm" value="{{ c.last_name }}" required>
+                            <div id="editContactLastNameError{{ c.id }}" class="text-danger small mt-1 fw-semibold" style="display: none; font-size: 0.75rem;"></div>
                         </div>
                         <div class="col-12">
-                            <label class="form-label small fw-semibold">Email Address <span class="text-danger">*</span></label>
-                            <input type="email" name="email" class="form-control form-control-sm" value="{{ c.email }}" required>
+                            <label class="form-label small fw-semibold" for="editContactEmail{{ c.id }}">Email Address <span class="text-danger">*</span></label>
+                            <input type="email" id="editContactEmail{{ c.id }}" name="email" class="form-control form-control-sm" value="{{ c.email }}" required>
+                            <div id="editContactEmailError{{ c.id }}" class="text-danger small mt-1 fw-semibold" style="display: none; font-size: 0.75rem;"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold">Designation / Role</label>
@@ -1233,15 +1261,17 @@
                                 <input type="tel" 
                                        id="editContactPhone{{ c.id }}" 
                                        name="phone" 
-                                       class="form-control form-control-sm font-monospace border-start-0" 
+                                       data-initial-phone="{{ c.phone_digits|default:c.phone }}"
+                                       class="form-control form-control-sm font-monospace border-start-0 edit-contact-phone" 
                                        value="{{ c.phone_digits|default:c.phone }}"
                                        placeholder="9876543210"
                                        maxlength="10"
-                                       pattern="[0-9]{10}"
+                                       pattern="[6-9][0-9]{9}"
                                        inputmode="numeric"
                                        autocomplete="tel-national">
                             </div>
-                            <small class="text-muted" style="font-size: 0.7rem;">Format: 10-digit mobile number (e.g. 9876543210)</small>
+                            <small class="text-muted" style="font-size: 0.7rem;">Format: 10-digit mobile number (starts with 6-9)</small>
+                            <div id="editContactPhoneError{{ c.id }}" class="text-danger small mt-1 fw-semibold" style="display: none; font-size: 0.75rem;"></div>
                         </div>
                         <div class="col-12">
                             <div class="form-check form-switch mt-2">
@@ -1304,13 +1334,22 @@
                 this.classList.remove('text-secondary');
             });
         });
-        // Vendor Dashboard Contact Phone (+91) 10-digit only validation & formatting
+        // Vendor Dashboard Company Profile Validation
         const profileForm = document.getElementById("vendorProfileForm");
         const phoneDigitsInput = document.getElementById("vendorPhoneDigits");
         const phoneFullInput = document.getElementById("vendorPhoneFull");
         const phoneCounter = document.getElementById("digitCount");
         const phoneBadge = document.getElementById("phoneDigitCounter");
         const phoneError = document.getElementById("phoneErrorFeedback");
+        const addressInput = document.getElementById("vendorAddressInput");
+        const addressError = document.getElementById("addressErrorFeedback");
+        const panInput = document.getElementById("vendorPanInput");
+        const panError = document.getElementById("panErrorFeedback");
+        const gstinInput = document.getElementById("vendorGstinInput");
+        const gstinError = document.getElementById("gstinErrorFeedback");
+
+        const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+        const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
         function updatePhoneState() {
             if (!phoneDigitsInput) return;
@@ -1334,9 +1373,15 @@
             if (phoneCounter) {
                 phoneCounter.textContent = digits.length;
             }
+
+            // Check Indian mobile prefix rule (must start with 6, 7, 8, or 9)
+            const hasInvalidPrefix = digits.length > 0 && !["6", "7", "8", "9"].includes(digits[0]);
+
             if (phoneBadge) {
-                if (digits.length === 10) {
+                if (digits.length === 10 && !hasInvalidPrefix) {
                     phoneBadge.className = "badge bg-success bg-opacity-10 text-success border border-success border-opacity-25";
+                } else if (hasInvalidPrefix) {
+                    phoneBadge.className = "badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25";
                 } else {
                     phoneBadge.className = "badge bg-light text-muted border";
                 }
@@ -1348,7 +1393,14 @@
             }
 
             // Feedback styling
-            if (digits.length === 10) {
+            if (hasInvalidPrefix) {
+                if (phoneError) {
+                    phoneError.textContent = "Invalid Indian mobile number prefix. Mobile number must begin with 6, 7, 8, or 9.";
+                    phoneError.style.display = "block";
+                }
+                phoneDigitsInput.classList.add("is-invalid");
+                phoneDigitsInput.classList.remove("is-valid");
+            } else if (digits.length === 10) {
                 if (phoneError) phoneError.style.display = "none";
                 phoneDigitsInput.classList.remove("is-invalid");
                 phoneDigitsInput.classList.add("is-valid");
@@ -1356,7 +1408,8 @@
                 if (phoneError) phoneError.style.display = "none";
                 phoneDigitsInput.classList.remove("is-invalid", "is-valid");
             } else {
-                phoneDigitsInput.classList.remove("is-valid");
+                if (phoneError) phoneError.style.display = "none";
+                phoneDigitsInput.classList.remove("is-valid", "is-invalid");
             }
         }
 
@@ -1368,8 +1421,115 @@
             updatePhoneState();
         }
 
-        // Auto-sanitize all contact phone inputs to strictly 10 digits
-        document.querySelectorAll('input[name="phone"]').forEach(function(phoneInput) {
+        // Live validation for address
+        function validateAddress() {
+            if (!addressInput) return true;
+            const val = addressInput.value.trim();
+            if (!val) {
+                if (addressError) {
+                    addressError.textContent = "Registered office address is required.";
+                    addressError.style.display = "block";
+                }
+                addressInput.classList.add("is-invalid");
+                addressInput.classList.remove("is-valid");
+                return false;
+            } else {
+                if (addressError) addressError.style.display = "none";
+                addressInput.classList.remove("is-invalid");
+                addressInput.classList.add("is-valid");
+                return true;
+            }
+        }
+        if (addressInput) {
+            addressInput.addEventListener("input", validateAddress);
+            addressInput.addEventListener("blur", validateAddress);
+        }
+
+        // Live validation for PAN
+        function validatePan() {
+            if (!panInput) return true;
+            panInput.value = panInput.value.toUpperCase();
+            const val = panInput.value.trim();
+            if (!val) {
+                if (panError) panError.style.display = "none";
+                panInput.classList.remove("is-invalid", "is-valid");
+                validateTaxConsistency();
+                return true;
+            }
+            if (!PAN_REGEX.test(val)) {
+                if (panError) {
+                    panError.textContent = "Invalid PAN format. PAN must be 10 characters: 5 uppercase letters, 4 digits, 1 uppercase letter (e.g. ABCDE1234F).";
+                    panError.style.display = "block";
+                }
+                panInput.classList.add("is-invalid");
+                panInput.classList.remove("is-valid");
+                return false;
+            } else {
+                if (panError) panError.style.display = "none";
+                panInput.classList.remove("is-invalid");
+                panInput.classList.add("is-valid");
+                validateTaxConsistency();
+                return true;
+            }
+        }
+        if (panInput) {
+            panInput.addEventListener("input", validatePan);
+            panInput.addEventListener("blur", validatePan);
+        }
+
+        // Live validation for GSTIN
+        function validateGstin() {
+            if (!gstinInput) return true;
+            gstinInput.value = gstinInput.value.toUpperCase();
+            const val = gstinInput.value.trim();
+            if (!val) {
+                if (gstinError) gstinError.style.display = "none";
+                gstinInput.classList.remove("is-invalid", "is-valid");
+                validateTaxConsistency();
+                return true;
+            }
+            if (!GSTIN_REGEX.test(val)) {
+                if (gstinError) {
+                    gstinError.textContent = "Invalid GSTIN format. GSTIN must be 15 alphanumeric characters (e.g. 29ABCDE1234F1Z5).";
+                    gstinError.style.display = "block";
+                }
+                gstinInput.classList.add("is-invalid");
+                gstinInput.classList.remove("is-valid");
+                return false;
+            } else {
+                if (gstinError) gstinError.style.display = "none";
+                gstinInput.classList.remove("is-invalid");
+                gstinInput.classList.add("is-valid");
+                validateTaxConsistency();
+                return true;
+            }
+        }
+        if (gstinInput) {
+            gstinInput.addEventListener("input", validateGstin);
+            gstinInput.addEventListener("blur", validateGstin);
+        }
+
+        // Consistency between PAN and GSTIN
+        function validateTaxConsistency() {
+            if (!panInput || !gstinInput) return true;
+            const panVal = panInput.value.trim().toUpperCase();
+            const gstinVal = gstinInput.value.trim().toUpperCase();
+            if (panVal && gstinVal && GSTIN_REGEX.test(gstinVal)) {
+                const embeddedPan = gstinVal.substring(2, 12);
+                if (embeddedPan !== panVal) {
+                    if (gstinError) {
+                        gstinError.textContent = "GSTIN '" + gstinVal + "' contains embedded PAN '" + embeddedPan + "' which does not match the separate PAN '" + panVal + "'.";
+                        gstinError.style.display = "block";
+                    }
+                    gstinInput.classList.add("is-invalid");
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // Auto-sanitize all contact phone inputs to strictly digits
+        document.querySelectorAll('input[type="tel"][name="phone"]').forEach(function(phoneInput) {
             phoneInput.addEventListener('input', function() {
                 let digits = this.value.replace(/\D/g, "");
                 if (digits.length === 12 && digits.startsWith("91")) {
@@ -1580,30 +1740,271 @@
 
         if (profileForm) {
             profileForm.addEventListener("submit", function(e) {
+                let isValid = true;
+                let firstInvalidEl = null;
+
+                // 1. Mandatory Address check
+                if (!validateAddress()) {
+                    isValid = false;
+                    if (!firstInvalidEl) firstInvalidEl = addressInput;
+                }
+
+                // 2. Telephone check
                 const digits = phoneDigitsInput ? phoneDigitsInput.value.replace(/\D/g, "") : "";
-                if (digits.length !== 10) {
-                    e.preventDefault();
-                    e.stopPropagation();
+                if (!digits) {
+                    isValid = false;
                     if (phoneError) {
-                        phoneError.textContent = "Phone number must have exactly 10 numbers. You entered " + digits.length + " digits.";
+                        phoneError.textContent = "Contact phone number is required.";
                         phoneError.style.display = "block";
                     }
                     if (phoneDigitsInput) {
                         phoneDigitsInput.classList.add("is-invalid");
-                        phoneDigitsInput.classList.remove("is-valid");
-                        phoneDigitsInput.focus();
+                        if (!firstInvalidEl) firstInvalidEl = phoneDigitsInput;
+                    }
+                } else if (digits.length !== 10) {
+                    isValid = false;
+                    if (phoneError) {
+                        phoneError.textContent = "Phone number must have exactly 10 digits. You entered " + digits.length + " digits.";
+                        phoneError.style.display = "block";
+                    }
+                    if (phoneDigitsInput) {
+                        phoneDigitsInput.classList.add("is-invalid");
+                        if (!firstInvalidEl) firstInvalidEl = phoneDigitsInput;
+                    }
+                } else if (!["6", "7", "8", "9"].includes(digits[0])) {
+                    isValid = false;
+                    if (phoneError) {
+                        phoneError.textContent = "Invalid Indian mobile number prefix. Mobile number must begin with 6, 7, 8, or 9.";
+                        phoneError.style.display = "block";
+                    }
+                    if (phoneDigitsInput) {
+                        phoneDigitsInput.classList.add("is-invalid");
+                        if (!firstInvalidEl) firstInvalidEl = phoneDigitsInput;
+                    }
+                } else {
+                    if (phoneFullInput) {
+                        phoneFullInput.value = "+91" + digits;
+                    }
+                    if (phoneError) {
+                        phoneError.style.display = "none";
+                    }
+                }
+
+                // 3. PAN validation
+                if (!validatePan()) {
+                    isValid = false;
+                    if (!firstInvalidEl) firstInvalidEl = panInput;
+                }
+
+                // 4. GSTIN validation
+                if (!validateGstin()) {
+                    isValid = false;
+                    if (!firstInvalidEl) firstInvalidEl = gstinInput;
+                }
+
+                // 5. Tax Consistency
+                if (!validateTaxConsistency()) {
+                    isValid = false;
+                    if (!firstInvalidEl) firstInvalidEl = gstinInput;
+                }
+
+                if (!isValid) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (firstInvalidEl) {
+                        firstInvalidEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        firstInvalidEl.focus();
                     }
                     return false;
                 }
 
-                if (phoneFullInput) {
-                    phoneFullInput.value = "+91" + digits;
+                // Prevent duplicate submissions while saving
+                if (profileForm.dataset.submitting === "true") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
                 }
-                if (phoneError) {
-                    phoneError.style.display = "none";
+                profileForm.dataset.submitting = "true";
+
+                const saveBtn = document.getElementById("saveVendorProfileBtn") || profileForm.querySelector('button[type="submit"]');
+                if (saveBtn) {
+                    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Saving Changes...';
+                    setTimeout(function() {
+                        saveBtn.disabled = true;
+                    }, 0);
                 }
             });
+
+            // Reset submission state when modal is dismissed or closed
+            const editProfileModalEl = document.getElementById("editProfileModal");
+            if (editProfileModalEl) {
+                editProfileModalEl.addEventListener("hidden.bs.modal", function() {
+                    profileForm.dataset.submitting = "false";
+                    const saveBtn = document.getElementById("saveVendorProfileBtn") || profileForm.querySelector('button[type="submit"]');
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Save Changes';
+                    }
+                });
+            }
         }
+
+        // =========================================================================
+        // Authorized Contacts (Add & Edit) Form Validation
+        // =========================================================================
+        function validateContactForm(form) {
+            let isValid = true;
+            let firstInvalidEl = null;
+
+            const fnInput = form.querySelector('input[name="first_name"]');
+            const lnInput = form.querySelector('input[name="last_name"]');
+            const emailInput = form.querySelector('input[name="email"]');
+            const phoneInput = form.querySelector('input[name="phone"]');
+
+            const fnError = form.querySelector('[id$="FirstNameError"], [id^="addContactFirstNameError"]');
+            const lnError = form.querySelector('[id$="LastNameError"], [id^="addContactLastNameError"]');
+            const emailError = form.querySelector('[id$="EmailError"], [id^="addContactEmailError"]');
+            const phoneErrorEl = form.querySelector('[id$="PhoneError"], [id^="addContactPhoneError"]');
+
+            // 1. First Name
+            if (fnInput) {
+                if (!fnInput.value.trim()) {
+                    isValid = false;
+                    if (fnError) {
+                        fnError.textContent = "First name is required.";
+                        fnError.style.display = "block";
+                    }
+                    fnInput.classList.add("is-invalid");
+                    if (!firstInvalidEl) firstInvalidEl = fnInput;
+                } else {
+                    if (fnError) fnError.style.display = "none";
+                    fnInput.classList.remove("is-invalid");
+                }
+            }
+
+            // 2. Last Name
+            if (lnInput) {
+                if (!lnInput.value.trim()) {
+                    isValid = false;
+                    if (lnError) {
+                        lnError.textContent = "Last name is required.";
+                        lnError.style.display = "block";
+                    }
+                    lnInput.classList.add("is-invalid");
+                    if (!firstInvalidEl) firstInvalidEl = lnInput;
+                } else {
+                    if (lnError) lnError.style.display = "none";
+                    lnInput.classList.remove("is-invalid");
+                }
+            }
+
+            // 3. Email Address
+            if (emailInput) {
+                const emVal = emailInput.value.trim();
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emVal) {
+                    isValid = false;
+                    if (emailError) {
+                        emailError.textContent = "Email address is required.";
+                        emailError.style.display = "block";
+                    }
+                    emailInput.classList.add("is-invalid");
+                    if (!firstInvalidEl) firstInvalidEl = emailInput;
+                } else if (!emailRegex.test(emVal)) {
+                    isValid = false;
+                    if (emailError) {
+                        emailError.textContent = "Please enter a valid email address.";
+                        emailError.style.display = "block";
+                    }
+                    emailInput.classList.add("is-invalid");
+                    if (!firstInvalidEl) firstInvalidEl = emailInput;
+                } else {
+                    if (emailError) emailError.style.display = "none";
+                    emailInput.classList.remove("is-invalid");
+                }
+            }
+
+            // 4. Phone Number (Optional, but if provided and changed, must follow Indian mobile prefix rule)
+            if (phoneInput) {
+                const rawVal = phoneInput.value.trim();
+                const initialVal = phoneInput.getAttribute("data-initial-phone");
+
+                // If unchanged on an edit form, allow
+                const isUnchanged = initialVal !== null && (rawVal === initialVal || rawVal === initialVal.replace(/\D/g, "").slice(-10));
+
+                if (rawVal && !isUnchanged) {
+                    let digits = rawVal.replace(/\D/g, "");
+                    if (digits.length === 12 && digits.startsWith("91")) {
+                        digits = digits.slice(2);
+                    } else if (digits.length === 11 && digits.startsWith("0")) {
+                        digits = digits.slice(1);
+                    }
+                    if (digits.length !== 10) {
+                        isValid = false;
+                        if (phoneErrorEl) {
+                            phoneErrorEl.textContent = "Phone number must be exactly 10 digits (e.g. 9876543210).";
+                            phoneErrorEl.style.display = "block";
+                        }
+                        phoneInput.classList.add("is-invalid");
+                        if (!firstInvalidEl) firstInvalidEl = phoneInput;
+                    } else if (!["6", "7", "8", "9"].includes(digits[0])) {
+                        isValid = false;
+                        if (phoneErrorEl) {
+                            phoneErrorEl.textContent = "Invalid Indian mobile number prefix. Phone number must start with 6, 7, 8, or 9.";
+                            phoneErrorEl.style.display = "block";
+                        }
+                        phoneInput.classList.add("is-invalid");
+                        if (!firstInvalidEl) firstInvalidEl = phoneInput;
+                    } else {
+                        if (phoneErrorEl) phoneErrorEl.style.display = "none";
+                        phoneInput.classList.remove("is-invalid");
+                    }
+                } else {
+                    if (phoneErrorEl) phoneErrorEl.style.display = "none";
+                    phoneInput.classList.remove("is-invalid");
+                }
+            }
+
+            if (!isValid) {
+                if (firstInvalidEl) firstInvalidEl.focus();
+                return false;
+            }
+            return true;
+        }
+
+        // Attach submit listener to Add Contact form
+        const addContactForm = document.getElementById("addContactForm");
+        const addContactModalEl = document.getElementById("addContactModal");
+        if (addContactForm) {
+            addContactForm.addEventListener("submit", function(e) {
+                if (!validateContactForm(addContactForm)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+            if (addContactModalEl) {
+                addContactModalEl.addEventListener("hidden.bs.modal", function() {
+                    addContactForm.reset();
+                    addContactForm.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
+                    addContactForm.querySelectorAll('[id^="addContact"][id$="Error"]').forEach(el => {
+                        el.style.display = "none";
+                        el.textContent = "";
+                    });
+                });
+            }
+        }
+
+        // Attach submit listeners to all Edit Contact forms
+        document.querySelectorAll(".edit-contact-form").forEach(function(editForm) {
+            editForm.addEventListener("submit", function(e) {
+                if (!validateContactForm(editForm)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+        });
     });
 </script>
 {% endblock vendor_content %}

@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from apps.accounts.models import Role
 from apps.audit.models import AuditLog
 from apps.vendors.models import VendorCategory
 
@@ -145,14 +146,30 @@ def _form_to_kwargs(cleaned):
 @login_required(login_url="/login/")
 def sourcing_create_view(request):
     _require_manage(request.user)
-    form = SourcingEventForm(request.POST or None)
+    if request.method == "POST":
+        form = SourcingEventForm(request.POST)
+    else:
+        form = SourcingEventForm()
     if request.method == "POST" and form.is_valid():
         try:
             event = services.create_sourcing_event_service(
-                **_form_to_kwargs(form.cleaned_data), created_by_user=request.user
+                **_form_to_kwargs(form.cleaned_data),
+                created_by_user=request.user,
+                enforce_future_start=True,
             )
         except ValidationError as exc:
-            form.add_error(None, exc)
+            if hasattr(exc, "messages"):
+                for m in exc.messages:
+                    if "deadline" in m.lower():
+                        form.add_error("bid_end_date", m)
+                    elif "start" in m.lower():
+                        form.add_error("bid_start_date", m)
+                    elif "weight" in m.lower():
+                        form.add_error("commercial_weight", m)
+                    else:
+                        form.add_error(None, m)
+            else:
+                form.add_error(None, exc)
         else:
             messages.success(
                 request,
@@ -175,10 +192,24 @@ def sourcing_edit_view(request, event_id):
     if request.method == "POST" and form.is_valid():
         try:
             services.update_draft_sourcing_event_service(
-                event=event, user=request.user, data=_form_to_kwargs(form.cleaned_data)
+                event=event,
+                user=request.user,
+                data=_form_to_kwargs(form.cleaned_data),
+                enforce_future_start=True,
             )
         except ValidationError as exc:
-            form.add_error(None, exc)
+            if hasattr(exc, "messages"):
+                for m in exc.messages:
+                    if "deadline" in m.lower():
+                        form.add_error("bid_end_date", m)
+                    elif "start" in m.lower():
+                        form.add_error("bid_start_date", m)
+                    elif "weight" in m.lower():
+                        form.add_error("commercial_weight", m)
+                    else:
+                        form.add_error(None, m)
+            else:
+                form.add_error(None, exc)
         else:
             messages.success(request, f"{event.event_number} updated.")
             return redirect("sourcing_detail", event_id=event.id)
@@ -338,6 +369,11 @@ def sourcing_detail_view(request, event_id):
         "audit_trail": _event_audit_trail(event),
         "is_deadline_passed": event.bid_end_date < timezone.now(),
     }
+    role_code = getattr(request.user, "role_code", None) or (
+        request.user.role.code if getattr(request.user, "role", None) else None
+    )
+    if role_code in [Role.PROC_MGR, "PROC_MGR"]:
+        context["base_layout"] = "manager/base_manager.html"
     return render(request, "sourcing/sourcing_detail.html", context)
 
 
@@ -650,14 +686,30 @@ def sourcing_events_tab_view(request):
 def sourcing_event_create_htmx_view(request):
     """Pillar 2 HTMX modal: create SourcingEvent (weights + deadline) via service."""
     _require_manage(request.user)
-    form = SourcingEventForm(request.POST or None)
+    if request.method == "POST":
+        form = SourcingEventForm(request.POST)
+    else:
+        form = SourcingEventForm()
     if request.method == "POST" and form.is_valid():
         try:
             event = services.create_sourcing_event_service(
-                **_form_to_kwargs(form.cleaned_data), created_by_user=request.user
+                **_form_to_kwargs(form.cleaned_data),
+                created_by_user=request.user,
+                enforce_future_start=True,
             )
         except ValidationError as exc:
-            form.add_error(None, exc)
+            if hasattr(exc, "messages"):
+                for m in exc.messages:
+                    if "deadline" in m.lower():
+                        form.add_error("bid_end_date", m)
+                    elif "start" in m.lower():
+                        form.add_error("bid_start_date", m)
+                    elif "weight" in m.lower():
+                        form.add_error("commercial_weight", m)
+                    else:
+                        form.add_error(None, m)
+            else:
+                form.add_error(None, exc)
             return render(
                 request,
                 "sourcing/partials/htmx_event_create_modal.html",

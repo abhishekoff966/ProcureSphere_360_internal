@@ -10,6 +10,16 @@ urlpatterns = [
     path("vendors/htmx/register/", views.vendor_register_modal_view, name="vendors_register_modal"),
     path("vendors/import/", views.vendor_import_view, name="vendor_import"),
     path(
+        "vendors/webhooks/brevo/",
+        views.brevo_webhook_view,
+        name="vendor_brevo_webhook",
+    ),
+    path(
+        "api/vendors/brevo-webhook/",
+        views.brevo_webhook_view,
+        name="vendor_brevo_webhook_api",
+    ),
+    path(
         "vendors/<uuid:vendor_id>/credentials/",
         views.vendor_issue_credentials_view,
         name="vendor_issue_credentials",

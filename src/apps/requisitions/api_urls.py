@@ -80,6 +80,7 @@ class PurchaseRequisitionSerializer(serializers.ModelSerializer):
     attachments = PRAttachmentSerializer(many=True, read_only=True)
     requester_email = serializers.CharField(source="requester.email", read_only=True)
     department_name = serializers.CharField(source="department.name", read_only=True)
+    resolved_route = serializers.SerializerMethodField()
 
     class Meta:
         model = PurchaseRequisition
@@ -92,7 +93,43 @@ class PurchaseRequisitionSerializer(serializers.ModelSerializer):
             "requester",
             "created_at",
             "updated_at",
+            "resolved_route",
         ]
+
+    def get_resolved_route(self, obj):
+        from apps.approvals.models import ApprovalPolicy
+        from apps.approvals.services import evaluate_approval_chain
+
+        amount = getattr(obj, "total_amount", None) or Decimal("0.00")
+        dept = getattr(obj, "department", None)
+        cc = getattr(obj, "cost_center", None)
+        try:
+            chain = evaluate_approval_chain(
+                module=ApprovalPolicy.MODULE_PR,
+                amount=amount,
+                department=dept,
+                cost_center=cc,
+            )
+            steps = []
+            for s in chain:
+                role_obj = s.get("approver_role")
+                spec_approver = s.get("specific_approver")
+                role_name = (
+                    "Finance / AP"
+                    if (role_obj and role_obj.code == Role.FINANCE_AP)
+                    else (role_obj.name if role_obj else "")
+                )
+                steps.append({
+                    "step_number": s["step_number"],
+                    "role": role_name,
+                    "role_code": role_obj.code if role_obj else "",
+                    "description": s.get("description", ""),
+                    "approver": spec_approver.email if spec_approver else None,
+                    "is_mandatory": s.get("is_mandatory", True),
+                })
+            return {"steps": steps}
+        except Exception:
+            return {"steps": []}
 
     def validate_requested_delivery_date(self, value):
         from django.utils import timezone
@@ -117,6 +154,16 @@ class PurchaseRequisitionSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         department = attrs.get("department") or getattr(self.instance, "department", None)
         cost_center = attrs.get("cost_center") or getattr(self.instance, "cost_center", None)
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if user and not user.is_superuser and getattr(user, "role_code", None) == Role.REQUESTER:
+            if getattr(user, "department_id", None) and cost_center:
+                if cost_center.department_id != user.department_id:
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied(
+                        {"code": "forbidden", "fields": {"cost_center": ["Cost center not authorized for this requester."]}}
+                    )
+
         if department and cost_center:
             if cost_center.department_id != department.id:
                 raise serializers.ValidationError(
@@ -273,7 +320,6 @@ class CanCreateRequisitionPermission(permissions.BasePermission):
             if action in ["approve", "reject"]:
                 return role_code in [
                     Role.DEPT_APPROVER,
-                    Role.PROC_MGR,
                     Role.FINANCE_AP,
                     Role.SUPER_ADMIN,
                 ]
@@ -410,6 +456,14 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
             )
         return Response(self.get_serializer(updated_pr).data, status=status.HTTP_200_OK)
 
+    @extend_schema(exclude=True)
+    @action(detail=True, methods=["get"], url_path="approval-route")
+    def approval_route(self, request, pk=None):
+        pr = self.get_object()
+        serializer = self.get_serializer(pr)
+        route = serializer.data.get("resolved_route") or {"steps": []}
+        return Response(route, status=status.HTTP_200_OK)
+
     @extend_schema(
         summary="Approve Purchase Requisition",
         description="Approves a submitted purchase requisition. Requires authorized approver.",
@@ -434,13 +488,18 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
             )
         if not user.is_superuser and role_code not in [
             Role.DEPT_APPROVER,
-            Role.PROC_MGR,
             Role.FINANCE_AP,
             Role.SUPER_ADMIN,
         ]:
             raise permissions.exceptions.PermissionDenied(
                 "You do not have permission to approve Purchase Requisitions."
             )
+        if role_code == Role.DEPT_APPROVER:
+            req_dept = pr.department or (pr.cost_center.department if pr.cost_center else None)
+            if (user.department_id and req_dept and user.department_id != req_dept.id) and not (pr.cost_center and user.id == pr.cost_center.manager_id):
+                raise permissions.exceptions.PermissionDenied(
+                    "Department Approver can only approve requisitions for their own department."
+                )
         from apps.requisitions.services import approve_purchase_requisition_service
 
         comments = request.data.get("comments", "")
@@ -468,16 +527,22 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
         role_code = getattr(user, "role_code", None) or (
             user.role.code if hasattr(user, "role") and user.role else None
         )
-        if not user.is_superuser and role_code not in [
-            Role.DEPT_APPROVER,
-            Role.PROC_MGR,
-            Role.FINANCE_AP,
-            Role.SUPER_ADMIN,
-        ]:
-            raise permissions.exceptions.PermissionDenied(
-                "You do not have permission to reject Purchase Requisitions."
-            )
-        comments = (request.data.get("comments") or "").strip()
+        if pr.status in [PurchaseRequisition.STATUS_SUBMITTED, PurchaseRequisition.STATUS_MANAGER_REVIEW]:
+            if not user.is_superuser and role_code not in [Role.DEPT_APPROVER, Role.PROC_MGR, Role.SUPER_ADMIN]:
+                raise permissions.exceptions.PermissionDenied(
+                    "Only Department Approvers, Procurement Managers, or Super Admins can reject requisitions in Manager Review."
+                )
+        elif pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW:
+            if not user.is_superuser and role_code not in [Role.FINANCE_AP, Role.PROC_MGR, Role.SUPER_ADMIN]:
+                raise permissions.exceptions.PermissionDenied(
+                    "Only Finance/AP or Procurement Managers can reject requisitions in Budget Review."
+                )
+        else:
+            if not user.is_superuser and role_code not in [Role.DEPT_APPROVER, Role.PROC_MGR, Role.SUPER_ADMIN]:
+                raise permissions.exceptions.PermissionDenied(
+                    "You do not have permission to reject Purchase Requisitions."
+                )
+        comments = (request.data.get("comments") or request.data.get("reason") or "").strip()
         if not comments:
             raise serializers.ValidationError(
                 {"comments": "Rejection comments/justification are mandatory."}
@@ -504,6 +569,7 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
             PurchaseRequisition.STATUS_PO_ISSUED,
             PurchaseRequisition.STATUS_CANCELLED,
             PurchaseRequisition.STATUS_SOURCING,
+            PurchaseRequisition.STATUS_REJECTED,
         ]:
             raise serializers.ValidationError(
                 {"status": f"Cannot cancel requisition in '{pr.status}' status."}

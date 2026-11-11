@@ -19,6 +19,26 @@ from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
 
+def _get_active_request_id(context=None):
+    if context and "request" in context:
+        req = context["request"]
+        rid = getattr(req, "request_id", None) or getattr(req, "correlation_id", None)
+        if rid:
+            return str(rid)
+        header_rid = req.headers.get("X-Request-ID") if hasattr(req, "headers") else req.META.get("HTTP_X_REQUEST_ID")
+        if header_rid:
+            return str(header_rid)
+    try:
+        from apps.core.middleware import get_current_request_id
+        rid = get_current_request_id()
+        if rid:
+            return str(rid)
+    except Exception:
+        pass
+    import uuid
+    return str(uuid.uuid4())
+
+
 def custom_exception_handler(exc, context):
     """
     Custom DRF exception handler returning standardized JSON error structure:
@@ -26,10 +46,14 @@ def custom_exception_handler(exc, context):
         "error": {
             "code": "VALIDATION_ERROR",
             "message": "Human readable error summary",
-            "details": { ... field specific errors ... }
+            "details": { ... field specific errors ... },
+            "request_id": "...",
+            "fields": { ... }
         }
     }
     """
+    req_id = _get_active_request_id(context)
+
     if isinstance(exc, (decimal.InvalidOperation, OverflowError, DataError, ValueError)):
         return Response(
             {
@@ -37,6 +61,7 @@ def custom_exception_handler(exc, context):
                     "code": "VALIDATION_ERROR",
                     "message": "Invalid input format or numeric value out of bounds.",
                     "details": str(exc),
+                    "request_id": req_id,
                 }
             },
             status=status.HTTP_400_BAD_REQUEST,
@@ -50,6 +75,7 @@ def custom_exception_handler(exc, context):
                     "code": "PROTECTED_ERROR",
                     "message": "Cannot delete record because it is referenced by other active entities.",
                     "details": {"protected_objects": protected_list},
+                    "request_id": req_id,
                 }
             },
             status=status.HTTP_400_BAD_REQUEST,
@@ -63,6 +89,7 @@ def custom_exception_handler(exc, context):
                     "code": "INTEGRITY_ERROR",
                     "message": "A record with this unique identifier or constrained attribute already exists.",
                     "details": str(exc),
+                    "request_id": req_id,
                 }
             },
             status=status.HTTP_400_BAD_REQUEST,
@@ -138,13 +165,15 @@ def custom_exception_handler(exc, context):
             if m:
                 message = m.group(1)
 
-        custom_response_data = {
-            "error": {
-                "code": error_code,
-                "message": message,
-                "details": details,
-            }
+        error_payload = {
+            "code": error_code,
+            "message": message,
+            "details": details,
+            "request_id": req_id,
         }
+        if isinstance(details, dict):
+            error_payload["fields"] = details
+        custom_response_data = {"error": error_payload}
         return Response(custom_response_data, status=status_code)
 
     import logging
@@ -168,6 +197,7 @@ def custom_exception_handler(exc, context):
                 "code": "INTERNAL_SERVER_ERROR",
                 "message": "An unexpected internal server error occurred.",
                 "details": details,
+                "request_id": req_id,
             }
         },
         status=status.HTTP_500_INTERNAL_SERVER_ERROR,

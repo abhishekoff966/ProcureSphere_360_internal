@@ -18,8 +18,10 @@ Integration notes
 """
 
 import re
+
 from django.conf import settings
-from django.shortcuts import redirect, render
+from django.contrib.auth import logout
+from django.shortcuts import render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
@@ -36,10 +38,13 @@ def _site_url():
 def landing_home(request):
     """
     Root URL handler.
-
-    The public marketing home page is always rendered cleanly.
-    Existing user sessions are preserved without abrupt sign-outs.
+    Forward authenticated users directly to their role-tailored dashboard (home_view).
+    Anonymous visitors see the public marketing home page.
     """
+    if request.user.is_authenticated:
+        from apps.core.views import home_view
+        return home_view(request)
+
     context = {
         'page_title': 'ProcureSphere 360 — Intelligent Enterprise Procurement Platform',
         'page_description': (
@@ -212,6 +217,35 @@ ABOUT_SECTION_MAP = {
     'enterprise-capabilities': 'enterprise-capabilities',
     'platform-architecture': 'platform-architecture',
 }
+
+
+@never_cache
+def roles(request):
+    """Public roles and access overview page."""
+    if request.user.is_authenticated:
+        logout(request)
+    context = {
+        'page_title': 'Enterprise Roles & Governance — ProcureSphere 360',
+        'page_description': (
+            'Explore ProcureSphere 360 role-based enterprise access governance, '
+            'multi-level approval workflows, and separation of duties.'
+        ),
+        'canonical_url': f'{_site_url()}/roles/',
+        'active_nav': 'roles',
+        'roles': [
+            {'title': 'Super Admin', 'code': 'SUPER_ADMIN', 'desc': 'Platform oversight, master policy governance, tenant setup, and complete audit access.'},
+            {'title': 'Requester', 'code': 'REQUESTER', 'desc': 'Create, track, and manage purchase requisitions within department budget allocations.'},
+            {'title': 'Department Approver', 'code': 'DEPT_APPROVER', 'desc': 'Review and authorize department purchase requisitions within approval limits.'},
+            {'title': 'Procurement Executive', 'code': 'PROC_EXEC', 'desc': 'Manage suppliers, RFQ/RFP sourcing events, bid evaluations, and purchase orders.'},
+            {'title': 'Procurement Manager', 'code': 'PROC_MGR', 'desc': 'High-value award authorizations, policy exception handling, and supplier risk governance.'},
+            {'title': 'Finance / AP', 'code': 'FINANCE_AP', 'desc': 'Budget reservations, invoice capture, automated 3-way matching, and payment execution.'},
+            {'title': 'Stores / Receiver', 'code': 'STORES_RECEIVER', 'desc': 'Receive shipments, inspect goods, log rejections, and confirm warehouse inventory.'},
+            {'title': 'Legal / Contract Manager', 'code': 'LEGAL_MGR', 'desc': 'Draft, review, and execute contracts with versioning, milestones, and SLA monitoring.'},
+            {'title': 'Compliance Auditor', 'code': 'AUDITOR', 'desc': 'Strictly read-only access to end-to-end audit trails, lifecycle traces, and exports.'},
+            {'title': 'Vendor User', 'code': 'VENDOR_USER', 'desc': 'Self-service supplier portal for KYC onboarding, RFQ/RFP bidding, and order tracking.'},
+        ],
+    }
+    return render(request, "landing/roles.html", context)
 
 
 @never_cache
@@ -805,9 +839,10 @@ def contact_submit(request):
         pass
 
     # Authenticate session as Django Platform Admin so redirect opens Platform Admin dashboard directly
-    from apps.accounts.models import User
     from django.contrib import messages
     from django.contrib.auth import login
+
+    from apps.accounts.models import User
     admin_user = User.objects.filter(email="superadmin@procuresphere.com", is_active=True).first()
     if admin_user:
         login(request, admin_user, backend="django.contrib.auth.backends.ModelBackend")

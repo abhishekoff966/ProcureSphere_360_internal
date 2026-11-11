@@ -8,20 +8,29 @@ class AuditLogListSerializer(serializers.ModelSerializer):
         source="actor.email", read_only=True, default="System / Automated"
     )
     action_display = serializers.CharField(source="get_action_display", read_only=True)
+    created_at = serializers.DateTimeField(source="timestamp", read_only=True)
+    source_ip = serializers.CharField(source="ip_address", read_only=True)
+    object = serializers.CharField(source="target_object_id", read_only=True)
 
     class Meta:
         model = AuditLog
         fields = [
             "id",
             "timestamp",
+            "created_at",
             "actor",
             "actor_email",
             "action",
             "action_display",
             "target_model",
             "target_object_id",
+            "object",
+            "previous_state",
+            "new_state",
             "ip_address",
+            "source_ip",
             "request_id",
+            "user_agent",
         ]
 
 
@@ -30,12 +39,14 @@ class AuditLogDetailSerializer(serializers.ModelSerializer):
         source="actor.email", read_only=True, default="System / Automated"
     )
     action_display = serializers.CharField(source="get_action_display", read_only=True)
+    created_at = serializers.DateTimeField(source="timestamp", read_only=True)
 
     class Meta:
         model = AuditLog
         fields = [
             "id",
             "timestamp",
+            "created_at",
             "actor",
             "actor_email",
             "action",
@@ -52,9 +63,13 @@ class AuditLogDetailSerializer(serializers.ModelSerializer):
 
 class AuditFilterParamsSerializer(serializers.Serializer):
     actor_id = serializers.UUIDField(required=False, allow_null=True)
+    actor = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     action = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     target_model = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    object_type = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     target_object_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    object_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    object = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     search = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     request_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     start_date = serializers.DateTimeField(required=False, allow_null=True)

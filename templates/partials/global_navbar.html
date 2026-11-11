@@ -65,10 +65,13 @@
                         <div class="text-muted text-truncate" style="font-size: 0.75rem;">{{ current_user.email }}</div>
                     </li>
                     <li>
-                        <a class="dropdown-item py-2 text-danger fw-semibold d-flex align-items-center" href="/logout/">
-                            <i class="fa-solid fa-arrow-right-from-bracket me-2 text-danger"></i>
-                            <span>Sign Out</span>
-                        </a>
+                        <form method="POST" action="/logout/" id="globalNavbarLogoutForm" class="m-0 p-0">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item py-2 text-danger fw-semibold d-flex align-items-center bg-transparent border-0 w-100">
+                                <i class="fa-solid fa-arrow-right-from-bracket me-2 text-danger"></i>
+                                <span>Sign Out</span>
+                            </button>
+                        </form>
                     </li>
                 </ul>
             </div>

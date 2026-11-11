@@ -16,7 +16,6 @@ EVENT_READ_ROLES = {
     Role.PROC_EXEC,
     Role.PROC_MGR,
     Role.FINANCE_AP,
-    Role.LEGAL_MGR,
     Role.AUDITOR,
 }
 EVENT_MANAGE_ROLES = {Role.SUPER_ADMIN, Role.PROC_EXEC, Role.PROC_MGR}

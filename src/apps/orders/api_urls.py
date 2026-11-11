@@ -46,12 +46,18 @@ class CanManagePurchaseOrder(BasePermission):
         if not request.user or not request.user.is_authenticated:
             return False
 
-        if getattr(request.user, "role_code", None) == Role.AUDITOR:
+        role_code = getattr(request.user, "role_code", None) or (
+            request.user.role.code if getattr(request.user, "role", None) else None
+        )
+        if not request.user.is_superuser and role_code == Role.STORES_RECEIVER:
+            return False
+
+        if role_code == Role.AUDITOR:
             return request.method in SAFE_METHODS
 
         is_vendor = (
             getattr(request.user, "is_vendor", False)
-            or getattr(request.user, "role_code", None) == Role.VENDOR_USER
+            or role_code == Role.VENDOR_USER
         )
 
         if is_vendor:
@@ -61,7 +67,7 @@ class CanManagePurchaseOrder(BasePermission):
                 return True
             return False
 
-        if getattr(request.user, "role_code", None) == Role.REQUESTER:
+        if role_code == Role.REQUESTER:
             return request.method in SAFE_METHODS
 
         if request.method in SAFE_METHODS:
@@ -286,15 +292,26 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         vendor = attrs.get("vendor", getattr(self.instance, "vendor", None))
         if vendor and vendor.status != Vendor.STATUS_ACTIVE:
+            if vendor.status == Vendor.STATUS_SUSPENDED:
+                raise serializers.ValidationError(
+                    {"vendor": [f"Cannot create Purchase Order: Vendor '{vendor.legal_name}' is not ACTIVE (current status: SUSPENDED). POs cannot be issued to suspended vendors."]}
+                )
             raise serializers.ValidationError(
                 {"vendor": [f"Cannot create Purchase Order: Vendor '{vendor.legal_name}' is not ACTIVE (current status: {vendor.status})."]}
             )
 
-        # DEF-050: A PO can only be created from an APPROVED requisition
+        # A PO can only be created from an APPROVED requisition
         requisition = attrs.get("requisition", getattr(self.instance, "requisition", None))
-        if requisition and requisition.status != "APPROVED":
+        if requisition and requisition.status not in ("APPROVED", "SOURCING"):
             raise serializers.ValidationError(
                 {"requisition": [f"Cannot create Purchase Order from requisition '{requisition.pr_number}': Requisition status is '{requisition.status}' (must be APPROVED)."]}
+            )
+
+        # A PO can only be created from an AWARDED sourcing event
+        sourcing_event = attrs.get("sourcing_event", getattr(self.instance, "sourcing_event", None))
+        if sourcing_event and sourcing_event.status != SourcingEvent.STATUS_AWARDED:
+            raise serializers.ValidationError(
+                {"sourcing_event": [f"Cannot create Purchase Order from sourcing event '{sourcing_event.event_number}': Sourcing event status is '{sourcing_event.status}' (must be AWARDED)."]}
             )
 
         if self.instance is None:
@@ -730,15 +747,40 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(po).data, status=status.HTTP_201_CREATED)
 
     def _run_lifecycle_action(self, fn, *args, **kwargs):
+        from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
+        from rest_framework.exceptions import PermissionDenied as DRFPermissionDenied
         try:
             po = fn(*args, **kwargs)
+        except (DjangoPermissionDenied, DRFPermissionDenied) as e:
+            return Response(
+                {
+                    "error": {
+                        "code": "PERMISSION_DENIED",
+                        "message": str(e),
+                        "details": [str(e)],
+                    }
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
         except ValidationError as e:
             msg = e.messages if hasattr(e, "messages") else [str(e)]
+            first_msg = msg[0] if isinstance(msg, list) else str(e)
+            if "permission denied" in first_msg.lower():
+                return Response(
+                    {
+                        "error": {
+                            "code": "PERMISSION_DENIED",
+                            "message": first_msg,
+                            "details": msg,
+                        }
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             return Response(
                 {
                     "error": {
                         "code": "VALIDATION_ERROR",
-                        "message": msg[0] if isinstance(msg, list) else str(e),
+                        "message": first_msg,
                         "details": msg,
                     }
                 },

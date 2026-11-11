@@ -216,6 +216,22 @@
 document.addEventListener('DOMContentLoaded', function () {
     console.log('ProcureSphere 360 Interface Initialized.');
 
+    // Auto-dismiss success and info alert banners after 4.5 seconds (BUG-018)
+    document.querySelectorAll('.alert.alert-dismissible.alert-success, .alert.alert-dismissible.alert-info').forEach(function (alertEl) {
+        setTimeout(function () {
+            if (!document.body.contains(alertEl)) return;
+            try {
+                if (window.bootstrap && window.bootstrap.Alert) {
+                    window.bootstrap.Alert.getOrCreateInstance(alertEl).close();
+                    return;
+                }
+            } catch (err) {}
+            alertEl.classList.remove('show');
+            setTimeout(function () { if (alertEl.parentNode) alertEl.parentNode.removeChild(alertEl); }, 200);
+        }, 4500);
+    });
+
+
     // Auto-inject CSRF token into HTMX headers
     document.body.addEventListener('htmx:configRequest', function (evt) {
         const csrfToken = getCookie('csrftoken');
@@ -297,6 +313,69 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.disabled = btn.dataset.originalDisabled === 'true';
         btn.classList.remove('btn-loading');
         delete btn.dataset.originalHtml;
+        if (btn.form) {
+            window.resetFormCancelButtons(btn.form);
+        }
+    };
+
+    // Disable all cancel buttons and navigation actions associated with a form
+    window.disableFormCancelButtons = function (form) {
+        if (!form) return;
+        const cancelElements = form.querySelectorAll(
+            'a.btn, button:not([type="submit"]), [data-action="cancel"], .btn-cancel, #pr_cancel_btn, #pr_edit_cancel_btn, a[href*="requisitions"]'
+        );
+        cancelElements.forEach(function (el) {
+            if (el.tagName === 'BUTTON') {
+                el.disabled = true;
+            }
+            el.classList.add('disabled');
+            el.setAttribute('aria-disabled', 'true');
+            el.setAttribute('tabindex', '-1');
+            el.style.pointerEvents = 'none';
+            el.style.opacity = '0.5';
+            el.style.cursor = 'not-allowed';
+        });
+        const formId = form.id;
+        if (formId) {
+            document.querySelectorAll(`[data-form-id="${formId}"], [data-form="${formId}"]`).forEach(function (el) {
+                if (el.tagName === 'BUTTON') el.disabled = true;
+                el.classList.add('disabled');
+                el.setAttribute('aria-disabled', 'true');
+                el.style.pointerEvents = 'none';
+                el.style.opacity = '0.5';
+                el.style.cursor = 'not-allowed';
+            });
+        }
+    };
+
+    // Restore cancel buttons and navigation actions associated with a form
+    window.resetFormCancelButtons = function (form) {
+        if (!form) return;
+        const cancelElements = form.querySelectorAll(
+            'a.btn, button:not([type="submit"]), [data-action="cancel"], .btn-cancel, #pr_cancel_btn, #pr_edit_cancel_btn, a[href*="requisitions"]'
+        );
+        cancelElements.forEach(function (el) {
+            if (el.tagName === 'BUTTON') {
+                el.disabled = false;
+            }
+            el.classList.remove('disabled');
+            el.removeAttribute('aria-disabled');
+            el.removeAttribute('tabindex');
+            el.style.pointerEvents = '';
+            el.style.opacity = '';
+            el.style.cursor = '';
+        });
+        const formId = form.id;
+        if (formId) {
+            document.querySelectorAll(`[data-form-id="${formId}"], [data-form="${formId}"]`).forEach(function (el) {
+                if (el.tagName === 'BUTTON') el.disabled = false;
+                el.classList.remove('disabled');
+                el.removeAttribute('aria-disabled');
+                el.style.pointerEvents = '';
+                el.style.opacity = '';
+                el.style.cursor = '';
+            });
+        }
     };
 
     // Track clicked submit button on form and block rapid double-clicks
@@ -309,6 +388,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 return false;
             }
             btn.form._ps360_clickedSubmitBtn = btn;
+        }
+
+        // Intercept clicks on Cancel buttons or links while a form is in submitting/loading state
+        const cancelEl = e.target.closest('a.disabled, a[aria-disabled="true"], button[disabled], [data-action="cancel"], #pr_cancel_btn, #pr_edit_cancel_btn');
+        if (cancelEl) {
+            const form = cancelEl.closest('form') || document.querySelector('form[data-submitting="true"]');
+            if (cancelEl.classList.contains('disabled') || cancelEl.getAttribute('aria-disabled') === 'true' || (form && form.dataset.submitting === 'true')) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                return false;
+            }
         }
     }, true);
 
@@ -365,6 +455,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 btn.classList.add('btn-loading');
             }
         });
+
+        // Disable Cancel buttons and navigation actions while form is submitting/loading
+        window.disableFormCancelButtons(form);
     }, false);
 
     // Intercept logout links to trigger session termination and redirect directly to /login/
@@ -402,6 +495,7 @@ document.addEventListener('DOMContentLoaded', function () {
             buttons.forEach(function (btn) {
                 window.resetButtonLoading(btn);
             });
+            window.resetFormCancelButtons(form);
         });
     });
 

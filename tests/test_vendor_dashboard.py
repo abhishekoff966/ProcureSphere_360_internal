@@ -1089,6 +1089,19 @@ def test_vendor_submit_partial_invoice(client, vendor_setup):
     po_line2 = POLine.objects.create(
         po=po, item_description="Network Cable", quantity=Decimal("10"), unit_price=Decimal("10.00"), line_total=Decimal("100.00")
     )
+    from apps.receipts.models import GoodsReceipt, ReceiptLine
+    grn = GoodsReceipt.objects.create(
+        po=po,
+        grn_number="GRN-V1-001",
+        received_by=proc_exec,
+        received_date=timezone.now(),
+    )
+    ReceiptLine.objects.create(
+        receipt=grn,
+        po_line=po_line1,
+        quantity_received=Decimal("1"),
+        quantity_accepted=Decimal("1"),
+    )
 
     client.force_login(u2)
     response = client.post(
@@ -1118,7 +1131,7 @@ def test_vendor_submit_partial_invoice(client, vendor_setup):
         },
     )
     assert response.status_code == 302
-    assert response.url == f"/vendor/purchase-orders/{po.id}/"
+    assert response.url == "/vendor/invoices/"
 
     from apps.invoices.models import SupplierInvoice
     invoice = SupplierInvoice.objects.get(invoice_number="INV-V1-001")
@@ -1181,6 +1194,19 @@ def test_post_with_valid_data_creates_invoice_successfully(client, vendor_setup)
         unit_price=Decimal("500.00"),
         line_total=Decimal("1000.00"),
     )
+    from apps.receipts.models import GoodsReceipt, ReceiptLine
+    grn = GoodsReceipt.objects.create(
+        po=po,
+        grn_number="GRN-VALID-001",
+        received_by=vendor_setup["proc_exec"],
+        received_date=timezone.now(),
+    )
+    ReceiptLine.objects.create(
+        receipt=grn,
+        po_line=line,
+        quantity_received=Decimal("2"),
+        quantity_accepted=Decimal("2"),
+    )
 
     client.force_login(u1)
     res = client.post(
@@ -1221,6 +1247,19 @@ def test_invalid_form_data_returns_validation_errors(client, vendor_setup):
         quantity=Decimal("2"),
         unit_price=Decimal("500.00"),
         line_total=Decimal("1000.00"),
+    )
+    from apps.receipts.models import GoodsReceipt, ReceiptLine
+    grn = GoodsReceipt.objects.create(
+        po=po,
+        grn_number="GRN-VALID-001",
+        received_by=vendor_setup["proc_exec"],
+        received_date=timezone.now(),
+    )
+    ReceiptLine.objects.create(
+        receipt=grn,
+        po_line=line,
+        quantity_received=Decimal("2"),
+        quantity_accepted=Decimal("2"),
     )
 
     client.force_login(u1)
@@ -1366,6 +1405,19 @@ def test_duplicate_invoice_submission_handled(client, vendor_setup):
         unit_price=Decimal("50.00"),
         line_total=Decimal("100.00"),
     )
+    from apps.receipts.models import GoodsReceipt, ReceiptLine
+    grn = GoodsReceipt.objects.create(
+        po=po,
+        grn_number="GRN-DUP-001",
+        received_by=vendor_setup["proc_exec"],
+        received_date=timezone.now(),
+    )
+    ReceiptLine.objects.create(
+        receipt=grn,
+        po_line=line,
+        quantity_received=Decimal("2"),
+        quantity_accepted=Decimal("2"),
+    )
 
     client.force_login(u1)
     # 1st submission
@@ -1475,6 +1527,19 @@ def test_invoice_appears_in_vendor_invoice_list_after_submission(client, vendor_
         unit_price=Decimal("250.00"),
         line_total=Decimal("1000.00"),
     )
+    from apps.receipts.models import GoodsReceipt, ReceiptLine
+    grn = GoodsReceipt.objects.create(
+        po=po,
+        grn_number="GRN-LISTING-001",
+        received_by=vendor_setup["proc_exec"],
+        received_date=timezone.now(),
+    )
+    ReceiptLine.objects.create(
+        receipt=grn,
+        po_line=line,
+        quantity_received=Decimal("4"),
+        quantity_accepted=Decimal("4"),
+    )
 
     client.force_login(u1)
     client.post(
@@ -1524,6 +1589,19 @@ def test_vendor_session_stability_post_invoice_submission(client, vendor_setup):
         quantity=Decimal("5"),
         unit_price=Decimal("200.00"),
         line_total=Decimal("1000.00"),
+    )
+    from apps.receipts.models import GoodsReceipt, ReceiptLine
+    grn = GoodsReceipt.objects.create(
+        po=po,
+        grn_number="GRN-SESS-001",
+        received_by=vendor_setup["proc_exec"],
+        received_date=timezone.now(),
+    )
+    ReceiptLine.objects.create(
+        receipt=grn,
+        po_line=po_line,
+        quantity_received=Decimal("5"),
+        quantity_accepted=Decimal("5"),
     )
 
     client.force_login(u1)

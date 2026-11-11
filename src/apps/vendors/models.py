@@ -1,4 +1,5 @@
 import re
+
 from django.conf import settings
 from django.db import models
 
@@ -382,6 +383,8 @@ class VendorCredentialDispatch(TimeStampedModel):
     STATUS_PENDING = "PENDING"
     STATUS_SENT = "SENT"
     STATUS_FAILED = "FAILED"
+    STATUS_DELIVERED = "DELIVERED"
+    STATUS_RETRYING = "RETRYING"
     STATUS_CHOICES = [
         (STATUS_PENDING, "Pending"),
         (STATUS_SENT, "Sent"),
@@ -432,3 +435,33 @@ class VendorCredentialDispatch(TimeStampedModel):
 
     def __str__(self):
         return f"{self.vendor_id} -> {self.sent_to} [{self.status}]"
+
+    def get_status_display(self):
+        display_map = {
+            self.STATUS_PENDING: "Pending",
+            self.STATUS_SENT: "Sent (Awaiting Provider Delivery)",
+            self.STATUS_DELIVERED: "Delivered",
+            self.STATUS_FAILED: "Failed",
+            self.STATUS_RETRYING: "Retrying",
+        }
+        return display_map.get(self.status, self.status)
+
+    @property
+    def is_delivered(self) -> bool:
+        return self.status == self.STATUS_DELIVERED
+
+    @property
+    def is_failed(self) -> bool:
+        return self.status == self.STATUS_FAILED
+
+    @property
+    def is_retrying(self) -> bool:
+        return self.status == self.STATUS_RETRYING
+
+    @property
+    def is_sent(self) -> bool:
+        return self.status == self.STATUS_SENT
+
+    @property
+    def can_retry(self) -> bool:
+        return self.status in (self.STATUS_FAILED, self.STATUS_PENDING)
