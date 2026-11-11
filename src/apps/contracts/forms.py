@@ -12,16 +12,19 @@ class ContractCreateForm(forms.ModelForm):
         queryset=Vendor.objects.all(),
         widget=forms.Select(attrs={"class": "form-select"}),
         required=True,
+        empty_label="-- Select Vendor --",
     )
     sourcing_event = forms.ModelChoiceField(
         queryset=SourcingEvent.objects.all(),
         widget=forms.Select(attrs={"class": "form-select"}),
         required=False,
+        empty_label="-- Select Sourcing Event (Optional) --",
     )
     po = forms.ModelChoiceField(
         queryset=PurchaseOrder.objects.all(),
         widget=forms.Select(attrs={"class": "form-select"}),
         required=False,
+        empty_label="-- Select Purchase Order (Optional) --",
     )
 
     class Meta:

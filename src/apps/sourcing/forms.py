@@ -21,6 +21,7 @@ class SourcingEventForm(forms.Form):
         queryset=PurchaseRequisition.objects.none(),
         required=False,
         widget=forms.Select(attrs={"class": "form-select"}),
+        empty_label="-- Select Requisition (Optional) --",
         help_text="Approved requisition this event sources (optional).",
     )
     bid_start_date = forms.DateTimeField(

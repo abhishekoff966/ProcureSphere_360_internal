@@ -22,7 +22,7 @@ class VendorEditForm(forms.Form):
     phone = forms.CharField(max_length=30, required=False, label="Phone")
     address = forms.CharField(widget=forms.Textarea(attrs={"rows": 2}), label="Address")
     category = forms.ModelChoiceField(
-        queryset=VendorCategory.objects.order_by("name"), label="Category"
+        queryset=VendorCategory.objects.order_by("name"), empty_label="-- Select Category --", label="Category"
     )
     bank_name = forms.CharField(max_length=150, required=False, label="Bank name")
     bank_account_number = forms.CharField(max_length=100, required=False, label="Bank account no.")
@@ -36,7 +36,9 @@ class VendorRegistrationForm(forms.Form):
     pan_number = forms.CharField(max_length=10, required=False, label="PAN")
     gstin = forms.CharField(max_length=15, required=False, label="GSTIN")
     registration_number = forms.CharField(max_length=100, required=False)
-    category = forms.ModelChoiceField(queryset=VendorCategory.objects.order_by("name"))
+    category = forms.ModelChoiceField(
+        queryset=VendorCategory.objects.order_by("name"), empty_label="-- Select Category --"
+    )
     email = forms.EmailField()
     phone = forms.CharField(max_length=30, required=False)
     address = forms.CharField(widget=forms.Textarea(attrs={"rows": 2}))

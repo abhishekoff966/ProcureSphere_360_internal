@@ -2031,8 +2031,7 @@ class BudgetAdminForm(forms.ModelForm):
 
 
         self.fields["cost_center"].queryset = cc_qs
-
-
+        self.fields["cost_center"].empty_label = "-- Select Cost Center --"
 
         self.fields["fiscal_period"].queryset = fp_qs
 
