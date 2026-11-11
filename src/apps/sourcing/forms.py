@@ -33,7 +33,6 @@ class SourcingEventForm(forms.Form):
         required=False,
         empty_label="Select a requisition (optional)...",
         widget=forms.Select(attrs={"class": "form-select"}),
-        empty_label="-- Select Requisition (Optional) --",
         help_text="Approved requisition this event sources (optional).",
     )
     bid_start_date = forms.DateTimeField(
