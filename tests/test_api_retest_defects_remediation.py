@@ -1,4 +1,5 @@
 import pytest
+import uuid
 from decimal import Decimal
 from django.utils import timezone
 from rest_framework import status
@@ -357,3 +358,189 @@ def test_rt_002_stores_receiver_and_legal_manager_safe_read_access(api_world):
     client.force_authenticate(user=api_world["legal"])
     res_sc = client.get("/api/v1/scorecards/")
     assert res_sc.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.django_db
+def test_def_010_vendor_activation_without_verified_kyc_fails(api_world):
+    """DEF-010: Activating unverified vendor via governance-status or assess-risk returns 400."""
+    client = APIClient()
+    procmgr = api_world["procmgr"]
+    client.force_authenticate(user=procmgr)
+
+    category = VendorCategory.objects.get(code="HW-CAT-01")
+    draft_vendor = Vendor.objects.create(
+        legal_name="Unverified KYC Vendor",
+        vendor_number="VND-2026-00998",
+        tax_identification_number="TIN-UNV-98",
+        category=category,
+        status=Vendor.STATUS_DRAFT,
+    )
+
+    # 1. Governance status activation fails with 400
+    res_gov = client.post(
+        f"/api/v1/vendors/{draft_vendor.id}/governance-status/",
+        {"status": "ACTIVE", "notes": "Attempt force activate"},
+        format="json",
+    )
+    assert res_gov.status_code == status.HTTP_400_BAD_REQUEST
+
+    # 2. Assess risk with governance_status=ACTIVE fails with 400
+    res_risk = client.post(
+        f"/api/v1/vendors/{draft_vendor.id}/assess-risk/",
+        {"risk_level": "LOW", "notes": "Risk assessed", "governance_status": "ACTIVE"},
+        format="json",
+    )
+    assert res_risk.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.django_db
+def test_def_016_po_creation_blocked_for_suspended_vendor(api_world):
+    """DEF-016: Creating PO for a SUSPENDED vendor returns 400."""
+    client = APIClient()
+    procexec = api_world["procexec"]
+    client.force_authenticate(user=procexec)
+
+    category = VendorCategory.objects.get(code="HW-CAT-01")
+    suspended_vendor = Vendor.objects.create(
+        legal_name="Suspended Tech Vendor",
+        vendor_number="VND-2026-00997",
+        tax_identification_number="TIN-SUSP-97",
+        category=category,
+        status=Vendor.STATUS_SUSPENDED,
+    )
+
+    res = client.post(
+        "/api/v1/purchase-orders/",
+        {
+            "vendor": str(suspended_vendor.id),
+            "cost_center": str(api_world["cc"].id),
+            "lines": [{"item_description": "Server Rack", "quantity": "1", "unit_price": "500.00"}],
+        },
+        format="json",
+    )
+    assert res.status_code == status.HTTP_400_BAD_REQUEST
+    assert "SUSPENDED" in str(res.data) or "not ACTIVE" in str(res.data)
+
+
+@pytest.mark.django_db
+def test_def_027_028_paid_invoice_immutable_and_cannot_delete(api_world):
+    """DEF-027, DEF-028: Modifying or deleting a PAID invoice returns 400."""
+    client = APIClient()
+    admin = api_world["admin"]
+    client.force_authenticate(user=admin)
+
+    po = PurchaseOrder.objects.create(
+        po_number="PO-PAID-02",
+        vendor=api_world["vendor"],
+        cost_center=api_world["cc"],
+        status=PurchaseOrder.STATUS_COMPLETED,
+        total_amount=Decimal("200.00"),
+    )
+    inv = SupplierInvoice.objects.create(
+        invoice_number="INV-PAID-002",
+        vendor=api_world["vendor"],
+        po=po,
+        invoice_date=timezone.now().date(),
+        due_date=timezone.now().date() + timezone.timedelta(days=30),
+        subtotal=Decimal("200.00"),
+        total_amount=Decimal("200.00"),
+        status=SupplierInvoice.STATUS_PAID,
+    )
+
+    # 1. PATCH returns 400
+    res_patch = client.patch(f"/api/v1/invoices/{inv.id}/", {"total_amount": "150.00"}, format="json")
+    assert res_patch.status_code == status.HTTP_400_BAD_REQUEST
+
+    # 2. DELETE returns 400
+    res_del = client.delete(f"/api/v1/invoices/{inv.id}/")
+    assert res_del.status_code == status.HTTP_400_BAD_REQUEST
+    inv.refresh_from_db()
+    assert inv.status == SupplierInvoice.STATUS_PAID
+
+
+@pytest.mark.django_db
+def test_rt_004_sourcing_event_generate_po_routing(api_world):
+    """RT-004: generate-po checks object existence (404) and award state (400)."""
+    client = APIClient()
+    procexec = api_world["procexec"]
+    client.force_authenticate(user=procexec)
+
+    # 1. Non-existent event returns 404
+    fake_id = uuid.uuid4()
+    res_404 = client.post(f"/api/v1/sourcing-events/events/{fake_id}/generate-po/", format="json")
+    assert res_404.status_code == status.HTTP_404_NOT_FOUND
+
+    # 2. Non-awarded event returns 400
+    now = timezone.now()
+    event = SourcingEvent.objects.create(
+        event_number="RFQ-2026-00101",
+        title="Draft RFQ",
+        event_type="RFQ",
+        status=SourcingEvent.STATUS_DRAFT,
+        bid_start_date=now + timezone.timedelta(days=1),
+        bid_end_date=now + timezone.timedelta(days=15),
+        technical_weight=50,
+        commercial_weight=50,
+    )
+    res_400 = client.post(f"/api/v1/sourcing-events/events/{event.id}/generate-po/", format="json")
+    assert res_400.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.django_db
+def test_rt_005_and_rt_009_vendor_risk_and_scorecard_actions(api_world):
+    """RT-005, RT-009: PROC_EXEC can record risk, lookup checks object (404), PROC_MGR deletes scorecard."""
+    client = APIClient()
+
+    # 1. PROC_EXEC records risk on non-existent vendor -> 404
+    client.force_authenticate(user=api_world["procexec"])
+    fake_id = uuid.uuid4()
+    res_404_risk = client.post(
+        f"/api/v1/vendors/{fake_id}/risk/",
+        {"risk_level": "HIGH", "notes": "Assessment note"},
+        format="json",
+    )
+    assert res_404_risk.status_code == status.HTTP_404_NOT_FOUND
+
+    # 2. PROC_EXEC records risk on active vendor -> 201
+    res_201_risk = client.post(
+        f"/api/v1/vendors/{api_world['vendor'].id}/risk/",
+        {"risk_level": "HIGH", "notes": "Quarterly audit review"},
+        format="json",
+    )
+    assert res_201_risk.status_code == status.HTTP_201_CREATED
+
+    # 3. PROC_EXEC records invalid risk level -> 400
+    res_400_risk = client.post(
+        f"/api/v1/vendors/{api_world['vendor'].id}/risk/",
+        {"risk_level": "INVALID_LEVEL", "notes": "Invalid test"},
+        format="json",
+    )
+    assert res_400_risk.status_code == status.HTTP_400_BAD_REQUEST
+
+    # 4. PROC_EXEC records blank notes -> 400
+    res_blank_notes = client.post(
+        f"/api/v1/vendors/{api_world['vendor'].id}/risk/",
+        {"risk_level": "LOW", "notes": ""},
+        format="json",
+    )
+    assert res_blank_notes.status_code == status.HTTP_400_BAD_REQUEST
+
+    # 5. PROC_MGR deletes scorecard: 404 for non-existent, 204 for existing
+    client.force_authenticate(user=api_world["procmgr"])
+    sc = VendorScorecard.objects.create(
+        vendor=api_world["vendor"],
+        evaluation_period="Q2-2026",
+        evaluated_by=api_world["procmgr"],
+        delivery_score=Decimal("85.00"),
+        quality_score=Decimal("85.00"),
+        price_score=Decimal("85.00"),
+        compliance_score=Decimal("85.00"),
+        composite_score=Decimal("85.00"),
+    )
+    res_del_404 = client.delete(f"/api/v1/scorecards/{fake_id}/")
+    assert res_del_404.status_code == status.HTTP_404_NOT_FOUND
+
+    res_del_204 = client.delete(f"/api/v1/scorecards/{sc.id}/")
+    assert res_del_204.status_code == status.HTTP_204_NO_CONTENT
+    assert not VendorScorecard.objects.filter(id=sc.id).exists()
+

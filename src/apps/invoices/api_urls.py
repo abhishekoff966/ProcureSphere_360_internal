@@ -140,6 +140,14 @@ class SupplierInvoiceSerializer(serializers.ModelSerializer):
         read_only_fields = ["status", "created_at", "updated_at"]
 
     def validate(self, attrs):
+        if self.instance and self.instance.status in [
+            SupplierInvoice.STATUS_PAID,
+            SupplierInvoice.STATUS_READY_FOR_PAYMENT,
+            SupplierInvoice.STATUS_APPROVAL,
+        ]:
+            raise serializers.ValidationError(
+                {"status": [f"Invoices in '{self.instance.status}' status cannot be edited."]}
+            )
         vendor = attrs.get("vendor", getattr(self.instance, "vendor", None))
         po = attrs.get("po", getattr(self.instance, "po", None))
         if po and po.status in [PurchaseOrder.STATUS_DRAFT, PurchaseOrder.STATUS_CANCELLED]:
@@ -264,6 +272,25 @@ class SupplierInvoiceViewSet(viewsets.ModelViewSet):
                 {"status": [f"Invoices in '{instance.status}' status cannot be edited."]}
             )
         serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.status in [
+            SupplierInvoice.STATUS_PAID,
+            SupplierInvoice.STATUS_READY_FOR_PAYMENT,
+            SupplierInvoice.STATUS_APPROVAL,
+        ]:
+            return Response(
+                {
+                    "error": {
+                        "code": "INVALID_STATE",
+                        "message": f"Invoices in '{instance.status}' status cannot be deleted.",
+                        "details": {"status": [f"Invoices in '{instance.status}' status cannot be deleted."]},
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return super().destroy(request, *args, **kwargs)
 
     def perform_destroy(self, instance):
         if instance.status in [SupplierInvoice.STATUS_PAID, SupplierInvoice.STATUS_READY_FOR_PAYMENT, SupplierInvoice.STATUS_APPROVAL]:

@@ -7,6 +7,7 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.urls import path
 from rest_framework import serializers, status, viewsets
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.decorators import action
 from rest_framework.permissions import SAFE_METHODS, BasePermission, IsAuthenticated
 from rest_framework.response import Response
@@ -565,14 +566,27 @@ class VendorViewSet(viewsets.ModelViewSet):
         risk_level = str(request.data.get("risk_level", "")).upper()
         risk_flags = request.data.get("risk_flags", [])
         notes = str(request.data.get("notes", request.data.get("assessment_notes", ""))).strip()
-        record = record_vendor_risk_assessment_service(
-            vendor=vendor,
-            assessor=request.user,
-            risk_level=risk_level,
-            risk_flags=risk_flags,
-            notes=notes,
-        )
-        return Response(VendorRiskRecordSerializer(record).data, status=status.HTTP_201_CREATED)
+        try:
+            record = record_vendor_risk_assessment_service(
+                vendor=vendor,
+                assessor=request.user,
+                risk_level=risk_level,
+                risk_flags=risk_flags,
+                notes=notes,
+            )
+            return Response(VendorRiskRecordSerializer(record).data, status=status.HTTP_201_CREATED)
+        except (DjangoValidationError, DRFValidationError) as exc:
+            msg = exc.messages if hasattr(exc, "messages") else [str(exc)]
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": msg[0] if isinstance(msg, list) else str(exc),
+                        "details": {"notes": msg} if "notes" in str(msg).lower() else {"risk_level": msg},
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     @action(
         detail=True,
@@ -876,12 +890,7 @@ class VendorAssessRiskAPIView(APIView):
                 Vendor.STATUS_REJECTED,
             ]:
                 try:
-                    if gov_status_upper == Vendor.STATUS_ACTIVE and vendor.status in [
-                        Vendor.STATUS_DRAFT,
-                        Vendor.STATUS_SUBMITTED,
-                        Vendor.STATUS_KYC_REVIEW,
-                        Vendor.STATUS_CHANGES_REQUIRED,
-                    ]:
+                    if gov_status_upper == Vendor.STATUS_ACTIVE:
                         # Activation is only possible through the KYC-gated service.
                         approve_vendor_service(vendor=vendor, manager=request.user, notes=assessment_notes)
                     else:
@@ -935,12 +944,7 @@ class VendorGovernanceStatusAPIView(APIView):
             )
 
         try:
-            if new_status == Vendor.STATUS_ACTIVE and vendor.status in [
-                Vendor.STATUS_DRAFT,
-                Vendor.STATUS_SUBMITTED,
-                Vendor.STATUS_KYC_REVIEW,
-                Vendor.STATUS_CHANGES_REQUIRED,
-            ]:
+            if new_status == Vendor.STATUS_ACTIVE:
                 # Activation is only possible through the KYC-gated service.
                 approve_vendor_service(vendor=vendor, manager=request.user, notes=notes)
                 vendor.refresh_from_db()

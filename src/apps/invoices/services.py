@@ -248,6 +248,14 @@ def run_3_way_match_service(
 
     if invoice.status == SupplierInvoice.STATUS_PAID:
         raise ValidationError("Cannot run 3-way match on an invoice that has already been PAID.")
+    if invoice.status not in [
+        SupplierInvoice.STATUS_RECEIVED,
+        SupplierInvoice.STATUS_EXCEPTION,
+        SupplierInvoice.STATUS_MATCHING,
+    ]:
+        raise ValidationError(
+            f"Cannot run 3-way match on invoice in '{invoice.status}' status. Matching is only permitted for RECEIVED and EXCEPTION invoices."
+        )
 
     invoice.status = SupplierInvoice.STATUS_MATCHING
     invoice.save(update_fields=["status", "updated_at"])
