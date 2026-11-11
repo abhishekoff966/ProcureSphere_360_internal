@@ -47,6 +47,7 @@ def legal_bugfix_world():
     cc_b = CostCenter.objects.create(department=dept_b, name="CC Beta", code="CCB")
 
     roles = {
+        Role.SUPER_ADMIN: _get_or_create_role(Role.SUPER_ADMIN, "Super Admin"),
         Role.LEGAL_MGR: _get_or_create_role(Role.LEGAL_MGR, "Legal Manager"),
         Role.PROC_MGR: _get_or_create_role(Role.PROC_MGR, "Procurement Manager"),
         Role.PROC_EXEC: _get_or_create_role(Role.PROC_EXEC, "Procurement Executive"),
@@ -57,6 +58,13 @@ def legal_bugfix_world():
         Role.VENDOR_USER: _get_or_create_role(Role.VENDOR_USER, "Vendor User"),
     }
 
+    super_admin_a = User.objects.create_user(
+        email="superadmin.alpha@test.com",
+        password="Password123!",
+        role=roles[Role.SUPER_ADMIN],
+        organization=org_a,
+        department=dept_a,
+    )
     legal_a = User.objects.create_user(
         email="legal.alpha@test.com",
         password="Password123!",
@@ -227,6 +235,7 @@ def legal_bugfix_world():
     return {
         "org_a": org_a,
         "org_b": org_b,
+        "super_admin_a": super_admin_a,
         "legal_a": legal_a,
         "legal_b": legal_b,
         "proc_mgr_a": proc_mgr_a,
@@ -383,12 +392,24 @@ def test_contract_ui_hides_buttons_by_role_and_status(client, legal_bugfix_world
         user=legal_a,
     )
 
-    # Read-only roles (AUDITOR, FINANCE_AP): no Draft New Contract and no mutation controls
+    # Contract drafting CTA (DEF-017): only LEGAL_MGR and SUPER_ADMIN see "Draft New Contract"
+    for creator_user in (legal_a, legal_bugfix_world["super_admin_a"]):
+        client.force_login(creator_user)
+        assert "Draft New Contract" in client.get(reverse("contracts_list")).content.decode()
+
+    # Non-drafting internal roles: no "Draft New Contract" on Contract Register
+    for non_creator in (
+        legal_bugfix_world["auditor_a"],
+        legal_bugfix_world["finance_a"],
+        legal_bugfix_world["proc_mgr_a"],
+        legal_bugfix_world["proc_exec_a"],
+    ):
+        client.force_login(non_creator)
+        assert "Draft New Contract" not in client.get(reverse("contracts_list")).content.decode()
+
+    # Read-only roles (AUDITOR, FINANCE_AP): no mutation controls on contract detail
     for ro_user in (legal_bugfix_world["auditor_a"], legal_bugfix_world["finance_a"]):
         client.force_login(ro_user)
-        list_html = client.get(reverse("contracts_list")).content.decode()
-        assert "Draft New Contract" not in list_html
-
         detail_html = client.get(
             reverse("contract_detail", kwargs={"contract_id": active_a.id})
         ).content.decode()
@@ -405,9 +426,8 @@ def test_contract_ui_hides_buttons_by_role_and_status(client, legal_bugfix_world
         assert "Mark Complete" not in detail_html
         assert "Mark Fulfilled" not in detail_html
 
-    # PROC_EXEC: can draft & manage SLA, cannot amend/renew/terminate
+    # PROC_EXEC: cannot draft contracts (DEF-017), can manage SLA, cannot amend/renew/terminate
     client.force_login(legal_bugfix_world["proc_exec_a"])
-    assert "Draft New Contract" in client.get(reverse("contracts_list")).content.decode()
     exec_html = client.get(
         reverse("contract_detail", kwargs={"contract_id": active_a.id})
     ).content.decode()

@@ -989,26 +989,17 @@ def verify_vendor_document_decision_service(
         )
 
     elif (
-
         eval_result["is_compliant"]
-
         and not vendor.is_event_eligible
-
-        and vendor.status in (Vendor.STATUS_ACTIVE, Vendor.STATUS_SUBMITTED, Vendor.STATUS_KYC_REVIEW)
-
+        and vendor.status == Vendor.STATUS_ACTIVE
     ):
-
+        # Only reinstate event eligibility for already-ACTIVE vendors;
+        # pre-activation transitions must flow explicitly through
+        # approve_vendor_service or legal_validate_vendor_credentials_service.
         previous_eligibility = vendor.event_eligibility_status
-
         vendor.is_event_eligible = True
-
         vendor.event_eligibility_status = Vendor.ELIGIBILITY_ELIGIBLE
-
-        if vendor.status in (Vendor.STATUS_SUBMITTED, Vendor.STATUS_KYC_REVIEW):
-            vendor.status = Vendor.STATUS_ACTIVE
-            vendor.legal_approved_by = reviewer
-            vendor.legal_approved_at = timezone.now()
-        vendor.save(update_fields=["status", "is_event_eligible", "event_eligibility_status", "legal_approved_by", "legal_approved_at", "updated_at"])
+        vendor.save(update_fields=["is_event_eligible", "event_eligibility_status", "updated_at"])
 
         create_audit_log_service(
 
