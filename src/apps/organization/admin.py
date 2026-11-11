@@ -1,6 +1,9 @@
 from django import forms
 from django.contrib import admin, messages
+<<<<<<< Updated upstream
 from django.shortcuts import redirect
+=======
+>>>>>>> Stashed changes
 from django.db.models import Q
 from django.utils.html import format_html
 

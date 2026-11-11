@@ -2302,6 +2302,20 @@ class ManagerApprovalActionAPIView(APIView):
     permission_classes = [IsAuthenticated, IsProcurementManager]
 
     def post(self, request):
+        # Procurement Managers maintain approval oversight only, not approval/rejection authority
+        role_code = getattr(request.user.role, 'code', None) if getattr(request.user, 'role', None) else None
+        if not request.user.is_superuser and role_code == Role.PROC_MGR:
+            return Response(
+                {
+                    'error': (
+                        'Permission Denied: Procurement Managers hold approval oversight only '
+                        'and do not possess direct approval or rejection authority. '
+                        'Decisions must be authorized by designated Department or Financial Approvers.'
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         item_type = str(request.data.get('item_type', '')).strip().upper() or 'PR'
         item_id = str(request.data.get('item_id', '')).strip()
         action = str(request.data.get('action', '')).strip().upper() or 'APPROVE'
@@ -2675,30 +2689,38 @@ class ManagerBudgetExceptionDecisionAPIView(APIView):
             )
 
         requisition_id = data.get("requisition_id") or data.get("pr_id")
-        action = (data.get("action") or data.get("decision") or "").strip().upper() or "APPROVE"
-        comments = (data.get("comments") or "").strip() or "Policy exception approved by Procurement Manager governance."
+        action = (data.get("action") or data.get("decision") or "").strip().upper()
+        comments = (data.get("comments") or "").strip()
 
         if not requisition_id:
-            from apps.requisitions.models import PurchaseRequisition
-            fallback_pr = PurchaseRequisition.objects.filter(
-                status=PurchaseRequisition.STATUS_BUDGET_REVIEW
-            ).first() or PurchaseRequisition.objects.first()
-            if fallback_pr:
-                requisition_id = str(fallback_pr.id)
-            else:
-                return Response(
-                    {
-                        "code": "VALIDATION_ERROR",
-                        "error": {"code": "VALIDATION_ERROR", "message": "Field 'requisition_id' is required."}
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            return Response(
+                {
+                    "code": "VALIDATION_ERROR",
+                    "error": {"code": "VALIDATION_ERROR", "message": "Field 'requisition_id' is required."}
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        if action not in ["APPROVE", "REJECT"]:
-            action = "APPROVE"
+        if not action or action not in ["APPROVE", "REJECT"]:
+            return Response(
+                {
+                    "code": "VALIDATION_ERROR",
+                    "error": {"code": "VALIDATION_ERROR", "message": "Action must be either 'APPROVE' or 'REJECT'."}
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if not comments or len(comments) < 5:
-            comments = "Policy exception approved by Procurement Manager governance."
+            return Response(
+                {
+                    "code": "JUSTIFICATION_REQUIRED",
+                    "error": {
+                        "code": "JUSTIFICATION_REQUIRED",
+                        "message": "A detailed justification/comment (minimum 5 characters) is mandatory for exception decisions.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         import uuid
 

@@ -34,6 +34,9 @@
             <a href="/approvals/inbox/" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm text-nowrap">
                 <i class="fa-solid fa-inbox me-1"></i> Open Inbox ({{ metrics.pending_count|default:"0" }})
             </a>
+            <a href="/approvals/inbox/?tab=history" class="btn btn-outline-primary btn-sm rounded-pill px-3 text-nowrap">
+                <i class="fa-solid fa-clock-rotate-left me-1"></i> My Approvals
+            </a>
             <a href="/requisitions/" class="btn btn-outline-dark btn-sm rounded-pill px-3 text-nowrap">
                 <i class="fa-solid fa-list me-1"></i> Department PRs
             </a>
@@ -209,8 +212,8 @@
                             </div>
                         </div>
                         <div class="text-end flex-shrink-0">
-                            <div class="fw-bold font-monospace {% if pr.status == 'BUDGET_REVIEW' %}text-danger{% else %}text-dark{% endif %} fs-6">₹{{ pr.total_amount|floatformat:2 }}</div>
-                            {% if pr.status == 'BUDGET_REVIEW' %}
+                            <div class="fw-bold font-monospace {% if pr.status == 'BUDGET_REVIEW' or pr.is_over_budget %}text-danger{% else %}text-dark{% endif %} fs-6">₹{{ pr.total_amount|floatformat:2 }}</div>
+                            {% if pr.status == 'BUDGET_REVIEW' or pr.is_over_budget %}
                                 <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2 py-0.5" style="font-size: 0.65rem;">
                                     <i class="fa-solid fa-scale-unbalanced me-1"></i>Over Budget
                                 </span>
@@ -229,7 +232,7 @@
                         <span class="badge bg-white text-secondary border flex-shrink-0">{{ pr.department.name }}</span>
                     </div>
 
-                    {% if pr.status == 'BUDGET_REVIEW' %}
+                    {% if pr.status == 'BUDGET_REVIEW' or pr.is_over_budget %}
                     <div class="alert alert-danger py-2 px-3 small rounded-3 mb-2 d-flex align-items-start gap-2" style="font-size: 0.82rem; line-height: 1.4;">
                         <i class="fa-solid fa-triangle-exclamation text-danger flex-shrink-0 mt-0.5"></i>
                         <span>Exceeds allocated budget. Review alert sent to Finance AP dashboard.</span>
@@ -249,7 +252,7 @@
                     {% endif %}
 
                     <!-- Touch-friendly Mobile Action Layout -->
-                    {% if pr.status == 'BUDGET_REVIEW' %}
+                    {% if pr.status == 'BUDGET_REVIEW' or pr.is_over_budget %}
                     <div class="pt-1">
                         <a href="{% url 'requisition_detail' pr.pk %}" class="btn btn-outline-danger btn-sm rounded-pill w-100 fw-semibold shadow-sm d-flex align-items-center justify-content-center py-2 px-3 text-center" style="min-height: 40px; font-size: 0.82rem; line-height: 1.35;">
                             <i class="fa-solid fa-clock me-1.5 flex-shrink-0"></i>
@@ -322,9 +325,9 @@
                                     <div class="fw-semibold text-dark small text-truncate" style="max-width: 150px;" title="{{ pr.requester.email }}">{{ pr.requester.email }}</div>
                                 </td>
                                 <td><span class="badge bg-light text-secondary border">{{ pr.department.name }}</span></td>
-                                <td class="fw-bold font-monospace text-end {% if pr.status == 'BUDGET_REVIEW' %}text-danger{% else %}text-dark{% endif %}">₹{{ pr.total_amount|floatformat:2 }}</td>
+                                <td class="fw-bold font-monospace text-end {% if pr.status == 'BUDGET_REVIEW' or pr.is_over_budget %}text-danger{% else %}text-dark{% endif %}">₹{{ pr.total_amount|floatformat:2 }}</td>
                                 <td class="text-center">
-                                    {% if pr.status == 'BUDGET_REVIEW' %}
+                                    {% if pr.status == 'BUDGET_REVIEW' or pr.is_over_budget %}
                                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2.5 py-1" title="PR budget exceeds allocation - Routed to Finance AP">
                                             <i class="fa-solid fa-scale-unbalanced me-1"></i> Over Budget &bull; At Finance AP
                                         </span>
@@ -335,7 +338,7 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-end pe-4" style="white-space: nowrap !important;">
-                                    {% if pr.status == 'BUDGET_REVIEW' %}
+                                    {% if pr.status == 'BUDGET_REVIEW' or pr.is_over_budget %}
                                         <div class="d-inline-flex flex-nowrap justify-content-end align-items-center gap-1.5">
                                             <a href="{% url 'requisition_detail' pr.pk %}" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1 fw-semibold text-nowrap d-inline-flex align-items-center" title="Requisition exceeds budget and is routed to Finance AP">
                                                 <i class="fa-solid fa-scale-unbalanced me-1"></i> Awaiting Finance AP

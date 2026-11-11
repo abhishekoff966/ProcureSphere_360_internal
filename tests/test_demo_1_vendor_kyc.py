@@ -47,20 +47,42 @@ def test_demo_1_vendor_onboarding_and_kyc_workflow(db_roles):
     assert vendor.status == Vendor.STATUS_DRAFT
     assert vendor.vendor_number.startswith("VND-")
 
-    # 4. Upload KYC Document
+    # 4. Upload KYC Documents (all required mandatory types)
     kyc_file = SimpleUploadedFile(
         "certificate_of_inc.pdf",
         b"%PDF-1.4 Fake Certificate of Incorporation Content",
         content_type="application/pdf",
     )
-    doc = VendorDocument.objects.create(
+    doc1 = VendorDocument.objects.create(
         vendor=vendor,
         document_type=VendorDocument.DOC_TYPE_CERT,
         title="Certificate of Incorporation",
         file=kyc_file,
     )
-    assert doc.id is not None
-    assert doc.is_verified is False
+    tax_file = SimpleUploadedFile(
+        "tax_clearance.pdf",
+        b"%PDF-1.4 Fake Tax Clearance Certificate Content",
+        content_type="application/pdf",
+    )
+    doc2 = VendorDocument.objects.create(
+        vendor=vendor,
+        document_type=VendorDocument.DOC_TYPE_TAX,
+        title="Tax Clearance Certificate",
+        file=tax_file,
+    )
+    bank_file = SimpleUploadedFile(
+        "bank_letter.pdf",
+        b"%PDF-1.4 Fake Bank Verification Letter Content",
+        content_type="application/pdf",
+    )
+    doc3 = VendorDocument.objects.create(
+        vendor=vendor,
+        document_type=VendorDocument.DOC_TYPE_BANK,
+        title="Bank Verification Document",
+        file=bank_file,
+    )
+    assert doc1.id is not None
+    assert doc1.is_verified is False
 
     # 5. Submit Vendor KYC -> status SUBMITTED
     vendor = submit_vendor_kyc_service(vendor=vendor, user=proc_exec)
@@ -70,10 +92,14 @@ def test_demo_1_vendor_onboarding_and_kyc_workflow(db_roles):
     vendor = start_kyc_review_service(vendor=vendor, reviewer=proc_exec)
     assert vendor.status == Vendor.STATUS_KYC_REVIEW
 
-    # 7. Verify KYC Document
-    doc = verify_vendor_document_service(document=doc, verifier=proc_exec)
-    assert doc.is_verified is True
-    assert doc.verified_by == proc_exec
+    # 7. Verify KYC Documents
+    doc1 = verify_vendor_document_service(document=doc1, verifier=proc_exec)
+    assert doc1.is_verified is True
+    assert doc1.verified_by == proc_exec
+    doc2 = verify_vendor_document_service(document=doc2, verifier=proc_exec)
+    assert doc2.is_verified is True
+    doc3 = verify_vendor_document_service(document=doc3, verifier=proc_exec)
+    assert doc3.is_verified is True
 
     # 8. Approve Vendor -> status ACTIVE
     vendor = approve_vendor_service(

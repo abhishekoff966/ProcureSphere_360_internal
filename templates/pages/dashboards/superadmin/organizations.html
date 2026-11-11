@@ -231,7 +231,7 @@
                 <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 w-100 w-sm-auto">
                     <form method="get" class="d-flex align-items-center mb-0 w-100 w-sm-auto">
                         <select name="department" class="form-select form-select-sm rounded-pill w-100" onchange="this.form.submit()" style="min-width: 170px;">
-                            <option value="">All Departments</option>
+                            <option value="">-- All Departments --</option>
                             {% for dept in departments %}
                             <option value="{{ dept.pk }}" {% if selected_dept == dept.pk|stringformat:"s" %}selected{% endif %}>
                                 {{ dept.name }} ({{ dept.code }})
