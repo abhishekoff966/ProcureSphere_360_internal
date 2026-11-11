@@ -72,7 +72,7 @@ def _get_approval_querysets(user, role_code):
     user_approved_pr_ids = ApprovalAction.objects.filter(
         actor=user,
         target_model_name="PurchaseRequisition",
-        action=ApprovalAction.ACTION_APPROVE,
+        action__in=[ApprovalAction.ACTION_APPROVE, ApprovalAction.ACTION_REJECT],
     ).values_list("target_object_id", flat=True)
 
     if role_code == Role.DEPT_APPROVER:
@@ -379,6 +379,7 @@ def approvals_inbox_view(request):
         "active_tab": tab,
         "role_code": role_code,
         "base_layout": base_layout,
+        "active_nav": "my_approvals" if tab == "history" else "pending_approvals",
         "search_q": search_q,
         "status_filter": status_filter,
         "has_budget_overrun": has_budget_overrun,

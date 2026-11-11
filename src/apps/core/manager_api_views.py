@@ -2302,6 +2302,20 @@ class ManagerApprovalActionAPIView(APIView):
     permission_classes = [IsAuthenticated, IsProcurementManager]
 
     def post(self, request):
+        # Procurement Managers maintain approval oversight only, not approval/rejection authority
+        role_code = getattr(request.user.role, 'code', None) if getattr(request.user, 'role', None) else None
+        if not request.user.is_superuser and role_code == Role.PROC_MGR:
+            return Response(
+                {
+                    'error': (
+                        'Permission Denied: Procurement Managers hold approval oversight only '
+                        'and do not possess direct approval or rejection authority. '
+                        'Decisions must be authorized by designated Department or Financial Approvers.'
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         item_type = str(request.data.get('item_type', '')).strip().upper() or 'PR'
         item_id = str(request.data.get('item_id', '')).strip()
         action = str(request.data.get('action', '')).strip().upper() or 'APPROVE'

@@ -1295,6 +1295,9 @@ select,
     background-position: right 0.85rem center !important;
     background-size: 16px 12px !important;
     padding-right: 2.25rem !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
 }
 
 /* Checkbox/radio excluded: the white background would hide Bootstrap's checked state while focused */

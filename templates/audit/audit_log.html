@@ -31,7 +31,7 @@
         </div>
         <div class="col-md-3">
             <select name="action" class="form-select">
-                <option value="">All Actions</option>
+                <option value="">-- All Actions --</option>
                 <option value="CREATE" {% if action_filter == 'CREATE' %}selected{% endif %}>CREATE</option>
                 <option value="UPDATE" {% if action_filter == 'UPDATE' %}selected{% endif %}>UPDATE</option>
                 <option value="DELETE" {% if action_filter == 'DELETE' %}selected{% endif %}>DELETE</option>
@@ -45,7 +45,7 @@
         </div>
         <div class="col-md-2">
             <select name="model" class="form-select">
-                <option value="">All Models</option>
+                <option value="">-- All Models --</option>
                 <option value="PurchaseRequisition" {% if model_filter == 'PurchaseRequisition' %}selected{% endif %}>PurchaseRequisition</option>
                 <option value="PurchaseOrder" {% if model_filter == 'PurchaseOrder' %}selected{% endif %}>PurchaseOrder</option>
                 <option value="SupplierInvoice" {% if model_filter == 'SupplierInvoice' %}selected{% endif %}>SupplierInvoice</option>

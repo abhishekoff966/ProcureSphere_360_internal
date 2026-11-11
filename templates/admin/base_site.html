@@ -3,6 +3,47 @@
 
 {% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('ProcureSphere 360 Admin') }}{% endblock %}
 
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  /* Dropdown Select Controls across Admin workspace with persistent dropdown arrow */
+  select,
+  .form-select,
+  .modal select,
+  #changelist-filter select,
+  .selectfilter select {
+    background-color: #ffffff !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.85rem center !important;
+    background-size: 16px 12px !important;
+    padding-right: 2.25rem !important;
+    color: #1e293b !important;
+    -webkit-text-fill-color: #1e293b !important;
+    border: 1px solid #cbd5e1 !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+  }
+
+  select:focus,
+  .form-select:focus,
+  .modal select:focus,
+  #changelist-filter select:focus,
+  .selectfilter select:focus {
+    background-color: #ffffff !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%231677FF' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.85rem center !important;
+    background-size: 16px 12px !important;
+    padding-right: 2.25rem !important;
+    color: #0f172a !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15) !important;
+  }
+</style>
+{% endblock %}
+
 {% block branding %}
 <div id="site-name">
   <a href="{% url 'admin:index' %}" style="display:flex; align-items:center; gap:0.5rem; text-decoration:none;">
