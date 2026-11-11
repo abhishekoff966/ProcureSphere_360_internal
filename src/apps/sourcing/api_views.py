@@ -3,7 +3,8 @@ from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied, ValidationError as DRFValidationError
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
@@ -138,11 +139,15 @@ class SourcingEventViewSet(
             technical_weight=data.get("technical_weight", 50),
             commercial_weight=data.get("commercial_weight", 50),
             created_by_user=self.request.user,
+            enforce_future_start=True,
         )
 
     def perform_update(self, serializer):
         serializer.instance = services.update_draft_sourcing_event_service(
-            event=serializer.instance, user=self.request.user, data=serializer.validated_data
+            event=serializer.instance,
+            user=self.request.user,
+            data=serializer.validated_data,
+            enforce_future_start=True,
         )
 
     def _ok(self, event):

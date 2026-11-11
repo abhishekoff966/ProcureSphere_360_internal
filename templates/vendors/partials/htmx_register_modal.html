@@ -1,4 +1,4 @@
-<form hx-post="{% url 'vendors_register_modal' %}" hx-target="#modal-content-body" hx-swap="innerHTML" novalidate>
+<form id="vendor-register-modal-form" hx-post="{% url 'vendors_register_modal' %}" hx-target="#modal-content-body" hx-swap="innerHTML" novalidate>
     {% csrf_token %}
     <div class="modal-header">
         <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-plus text-primary me-2"></i>Register vendor</h5>
@@ -20,9 +20,22 @@
                 {% elif field.name == 'address' %}
                 <textarea name="address" id="{{ field.id_for_label }}" rows="2" class="form-control {% if field.errors %}is-invalid{% endif %}" required>{{ field.value|default:'' }}</textarea>
                 {% else %}
-                <input type="{% if field.name == 'email' %}email{% else %}text{% endif %}" name="{{ field.html_name }}" id="{{ field.id_for_label }}" value="{{ field.value|default:'' }}" class="form-control {% if field.errors %}is-invalid{% endif %}" {% if field.field.required %}required{% endif %}>
+                <input type="{% if field.name == 'email' %}email{% else %}text{% endif %}" 
+                       name="{{ field.html_name }}" 
+                       id="{{ field.id_for_label }}" 
+                       value="{{ field.value|default:'' }}" 
+                       class="form-control {% if field.errors %}is-invalid{% endif %}" 
+                       {% if field.field.required %}required{% endif %}
+                       {% if field.name == 'pan_number' %}maxlength="10" style="text-transform: uppercase;" placeholder="e.g. ABCDE1234F"{% endif %}
+                       {% if field.name == 'gstin' %}maxlength="15" style="text-transform: uppercase;" placeholder="e.g. 29ABCDE1234F1Z5"{% endif %}
+                       {% if field.name == 'tax_identification_number' %}maxlength="30" placeholder="e.g. TAX-12345678 or 12-3456789"{% endif %}
+                       {% if field.name == 'legal_name' %}placeholder="e.g. Acme Corporation Ltd"{% endif %}
+                       {% if field.name == 'trade_name' %}placeholder="e.g. Acme Solutions (trading name)"{% endif %}
+                       {% if field.name == 'email' %}placeholder="e.g. contact@vendor.com"{% endif %}
+                       {% if field.name == 'phone' %}placeholder="e.g. +91 9876543210 (optional)"{% endif %}
+                       {% if field.name == 'address' %}placeholder="Registered business address..."{% endif %}>
                 {% endif %}
-                {% for e in field.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
             </div>
             {% endif %}
             {% endfor %}

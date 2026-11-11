@@ -1,14 +1,16 @@
+import json
+
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db.models import ProtectedError, RestrictedError
-import json
-from django.conf import settings
 from django.http import FileResponse, Http404, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.scorecards.models import band_for_composite
@@ -153,6 +155,7 @@ def _performance_band(score):
     return band_for_composite(score).lower()
 
 
+@never_cache
 def _vendor_register(request, *, mode):
     _require_governance_view(request.user)
     queryset = get_governance_vendor_queryset(user=request.user)
@@ -161,7 +164,7 @@ def _vendor_register(request, *, mode):
     vendor_filter = VendorFilter(request.GET or None, queryset=queryset)
     for name, field in vendor_filter.form.fields.items():
         field.widget.attrs["class"] = (
-            "form-control form-control-sm" if name == "q" else ("form-select form-select-sm")
+            "form-control" if name == "q" else "form-select"
         )
     filtered = vendor_filter.qs if vendor_filter.is_bound else queryset
     if vendor_filter.is_bound and not vendor_filter.is_valid():
@@ -185,18 +188,21 @@ def _vendor_register(request, *, mode):
     return render(request, "pages/vendors/list.html", context)
 
 
+@never_cache
 @login_required(login_url="/login/")
 def vendor_list_view(request):
     """Vendor Master & Risk register (all vendors)."""
     return _vendor_register(request, mode="master")
 
 
+@never_cache
 @login_required(login_url="/login/")
 def vendor_governance_view(request):
     """Vendor Governance: KPI dashboard + governance register."""
     return _vendor_register(request, mode="governance")
 
 
+@never_cache
 @login_required(login_url="/login/")
 def vendor_onboarding_view(request):
     """Vendor Onboarding & KYC queue (approval-stage vendors)."""
@@ -206,7 +212,10 @@ def vendor_onboarding_view(request):
 @login_required(login_url="/login/")
 def vendor_create_view(request):
     _require_governance_operate(request.user)
-    form = VendorRegistrationForm(request.POST or None)
+    if request.method == "POST":
+        form = VendorRegistrationForm(request.POST)
+    else:
+        form = VendorRegistrationForm()
     if request.method == "POST" and form.is_valid():
         try:
             vendor = register_vendor_service(
@@ -834,7 +843,10 @@ def vendor_kyc_htmx_view(request, vendor_id, kyc_action):
 def vendor_register_modal_view(request):
     """HTMX modal: register a vendor (DRAFT) with basic details, then offer credential issue."""
     _require_governance_operate(request.user)
-    form = VendorRegistrationForm(request.POST or None)
+    if request.method == "POST":
+        form = VendorRegistrationForm(request.POST)
+    else:
+        form = VendorRegistrationForm()
     if request.method == "POST" and form.is_valid():
         try:
             vendor = register_vendor_service(
@@ -850,11 +862,12 @@ def vendor_register_modal_view(request):
             )
             response["HX-Trigger"] = "vendor-updated"
             return response
+    is_htmx = getattr(request, "htmx", False) or request.headers.get("HX-Request") == "true"
     return render(
         request,
         "vendors/partials/htmx_register_modal.html",
         {"form": form},
-        status=400 if request.method == "POST" else 200,
+        status=200 if is_htmx else (400 if request.method == "POST" else 200),
     )
 
 
@@ -974,11 +987,12 @@ def vendor_edit_view(request, vendor_id):
                 return response
             return redirect("vendor_detail", vendor_id=vendor.id)
 
-    status_code = 400 if (request.method == "POST" and not form.is_valid()) else 200
+    is_htmx = getattr(request, "htmx", False) or request.headers.get("HX-Request") == "true"
+    status_code = 200 if is_htmx else (400 if (request.method == "POST" and not form.is_valid()) else 200)
     return render(
         request,
         "vendors/partials/htmx_edit_modal.html",
-        {"form": form, "vendor": vendor},
+        {"form": form, "vendor": vendor, "saved_initial": initial},
         status=status_code,
     )
 

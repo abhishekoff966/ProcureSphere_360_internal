@@ -21,7 +21,7 @@
 
         <form id="vendor-edit-form"
               hx-post="{% url 'vendor_edit' vendor.id %}"
-              hx-target="#vendor-edit-slot"
+              hx-target="#vendorEditModal"
               hx-swap="outerHTML"
               novalidate>
           {% csrf_token %}
@@ -32,36 +32,44 @@
               <label class="form-label fw-semibold small" for="id_legal_name">Legal Name <span class="text-danger">*</span></label>
               <input type="text" class="form-control form-control-sm {% if form.legal_name.errors %}is-invalid{% endif %}"
                      id="id_legal_name" name="legal_name"
-                     value="{{ form.legal_name.value|default:'' }}" required>
-              {% if form.legal_name.errors %}<div class="invalid-feedback">{{ form.legal_name.errors|join:", " }}</div>{% endif %}
+                     data-saved-value="{{ saved_initial.legal_name|default:vendor.legal_name }}"
+                     value="{{ form.legal_name.value|default:'' }}" placeholder="e.g. Acme Corporation Ltd" required>
+              {% if form.legal_name.errors %}<div class="invalid-feedback d-block">{{ form.legal_name.errors|join:", " }}</div>{% endif %}
             </div>
             <!-- Trade name -->
             <div class="col-md-6">
               <label class="form-label fw-semibold small" for="id_trade_name">Trade / Brand Name</label>
               <input type="text" class="form-control form-control-sm"
                      id="id_trade_name" name="trade_name"
-                     value="{{ form.trade_name.value|default:'' }}">
+                     data-saved-value="{{ saved_initial.trade_name|default:vendor.trade_name }}"
+                     value="{{ form.trade_name.value|default:'' }}"
+                     placeholder="e.g. Acme Solutions (trading name)">
             </div>
             <!-- Email -->
             <div class="col-md-6">
               <label class="form-label fw-semibold small" for="id_email">Primary Email <span class="text-danger">*</span></label>
               <input type="email" class="form-control form-control-sm {% if form.email.errors %}is-invalid{% endif %}"
                      id="id_email" name="email"
-                     value="{{ form.email.value|default:'' }}" required>
+                     data-saved-value="{{ saved_initial.email|default:vendor.email }}"
+                     value="{{ form.email.value|default:'' }}" required
+                     placeholder="e.g. contact@vendor.com">
               {% if form.email.errors %}<div class="invalid-feedback">{{ form.email.errors|join:", " }}</div>{% endif %}
             </div>
             <!-- Phone -->
             <div class="col-md-6">
-              <label class="form-label fw-semibold small" for="id_phone">Phone</label>
-              <input type="text" class="form-control form-control-sm"
+              <label class="form-label fw-semibold small" for="id_phone">Phone <span class="text-muted fw-normal">(Optional)</span></label>
+              <input type="text" class="form-control form-control-sm {% if form.phone.errors %}is-invalid{% endif %}"
                      id="id_phone" name="phone"
-                     value="{{ form.phone.value|default:'' }}">
+                     data-saved-value="{{ saved_initial.phone|default:vendor.phone }}"
+                     value="{{ form.phone.value|default:'' }}"
+                     placeholder="e.g. +91 9876543210">
+              {% if form.phone.errors %}<div class="invalid-feedback d-block">{{ form.phone.errors|join:", " }}</div>{% endif %}
             </div>
             <!-- Category -->
             <div class="col-md-6">
               <label class="form-label fw-semibold small" for="id_category">Category <span class="text-danger">*</span></label>
               <select class="form-select form-select-sm {% if form.category.errors %}is-invalid{% endif %}"
-                      id="id_category" name="category" required>
+                      id="id_category" name="category" data-saved-value="{{ saved_initial.category|default:vendor.category_id }}" required>
                 <option value="">— Select category —</option>
                 {% for cat in form.fields.category.queryset %}
                   <option value="{{ cat.pk }}" {% if form.category.value|stringformat:"s" == cat.pk|stringformat:"s" %}selected{% endif %}>
@@ -75,7 +83,9 @@
             <div class="col-md-6">
               <label class="form-label fw-semibold small" for="id_address">Address <span class="text-danger">*</span></label>
               <textarea class="form-control form-control-sm {% if form.address.errors %}is-invalid{% endif %}"
-                        id="id_address" name="address" rows="2" required>{{ form.address.value|default:'' }}</textarea>
+                        id="id_address" name="address" rows="2" required
+                        data-saved-value="{{ saved_initial.address|default:vendor.address }}"
+                        placeholder="Registered business address...">{{ form.address.value|default:'' }}</textarea>
               {% if form.address.errors %}<div class="invalid-feedback">{{ form.address.errors|join:", " }}</div>{% endif %}
             </div>
 
@@ -86,21 +96,27 @@
               <label class="form-label fw-semibold small" for="id_bank_name">Bank Name</label>
               <input type="text" class="form-control form-control-sm"
                      id="id_bank_name" name="bank_name"
-                     value="{{ form.bank_name.value|default:'' }}">
+                     data-saved-value="{{ saved_initial.bank_name|default:vendor.bank_name }}"
+                     value="{{ form.bank_name.value|default:'' }}"
+                     placeholder="e.g. HDFC Bank, Citibank">
             </div>
             <!-- Account number -->
             <div class="col-md-4">
               <label class="form-label fw-semibold small" for="id_bank_account_number">Account No.</label>
               <input type="text" class="form-control form-control-sm"
                      id="id_bank_account_number" name="bank_account_number"
-                     value="{{ form.bank_account_number.value|default:'' }}">
+                     data-saved-value="{{ saved_initial.bank_account_number|default:vendor.bank_account_number }}"
+                     value="{{ form.bank_account_number.value|default:'' }}"
+                     placeholder="e.g. 123456789012">
             </div>
             <!-- Routing code -->
             <div class="col-md-4">
               <label class="form-label fw-semibold small" for="id_bank_routing_code">Routing / IFSC</label>
               <input type="text" class="form-control form-control-sm"
                      id="id_bank_routing_code" name="bank_routing_code"
-                     value="{{ form.bank_routing_code.value|default:'' }}">
+                     data-saved-value="{{ saved_initial.bank_routing_code|default:vendor.bank_routing_code }}"
+                     value="{{ form.bank_routing_code.value|default:'' }}"
+                     placeholder="e.g. HDFC0001234 (IFSC/SWIFT)">
             </div>
           </div>
 
@@ -109,11 +125,36 @@
                     onclick="document.getElementById('vendorEditModal').remove();">
               Cancel
             </button>
-            <button type="submit" class="btn btn-primary btn-sm rounded-pill px-4 fw-semibold">
+            <button id="vendor-edit-save-btn" type="submit" class="btn btn-primary btn-sm rounded-pill px-4 fw-semibold" disabled title="Make a change to enable saving">
               <i class="fa-solid fa-floppy-disk me-1"></i>Save changes
             </button>
           </div>
         </form>
+        <script>
+        (function() {
+          var form = document.getElementById('vendor-edit-form');
+          var saveBtn = document.getElementById('vendor-edit-save-btn');
+          if (!form || !saveBtn) return;
+          function getBaseline(el) {
+            var raw = el.hasAttribute('data-saved-value')
+              ? el.getAttribute('data-saved-value')
+              : el.defaultValue;
+            return String(raw || '').replace(/\\r\\n/g, '\\n');
+          }
+          function checkDirty() {
+            var dirty = false;
+            Array.from(form.elements).forEach(function(el) {
+              if (!el.name || el.name === 'csrfmiddlewaretoken' || el.type === 'hidden') return;
+              if (String(el.value || '').replace(/\\r\\n/g, '\\n') !== getBaseline(el)) dirty = true;
+            });
+            saveBtn.disabled = !dirty;
+            saveBtn.title = dirty ? '' : 'Make a change to enable saving';
+          }
+          checkDirty();
+          form.addEventListener('input', checkDirty);
+          form.addEventListener('change', checkDirty);
+        })();
+        </script>
       </div>
     </div>
   </div>
