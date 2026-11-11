@@ -242,3 +242,15 @@ def test_additional_audit_log_carries_created_at(world):
     assert "timestamp" in first_result
     assert "created_at" in first_result
 
+
+def test_manager_exception_decision_empty_payload_returns_400(world):
+    client = APIClient()
+    client.force_authenticate(user=world["admin"])
+
+    res = client.post("/api/v1/manager/budget-exceptions/decision/", {})
+    assert res.status_code == status.HTTP_400_BAD_REQUEST
+
+    res = client.post("/api/v1/manager/policy-exceptions/decision/", {})
+    assert res.status_code == status.HTTP_400_BAD_REQUEST
+
+
