@@ -155,6 +155,7 @@ class VendorSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
     category_code = serializers.CharField(source="category.code", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    vendor_code = serializers.CharField(source="vendor_number", read_only=True)
 
     documents = VendorDocumentSerializer(many=True, read_only=True)
     contacts = VendorContactSerializer(many=True, read_only=True)
@@ -211,6 +212,7 @@ class VendorSerializer(serializers.ModelSerializer):
             "legal_name",
             "trade_name",
             "vendor_number",
+            "vendor_code",
             "tax_identification_number",
             "pan_number",
             "gstin",
@@ -246,7 +248,7 @@ class VendorSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["status", "vendor_number"]
+        read_only_fields = ["status", "vendor_number", "vendor_code"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -393,7 +395,9 @@ class VendorRiskAndHistoryPermission(BasePermission):
             return False
         if user.is_superuser:
             return True
-        role = getattr(user, "role_code", None)
+        role = getattr(user, "role_code", None) or (
+            user.role.code if getattr(user, "role", None) else None
+        )
         from apps.accounts.models import Role
         if request.method in SAFE_METHODS:
             return role in {Role.SUPER_ADMIN, Role.PROC_EXEC, Role.PROC_MGR, Role.AUDITOR, Role.FINANCE_AP, Role.LEGAL_MGR}
@@ -599,6 +603,17 @@ class VendorViewSet(viewsets.ModelViewSet):
         risk_level = str(request.data.get("risk_level", "")).upper()
         risk_flags = request.data.get("risk_flags", [])
         notes = str(request.data.get("notes", request.data.get("assessment_notes", ""))).strip()
+        if not notes:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Assessment notes are mandatory.",
+                        "details": {"notes": ["This field is required."]},
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         try:
             record = record_vendor_risk_assessment_service(
                 vendor=vendor,

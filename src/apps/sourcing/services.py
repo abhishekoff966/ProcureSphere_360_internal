@@ -392,7 +392,12 @@ def publish_sourcing_event_service(*, event: SourcingEvent, user: User) -> Sourc
     if errors:
         raise ValidationError(errors)
 
-    _transition_event(event=event, to_status=SourcingEvent.STATUS_PUBLISHED, actor=user)
+    _transition_event(
+        event=event,
+        to_status=SourcingEvent.STATUS_PUBLISHED,
+        actor=user,
+        action=AuditLog.ACTION_PUBLISH,
+    )
 
     if event.requisition:
         from apps.requisitions.models import PurchaseRequisition

@@ -13,6 +13,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from apps.accounts.models import Role
 from apps.scorecards.models import band_for_composite
 
 from .filters import APPROVAL_STAGE_STATUSES, VendorFilter
@@ -309,6 +310,11 @@ def _vendor_page_base(request, vendor_id, page):
     if caps["can_operate"]:
         context["last_dispatch"] = vendor.credential_dispatches.first()
     context["latest_risk"] = vendor.risk_records.order_by("-created_at").first()
+    role_code = getattr(request.user, "role_code", None) or (
+        request.user.role.code if getattr(request.user, "role", None) else None
+    )
+    if role_code in [Role.PROC_MGR, "PROC_MGR"]:
+        context["base_layout"] = "manager/base_manager.html"
     return vendor, context
 
 

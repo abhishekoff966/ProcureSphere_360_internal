@@ -33,14 +33,14 @@
     <div class="col-sm-6 col-xl-4">
         <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-emerald">
             <div class="text-muted small fw-bold text-uppercase">USER LOGINS</div>
-            <div class="fs-3 fw-bold text-success font-heading mt-1">{{ summary.login_count|default:0 }}</div>
+            <div class="fs-3 fw-bold text-success font-heading mt-1">{{ summary.login_count|default:summary.logins_count|default:0 }}</div>
             <div class="text-muted small mt-1">Authenticated Sessions</div>
         </div>
     </div>
     <div class="col-sm-6 col-xl-4">
         <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-indigo">
             <div class="text-muted small fw-bold text-uppercase">EVIDENCE EXPORTS</div>
-            <div class="fs-3 fw-bold text-indigo font-heading mt-1">{{ summary.export_count|default:0 }}</div>
+            <div class="fs-3 fw-bold text-indigo font-heading mt-1">{{ summary.export_count|default:summary.exports_count|default:0 }}</div>
             <div class="text-muted small mt-1">Authorized Data Downloads</div>
         </div>
     </div>

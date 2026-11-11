@@ -161,6 +161,21 @@ class SourcingEventViewSet(
     def publish(self, request, pk=None):
         _require_manage(request)
         event = self.get_object()
+        active_invites = [
+            i for i in event.invitations.select_related("vendor").all()
+            if getattr(i.vendor, "status", None) == "ACTIVE"
+        ]
+        if len(active_invites) < 3:
+            return Response(
+                {
+                    "error": {
+                        "code": "min_vendors_required",
+                        "message": "Invite at least 3 ACTIVE vendors before publishing.",
+                        "details": {"invitations": ["Invite at least 3 ACTIVE vendors before publishing."]},
+                    }
+                },
+                status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
         services.publish_sourcing_event_service(event=event, user=request.user)
         return self._ok(event)
 

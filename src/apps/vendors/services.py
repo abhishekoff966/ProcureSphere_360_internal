@@ -887,33 +887,19 @@ def verify_vendor_document_decision_service(
         target_object_id=str(document.id),
 
         previous_state={
-
             "status": previous_status,
-
             "review_status": previous_review_status,
-
             "is_verified": previous_is_verified,
-
             "document_type": document.document_type,
-
             "vendor": document.vendor.legal_name,
-
         },
-
         new_state={
-
             "status": new_status,
-
             "review_status": document.review_status,
-
             "is_verified": document.is_verified,
-
             "decision": decision,
-
             "notes": resolved_notes,
-
             "vendor": document.vendor.legal_name,
-
         },
 
     )
@@ -3419,7 +3405,7 @@ def scan_vendor_document_expirations_service(now=None) -> dict:
 
                         message=f"Vendor '{vendor.legal_name}' mandatory document '{doc.title}' expired. Eligibility revoked.",
 
-                        target_url="/contracts/dashboard/",
+                        target_url=f"/vendors/{vendor.id}/",
 
                     )
 

@@ -165,6 +165,12 @@ def _handle_approval_post(request, role_code):
             "Permission Denied: Compliance Auditors hold strictly read-only permissions and cannot approve or reject requisitions.",
         )
         return redirect("approvals_inbox")
+    if role_code in [Role.PROC_MGR, "PROC_MGR"] and not request.user.is_superuser:
+        messages.error(
+            request,
+            "Permission Denied: Procurement Managers maintain view and inspection permissions only and cannot approve or reject purchase requisitions.",
+        )
+        return redirect("manager_approvals")
     if not request.user.is_superuser and role_code in [
         Role.LEGAL_MGR,
         Role.STORES_RECEIVER,
