@@ -447,8 +447,6 @@ def close_bid_window_service(*, event: SourcingEvent, user: User) -> SourcingEve
     at any time while the bid window is open, or automatically when the deadline passes.
     """
     _lock_and_refresh(event)
-    if event.status == SourcingEvent.STATUS_TECHNICAL_REVIEW:
-        return event
     if event.status != SourcingEvent.STATUS_BID_WINDOW:
         raise ValidationError(f"Bid window is not open (current: {event.status}).")
 

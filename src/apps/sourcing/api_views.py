@@ -1,8 +1,9 @@
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError as DRFValidationError
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
@@ -349,22 +350,35 @@ class SourcingEventViewSet(
     @action(detail=True, methods=["post"], url_path="generate-po")
     def generate_po(self, request, pk=None):
         """
-        Deprecated: purchase order generation moved to the Purchase Orders module
-        (POST /api/v1/purchase-orders/generate-from-award/). This endpoint now
-        returns 410 Gone pointing callers at the new location.
+        POST /api/v1/sourcing-events/events/{id}/generate-po/
+        Generates a DRAFT purchase order from the awarded event.
         """
-        return Response(
-            {
-                "error": {
-                    "code": "endpoint_moved",
-                    "message": (
-                        "Purchase order generation moved to the Purchase Orders module. "
-                        "Use POST /api/v1/purchase-orders/generate-from-award/ instead."
-                    ),
-                }
-            },
-            status=status.HTTP_410_GONE,
-        )
+        event = self.get_object()
+        cost_center = None
+        cost_center_id = request.data.get("cost_center_id") if isinstance(request.data, dict) else None
+        if cost_center_id:
+            from apps.organization.models import CostCenter
+            cost_center = get_object_or_404(CostCenter, pk=cost_center_id)
+        try:
+            from apps.orders.api_urls import PurchaseOrderSerializer
+            from apps.sourcing import services as sourcing_services
+
+            po = sourcing_services.generate_po_from_award_service(
+                event=event, user=request.user, cost_center=cost_center
+            )
+            return Response(PurchaseOrderSerializer(po).data, status=status.HTTP_201_CREATED)
+        except (DjangoValidationError, DRFValidationError) as e:
+            msg = e.messages if hasattr(e, "messages") else [str(e)]
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": msg[0] if isinstance(msg, list) else str(e),
+                        "details": msg,
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class VendorBidViewSet(viewsets.ReadOnlyModelViewSet):
