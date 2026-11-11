@@ -43,7 +43,7 @@ def get_axes_client_ip(request):
         return None
     try:
         from apps.core.middleware import get_client_ip
-        ip = get_client_ip(request)
+        ip = get_client_ip()
         if ip:
             return ip
     except Exception:
