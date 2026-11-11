@@ -76,7 +76,7 @@
             </div>
             <div class="col-12 col-sm-8 col-md-4 col-lg-3">
                 <select name="status" class="form-select text-secondary fw-medium" style="background-image: url(&quot;data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e&quot;) !important; background-repeat: no-repeat !important; background-position: right 0.85rem center !important; background-size: 16px 12px !important; padding-right: 2.25rem !important;">
-                    <option value="">All Statuses</option>
+                    <option value="">-- All Statuses --</option>
                     {% if is_legal_inbox %}
                         {% if active_tab == 'history' %}
                         <option value="BUSINESS_APPROVAL" {% if status_filter == 'BUSINESS_APPROVAL' %}selected{% endif %}>Business Approval</option>
