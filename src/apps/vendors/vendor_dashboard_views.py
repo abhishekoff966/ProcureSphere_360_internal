@@ -450,7 +450,7 @@ def vendor_profile_view(request):
         elif action == "edit_contact":
             contact_id = request.POST.get("contact_id")
             contact = get_object_or_404(VendorContact, pk=contact_id, vendor=vendor)
-            form = VendorContactForm(request.POST)
+            form = VendorContactForm(request.POST, contact=contact)
             if not form.is_valid():
                 for field, error_list in form.errors.items():
                     for err in error_list:

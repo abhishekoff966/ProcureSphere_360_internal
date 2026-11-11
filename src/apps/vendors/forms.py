@@ -33,8 +33,22 @@ class VendorRegistrationForm(forms.Form):
     legal_name = forms.CharField(max_length=255)
     trade_name = forms.CharField(max_length=255, required=False)
     tax_identification_number = forms.CharField(max_length=100)
-    pan_number = forms.CharField(max_length=10, required=False, label="PAN")
-    gstin = forms.CharField(max_length=15, required=False, label="GSTIN")
+    pan_number = forms.CharField(
+        max_length=10,
+        required=False,
+        label="PAN",
+        error_messages={
+            "max_length": "Invalid PAN format. PAN must be 10 characters: 5 uppercase letters, 4 digits, 1 uppercase letter (e.g. ABCDE1234F).",
+        },
+    )
+    gstin = forms.CharField(
+        max_length=15,
+        required=False,
+        label="GSTIN",
+        error_messages={
+            "max_length": "Invalid GSTIN format. GSTIN must be 15 alphanumeric characters (e.g. 29ABCDE1234F1Z5).",
+        },
+    )
     registration_number = forms.CharField(max_length=100, required=False)
     category = forms.ModelChoiceField(queryset=VendorCategory.objects.order_by("name"))
     email = forms.EmailField()
@@ -101,7 +115,13 @@ class VendorProfileUpdateForm(forms.Form):
     Allows updating PAN and GSTIN with consistency validation.
     """
     trade_name = forms.CharField(max_length=255, required=False)
-    address = forms.CharField(widget=forms.Textarea(attrs={"rows": 2}), required=True)
+    address = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 2}),
+        required=True,
+        error_messages={
+            "required": "Registered office address is required.",
+        },
+    )
     phone = forms.CharField(
         max_length=25,
         required=True,
@@ -109,16 +129,38 @@ class VendorProfileUpdateForm(forms.Form):
             "required": "Contact phone number is required.",
         },
     )
-    pan_number = forms.CharField(max_length=10, required=False, label="PAN")
-    gstin = forms.CharField(max_length=15, required=False, label="GSTIN")
+    pan_number = forms.CharField(
+        max_length=10,
+        required=False,
+        label="PAN",
+        error_messages={
+            "max_length": "Invalid PAN format. PAN must be 10 characters: 5 uppercase letters, 4 digits, 1 uppercase letter (e.g. ABCDE1234F).",
+        },
+    )
+    gstin = forms.CharField(
+        max_length=15,
+        required=False,
+        label="GSTIN",
+        error_messages={
+            "max_length": "Invalid GSTIN format. GSTIN must be 15 alphanumeric characters (e.g. 29ABCDE1234F1Z5).",
+        },
+    )
     bank_name = forms.CharField(max_length=150, required=False)
     bank_account_number = forms.CharField(max_length=100, required=False)
     bank_routing_code = forms.CharField(max_length=100, required=False)
+
+    def clean_address(self):
+        address = self.cleaned_data.get("address", "").strip()
+        if not address:
+            raise forms.ValidationError("Registered office address is required.")
+        return address
 
     def clean_phone(self):
         import re
 
         raw_phone = self.cleaned_data.get("phone", "").strip()
+        if not raw_phone:
+            raise forms.ValidationError("Contact phone number is required.")
         clean_phone = re.sub(r"[\s\-\(\)\.]", "", raw_phone)
 
         # If user submits 12 digits starting with 91 (e.g. 919876543210), normalize to +91XXXXXXXXXX
@@ -129,6 +171,12 @@ class VendorProfileUpdateForm(forms.Form):
         if not re.match(r"^\+91\d{10}$", clean_phone):
             raise forms.ValidationError(
                 "Phone number must have country code (+91) followed by exactly 10 digits (e.g., +919876543210)."
+            )
+
+        # Strictly enforce Indian mobile number prefix (starts with 6, 7, 8, or 9)
+        if not re.match(r"^\+91[6-9]\d{9}$", clean_phone):
+            raise forms.ValidationError(
+                "Invalid Indian mobile number prefix. Mobile number must begin with 6, 7, 8, or 9 (e.g., +919876543210)."
             )
         return clean_phone
 
@@ -160,13 +208,44 @@ class VendorContactForm(forms.Form):
     """
     Form for adding and editing authorized vendor contacts.
     Strictly validates primary/secondary contact email and phone format.
+    Allows unchanged contact details to be safely re-submitted.
     """
-    first_name = forms.CharField(max_length=100, required=True)
-    last_name = forms.CharField(max_length=100, required=True)
-    email = forms.EmailField(required=True)
+    first_name = forms.CharField(
+        max_length=100,
+        required=True,
+        error_messages={"required": "First name is required."},
+    )
+    last_name = forms.CharField(
+        max_length=100,
+        required=True,
+        error_messages={"required": "Last name is required."},
+    )
+    email = forms.EmailField(
+        required=True,
+        error_messages={
+            "required": "Email address is required.",
+            "invalid": "Please enter a valid email address.",
+        },
+    )
     phone = forms.CharField(max_length=25, required=False)
     designation = forms.CharField(max_length=100, required=False)
     is_primary = forms.BooleanField(required=False)
+
+    def __init__(self, *args, contact=None, **kwargs):
+        self.contact = contact
+        super().__init__(*args, **kwargs)
+
+    def clean_first_name(self):
+        fn = self.cleaned_data.get("first_name", "").strip()
+        if not fn:
+            raise forms.ValidationError("First name is required.")
+        return fn
+
+    def clean_last_name(self):
+        ln = self.cleaned_data.get("last_name", "").strip()
+        if not ln:
+            raise forms.ValidationError("Last name is required.")
+        return ln
 
     def clean_phone(self):
         import re
@@ -174,16 +253,32 @@ class VendorContactForm(forms.Form):
         raw_phone = self.cleaned_data.get("phone", "").strip()
         if not raw_phone:
             return ""
+
+        # Allow unchanged phone if editing an existing contact
+        if self.contact:
+            existing_phone = getattr(self.contact, "phone", "") or ""
+            existing_digits = getattr(self.contact, "phone_digits", "") or ""
+            if raw_phone == existing_phone or raw_phone == existing_digits:
+                return existing_phone or raw_phone
+
         clean_phone = re.sub(r"[\s\-\(\)\.]", "", raw_phone)
         if re.match(r"^\d{10}$", clean_phone):
-            return clean_phone
-        if re.match(r"^91\d{10}$", clean_phone):
-            return clean_phone[2:]
-        if re.match(r"^\+91\d{10}$", clean_phone):
-            return clean_phone[3:]
-        raise forms.ValidationError(
-            "Phone number must be exactly 10 digits (e.g., 9876543210)."
-        )
+            digits = clean_phone
+        elif re.match(r"^91\d{10}$", clean_phone):
+            digits = clean_phone[2:]
+        elif re.match(r"^\+91\d{10}$", clean_phone):
+            digits = clean_phone[3:]
+        else:
+            raise forms.ValidationError(
+                "Phone number must be exactly 10 digits (e.g., 9876543210)."
+            )
+
+        # Enforce Indian mobile prefix rule (starts with 6, 7, 8, or 9)
+        if not re.match(r"^[6-9]\d{9}$", digits):
+            raise forms.ValidationError(
+                "Invalid Indian mobile number prefix. Phone number must start with 6, 7, 8, or 9."
+            )
+        return digits
 
 
 class VendorChangesRequestForm(forms.Form):
