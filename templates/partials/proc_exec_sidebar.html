@@ -197,17 +197,57 @@
 </aside>
 
 <script>
-    // Handle offcanvas link clicks on mobile (<992px)
-    document.querySelectorAll('#procExecSidebar a.vendor-navlink, #procExecSidebar a.proc-navlink').forEach(function(link) {
-        link.addEventListener('click', function() {
-            var sidebarEl = document.getElementById('procExecSidebar');
-            if (window.innerWidth < 992 && sidebarEl && typeof bootstrap !== 'undefined') {
-                var offcanvasInstance = bootstrap.Offcanvas.getInstance(sidebarEl);
-                if (offcanvasInstance) {
-                    offcanvasInstance.hide();
+    // Preserve vertical scroll position of #procExecNav across full-page navigations
+    // so clicking lower items (e.g. PR Aging, Sourcing Cycle, PO Status) stays in place
+    // instead of jumping back up to the first navigation item.
+    (function() {
+        var SCROLL_KEY = 'ps_proc_exec_nav_scroll';
+        var navEl = document.getElementById('procExecNav');
+        if (!navEl) return;
+
+        function restoreScroll() {
+            var saved = null;
+            try {
+                saved = sessionStorage.getItem(SCROLL_KEY);
+            } catch (err) {}
+            if (saved !== null && saved !== '') {
+                var parsed = parseInt(saved, 10);
+                if (!isNaN(parsed)) {
+                    navEl.scrollTop = parsed;
                 }
             }
+            var activeLink = navEl.querySelector('a.active-nav-item, a.active');
+            if (activeLink) {
+                var navRect = navEl.getBoundingClientRect();
+                var linkRect = activeLink.getBoundingClientRect();
+                if (linkRect.top < navRect.top || linkRect.bottom > navRect.bottom) {
+                    activeLink.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                }
+            }
+        }
+
+        function saveScroll() {
+            try {
+                sessionStorage.setItem(SCROLL_KEY, String(navEl.scrollTop || 0));
+            } catch (err) {}
+        }
+
+        restoreScroll();
+        document.addEventListener('DOMContentLoaded', restoreScroll);
+
+        navEl.addEventListener('scroll', saveScroll, { passive: true });
+        document.querySelectorAll('#procExecSidebar a.vendor-navlink, #procExecSidebar a.proc-navlink').forEach(function(link) {
+            link.addEventListener('click', function() {
+                saveScroll();
+                var sidebarEl = document.getElementById('procExecSidebar');
+                if (window.innerWidth < 992 && sidebarEl && typeof bootstrap !== 'undefined') {
+                    var offcanvasInstance = bootstrap.Offcanvas.getInstance(sidebarEl);
+                    if (offcanvasInstance) {
+                        offcanvasInstance.hide();
+                    }
+                }
+            });
         });
-    });
+    })();
 </script>
 {% endwith %}
