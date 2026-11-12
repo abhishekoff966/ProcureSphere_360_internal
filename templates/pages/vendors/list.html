@@ -191,7 +191,7 @@
 
     <div class="row g-2 align-items-end">
 
-        <div class="col-12 col-lg-3">
+        <div class="col-12 col-md-6 col-xl-4">
 
             <label class="form-label small fw-semibold text-muted mb-1" for="f-q">Search</label>
 
@@ -199,7 +199,7 @@
 
         </div>
 
-        <div class="col-6 col-md-4 col-lg">
+        <div class="col-12 col-sm-6 col-md-4 col-xl-3">
 
             <label class="form-label small fw-semibold text-muted mb-1" for="id_category">Category</label>
 
@@ -209,7 +209,7 @@
 
         {% if mode != 'onboarding' %}
 
-        <div class="col-6 col-md-4 col-lg">
+        <div class="col-12 col-sm-6 col-md-4 col-xl-3">
 
             <label class="form-label small fw-semibold text-muted mb-1" for="id_operational_status">Operational status</label>
 
@@ -219,7 +219,7 @@
 
         {% endif %}
 
-        <div class="col-6 col-md-4 col-lg">
+        <div class="col-12 col-sm-6 col-md-4 col-xl-2">
 
             <label class="form-label small fw-semibold text-muted mb-1" for="id_approval_status">Approval status</label>
 
@@ -227,7 +227,7 @@
 
         </div>
 
-        <div class="col-6 col-md-4 col-lg">
+        <div class="col-12 col-sm-6 col-md-4 col-xl-3">
 
             <label class="form-label small fw-semibold text-muted mb-1" for="id_risk_level">Risk</label>
 
@@ -235,7 +235,7 @@
 
         </div>
 
-        <div class="col-6 col-md-4 col-lg">
+        <div class="col-12 col-sm-6 col-md-4 col-xl-3">
 
             <label class="form-label small fw-semibold text-muted mb-1" for="id_restriction">Hold / suspension</label>
 
@@ -243,7 +243,7 @@
 
         </div>
 
-        <div class="col-6 col-md-4 col-lg">
+        <div class="col-12 col-sm-6 col-md-4 col-xl-3">
 
             <label class="form-label small fw-semibold text-muted mb-1" for="id_performance">Performance</label>
 
@@ -251,11 +251,11 @@
 
         </div>
 
-        <div class="col-12 col-lg-auto d-flex gap-2 w-100 w-lg-auto">
+        <div class="col-12 col-md-8 col-xl-3 d-flex gap-2 justify-content-xl-end">
 
-            <button type="submit" class="btn btn-primary btn-sm px-3 flex-fill flex-lg-grow-0"><i class="fa-solid fa-filter me-1"></i>Apply</button>
+            <button type="submit" class="btn btn-primary btn-sm px-3 flex-fill flex-xl-grow-0"><i class="fa-solid fa-filter me-1"></i>Apply</button>
 
-            <a href="{{ request.path }}" class="btn btn-outline-secondary btn-sm px-3 flex-fill flex-lg-grow-0 text-center">Reset</a>
+            <a href="{{ request.path }}" class="btn btn-outline-secondary btn-sm px-3 flex-fill flex-xl-grow-0 text-center">Reset</a>
 
         </div>
 

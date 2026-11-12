@@ -30,12 +30,10 @@ def get_all_sourcing_events():
     )
 
 
-def get_sourcing_events_for_user(user):
-    """
-    Object-level scoping: internal readers see all events; vendor users see only events they
-    are invited to and that have been published (drafts are never exposed to vendors).
-    """
-    qs = get_all_sourcing_events()
+def _scope_sourcing_queryset(qs, user):
+    """Apply consistent role and organization scoping for sourcing events and KPI metrics."""
+    if user is None or not getattr(user, "is_authenticated", False):
+        return qs.none()
     if user.is_vendor:
         if not user.vendor_id:
             return qs.none()
@@ -49,10 +47,20 @@ def get_sourcing_events_for_user(user):
                 qs = qs.filter(
                     Q(requisition__department__organization=user_org)
                     | Q(requisition__isnull=True, created_by__organization=user_org)
+                    | Q(requisition__isnull=True, created_by__department__organization=user_org)
                     | Q(requisition__isnull=True, created_by__isnull=True)
                 )
         return qs
     return qs.none()
+
+
+def get_sourcing_events_for_user(user):
+    """
+    Object-level scoping: internal readers see all events in their organization;
+    vendor users see only events they are invited to and that have been published
+    (drafts are never exposed to vendors).
+    """
+    return _scope_sourcing_queryset(get_all_sourcing_events(), user)
 
 
 def get_sourcing_event_by_id(event_id):
@@ -104,18 +112,14 @@ def search_sourcing_events(queryset, params):
 def get_sourcing_dashboard_metrics(user=None) -> dict:
     """RFQ/RFP KPIs for the Procurement Executive dashboard (one aggregate query).
 
-    Scoped to the requesting user's organization when one is resolvable, so a
-    new organization never sees another organization's sourcing activity."""
-    from apps.organization.selectors import resolve_user_scope_organization
-
+    Uses the exact same role and organization scoping as ``get_sourcing_events_for_user``
+    so KPI summary cards always match the sourcing register table."""
     now = timezone.now()
-    qs = SourcingEvent.objects.all()
-    scoped_org = resolve_user_scope_organization(user)
-    if scoped_org:
-        qs = qs.filter(
-            Q(requisition__department__organization=scoped_org)
-            | Q(requisition__isnull=True, created_by__department__organization=scoped_org)
-        )
+    qs = (
+        _scope_sourcing_queryset(SourcingEvent.objects.all(), user)
+        if user is not None
+        else SourcingEvent.objects.all()
+    )
     return qs.aggregate(
         total=Count("id"),
         draft=Count("id", filter=Q(status=SourcingEvent.STATUS_DRAFT)),

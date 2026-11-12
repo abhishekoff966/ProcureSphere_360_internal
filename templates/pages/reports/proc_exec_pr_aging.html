@@ -9,11 +9,11 @@
   <a href="?export=csv{% if q %}&amp;q={{ q }}{% endif %}{% if status_filter %}&amp;status={{ status_filter }}{% endif %}" class="btn btn-success btn-sm rounded-pill px-3"><i class="fa-solid fa-download me-1"></i>Export CSV</a>
 </div>
 
-<div class="row g-3 mb-3">
-  <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small text-uppercase fw-bold">Total PRs</div><div class="fs-4 fw-bold">{{ total }}</div></div></div></div>
-  <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small text-uppercase fw-bold">Under 3 days</div><div class="fs-4 fw-bold text-success">{{ under_3 }}</div></div></div></div>
-  <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small text-uppercase fw-bold">3–7 days</div><div class="fs-4 fw-bold text-warning">{{ btw_3_7 }}</div></div></div></div>
-  <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm"><div class="card-body"><div class="text-muted small text-uppercase fw-bold">Over 7 days</div><div class="fs-4 fw-bold text-danger">{{ over_7 }}</div></div></div></div>
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><div class="stat-card h-100 border-start border-primary border-4"><div class="text-muted small fw-semibold">TOTAL PRS</div><div class="metric-value text-dark">{{ total }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="stat-card h-100 border-start border-success border-4"><div class="text-muted small fw-semibold">UNDER 3 DAYS</div><div class="metric-value text-success">{{ under_3 }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="stat-card h-100 border-start border-warning border-4"><div class="text-muted small fw-semibold">3–7 DAYS</div><div class="metric-value text-warning">{{ btw_3_7 }}</div></div></div>
+  <div class="col-6 col-lg-3"><div class="stat-card h-100 border-start border-danger border-4"><div class="text-muted small fw-semibold">OVER 7 DAYS</div><div class="metric-value text-danger">{{ over_7 }}</div></div></div>
 </div>
 
 <form method="get" class="card border-0 shadow-sm mb-3">
@@ -30,19 +30,19 @@
 
 <div class="card border-0 shadow-sm">
   <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
-      <thead class="table-light"><tr><th>PR Number</th><th>Title</th><th>Department</th><th>Cost Center</th><th>Status</th><th class="text-end">Amount</th><th>Created</th><th class="text-end">Age (days)</th></tr></thead>
+    <table class="table table-hover align-middle mb-0" style="min-width: 920px;">
+      <thead class="table-light"><tr class="small text-uppercase text-muted"><th class="ps-3 text-nowrap">PR Number</th><th style="min-width: 200px;">Title</th><th style="min-width: 160px;">Department</th><th class="text-nowrap">Cost Center</th><th class="text-nowrap">Status</th><th class="text-end text-nowrap">Amount</th><th class="text-nowrap">Created</th><th class="text-end pe-3 text-nowrap">Age (days)</th></tr></thead>
       <tbody>
         {% for r in rows %}
         <tr>
-          <td class="fw-semibold">{{ r.pr_number }}</td>
+          <td class="ps-3 fw-semibold text-nowrap">{{ r.pr_number }}</td>
           <td>{{ r.title }}</td>
           <td>{{ r.department }}</td>
-          <td>{{ r.cost_center }}</td>
-          <td><span class="badge rounded-pill {% if r.age_days > 7 %}bg-danger{% elif r.age_days >= 3 %}bg-warning text-dark{% else %}bg-success{% endif %}">{{ r.status }}</span></td>
-          <td class="text-end">{{ r.total_amount }}</td>
-          <td>{{ r.created_at }}</td>
-          <td class="text-end fw-bold">{{ r.age_days }}</td>
+          <td class="text-nowrap">{{ r.cost_center }}</td>
+          <td class="text-nowrap"><span class="badge rounded-pill {% if r.age_days > 7 %}bg-danger{% elif r.age_days >= 3 %}bg-warning text-dark{% else %}bg-success{% endif %}">{{ r.status }}</span></td>
+          <td class="text-end text-nowrap">{{ r.total_amount }}</td>
+          <td class="text-nowrap">{{ r.created_at }}</td>
+          <td class="text-end pe-3 fw-bold text-nowrap">{{ r.age_days }}</td>
         </tr>
         {% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No requisitions found.</td></tr>{% endfor %}
       </tbody>
