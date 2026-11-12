@@ -271,16 +271,20 @@ class TestLandingContactEnquiryAdmin:
         assert "Manage Users &amp; Roles" not in admin_html
         assert "Manage Users & Roles" not in admin_html
         assert "Audit History" not in admin_html
+        assert "SUPER ADMIN WORKSPACE" in admin_html
+        assert 'title="Sign out"' not in admin_html
         assert "/admin/core/contactenquiry/" in admin_html
 
         # 5 on /admin/organizations/ (and backwards compatibility on /superadmin/organizations/)
         orgs_res = client.get("/admin/organizations/")
         assert orgs_res.status_code == 200
         orgs_html = orgs_res.content.decode("utf-8")
+        assert "Super Admin Workspace" in orgs_html
         assert 'href="/admin/contact-enquiries/"' in orgs_html
         assert 'href="/admin/organizations/' in orgs_html
         assert "Contact Enquiries" in orgs_html
         assert "Manage Users &amp; Roles" not in orgs_html
+        assert 'title="Sign out"' not in orgs_html
         assert "org-extra-row d-none" in orgs_html
         assert "Show More (" in orgs_html
         assert client.get("/superadmin/organizations/").status_code == 200
