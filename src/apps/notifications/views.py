@@ -66,11 +66,14 @@ def notification_open_view(request, notification_id):
     if not notification.is_read:
         notification.is_read = True
         notification.save(update_fields=["is_read", "updated_at"])
+<<<<<<< Updated upstream
     role_code = getattr(request.user, "role_code", "") or (
         request.user.role.code if getattr(request.user, "role", None) else ""
     )
     if str(role_code).upper() == "PROC_EXEC":
         return redirect("notification_list")
+=======
+>>>>>>> Stashed changes
     target = (notification.target_url or "").strip()
     is_global_superadmin = bool(
         getattr(request.user, "is_superuser", False)
@@ -106,10 +109,14 @@ def notification_open_view(request, notification_id):
 @login_required(login_url="/login/")
 @require_POST
 def notification_mark_all_read_view(request):
+<<<<<<< Updated upstream
     scope_notifications_for_user(
         Notification.objects.filter(recipient=request.user, is_read=False),
         request.user,
     ).update(is_read=True)
+=======
+    Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+>>>>>>> Stashed changes
     if request.path.startswith("/admin/"):
         return redirect("admin_notifications")
     return redirect("notification_list")

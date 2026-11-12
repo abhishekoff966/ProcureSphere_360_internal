@@ -315,8 +315,6 @@ def test_org_create_modal_renders_password_visibility_toggle_symbols():
 @pytest.mark.django_db
 def test_org_modal_uses_innerhtml_and_admin_edit_preserves_modal_and_admin():
     """Verify org create/edit modals use innerHTML (never outerHTML destroying .modal-content) and /admin/ edit works."""
-    from apps.organization.models import Organization
-
     client = Client()
     role_sa, _ = Role.objects.get_or_create(code=Role.SUPER_ADMIN, defaults={"name": "Super Admin"})
     sa_user = User.objects.create_superuser(

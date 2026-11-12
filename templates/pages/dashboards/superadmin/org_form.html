@@ -74,7 +74,11 @@
     <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-sitemap text-primary me-2"></i>{% if is_edit %}Edit Organization{% else %}Create Organization{% endif %}</h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
+<<<<<<< Updated upstream
 <form id="orgModalForm" class="org-modal-form bg-white rounded-bottom-4" hx-post="{% if is_edit %}{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ form.instance.pk }}/edit/{% else %}{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}create/{% endif %}" hx-target="#modal-content-body" hx-swap="innerHTML" autocomplete="off">
+=======
+<form hx-post="{% if is_edit %}{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ form.instance.pk }}/edit/{% else %}{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}create/{% endif %}" hx-target="#modal-content-body" hx-swap="outerHTML" autocomplete="off">
+>>>>>>> Stashed changes
     <!-- Anti-autofill decoy inputs to capture browser password manager -->
     <div style="position: absolute; left: -9999px; top: -9999px; opacity: 0; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
         <input type="text" name="fake_username_anti_autofill" tabindex="-1" autocomplete="username">
