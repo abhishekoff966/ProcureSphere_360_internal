@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
 from rest_framework.views import APIView
 
-from apps.accounts.permissions import IsProcurementManager
+from apps.core.validators import validate_no_html_or_script
 from apps.orders.models import PurchaseOrder
 from apps.scorecards.models import (
     PERFORMANCE_GOOD_THRESHOLD,
@@ -48,7 +48,23 @@ class VendorCategorySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "code", "description"]
 
 
+def _clean_safe_api_text(value, field_label):
+    try:
+        return validate_no_html_or_script(value, field_label)
+    except DjangoValidationError as exc:
+        raise serializers.ValidationError(exc.messages[0])
+
+
 class VendorContactSerializer(serializers.ModelSerializer):
+    def validate_first_name(self, value):
+        return _clean_safe_api_text(value, "First name")
+
+    def validate_last_name(self, value):
+        return _clean_safe_api_text(value, "Last name")
+
+    def validate_designation(self, value):
+        return _clean_safe_api_text(value, "Designation")
+
     class Meta:
         model = VendorContact
         fields = [
@@ -125,6 +141,21 @@ class VendorRiskRecordSerializer(serializers.ModelSerializer):
 
 
 class VendorSerializer(serializers.ModelSerializer):
+    def validate_legal_name(self, value):
+        return _clean_safe_api_text(value, "Legal name")
+
+    def validate_trade_name(self, value):
+        return _clean_safe_api_text(value, "Trade name")
+
+    def validate_registration_number(self, value):
+        return _clean_safe_api_text(value, "Registration number")
+
+    def validate_address(self, value):
+        return _clean_safe_api_text(value, "Address")
+
+    def validate_bank_name(self, value):
+        return _clean_safe_api_text(value, "Bank name")
+
     def validate_phone(self, value):
         if not value:
             return value

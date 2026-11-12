@@ -4,6 +4,7 @@ from apps.core.validators import (
     normalize_tax_identifier,
     validate_gstin,
     validate_legal_name,
+    validate_no_html_or_script,
     validate_optional_phone_number,
     validate_pan_gstin_consistency,
     validate_pan_number,
@@ -33,6 +34,15 @@ class VendorEditForm(forms.Form):
 
     def clean_legal_name(self):
         return validate_legal_name(self.cleaned_data.get("legal_name"))
+
+    def clean_trade_name(self):
+        return validate_no_html_or_script(self.cleaned_data.get("trade_name", ""), "Trade / brand name")
+
+    def clean_address(self):
+        return validate_no_html_or_script(self.cleaned_data.get("address", ""), "Address")
+
+    def clean_bank_name(self):
+        return validate_no_html_or_script(self.cleaned_data.get("bank_name", ""), "Bank name")
 
     def clean_phone(self):
         return validate_optional_phone_number(self.cleaned_data.get("phone", ""))
@@ -76,8 +86,20 @@ class VendorRegistrationForm(forms.Form):
     def clean_legal_name(self):
         return validate_legal_name(self.cleaned_data.get("legal_name"))
 
+    def clean_trade_name(self):
+        return validate_no_html_or_script(self.cleaned_data.get("trade_name", ""), "Trade / brand name")
+
+    def clean_address(self):
+        return validate_no_html_or_script(self.cleaned_data.get("address", ""), "Address")
+
+    def clean_bank_name(self):
+        return validate_no_html_or_script(self.cleaned_data.get("bank_name", ""), "Bank name")
+
     def clean_phone(self):
         return validate_optional_phone_number(self.cleaned_data.get("phone", ""))
+
+    def clean_registration_number(self):
+        return validate_no_html_or_script(self.cleaned_data.get("registration_number", ""), "Registration number")
 
     def clean_tax_identification_number(self):
         tin = validate_tax_id_number(self.cleaned_data.get("tax_identification_number"))
@@ -174,11 +196,17 @@ class VendorProfileUpdateForm(forms.Form):
     bank_account_number = forms.CharField(max_length=100, required=False)
     bank_routing_code = forms.CharField(max_length=100, required=False)
 
+    def clean_trade_name(self):
+        return validate_no_html_or_script(self.cleaned_data.get("trade_name", ""), "Trade name")
+
+    def clean_bank_name(self):
+        return validate_no_html_or_script(self.cleaned_data.get("bank_name", ""), "Bank name")
+
     def clean_address(self):
         address = self.cleaned_data.get("address", "").strip()
         if not address:
             raise forms.ValidationError("Registered office address is required.")
-        return address
+        return validate_no_html_or_script(address, "Registered office address")
 
     def clean_phone(self):
         import re
@@ -264,13 +292,16 @@ class VendorContactForm(forms.Form):
         fn = self.cleaned_data.get("first_name", "").strip()
         if not fn:
             raise forms.ValidationError("First name is required.")
-        return fn
+        return validate_no_html_or_script(fn, "First name")
 
     def clean_last_name(self):
         ln = self.cleaned_data.get("last_name", "").strip()
         if not ln:
             raise forms.ValidationError("Last name is required.")
-        return ln
+        return validate_no_html_or_script(ln, "Last name")
+
+    def clean_designation(self):
+        return validate_no_html_or_script(self.cleaned_data.get("designation", ""), "Designation")
 
     def clean_phone(self):
         import re

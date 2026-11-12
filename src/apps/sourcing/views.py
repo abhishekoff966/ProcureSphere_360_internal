@@ -300,14 +300,21 @@ def sourcing_detail_view(request, event_id):
         SourcingEvent.STATUS_PUBLISHED,
         SourcingEvent.STATUS_BID_WINDOW,
     )
+    scoped_org = None if request.user.is_superuser else getattr(request.user, "effective_organization", None)
     eligible_vendors = []
     if can_invite:
         eligible_vendors = get_eligible_vendors_for_event(
-            event, category_id=request.GET.get("inv_cat") or None, q=request.GET.get("inv_q", "")
+            event,
+            category_id=request.GET.get("inv_cat") or None,
+            q=request.GET.get("inv_q", ""),
+            organization=scoped_org,
         )[:100]
     pending_vendors = (
         get_pending_onboarding_vendors(
-            event, category_id=request.GET.get("inv_cat") or None, q=request.GET.get("inv_q", "")
+            event,
+            category_id=request.GET.get("inv_cat") or None,
+            q=request.GET.get("inv_q", ""),
+            organization=scoped_org,
         )[:50]
         if can_invite
         else []
@@ -789,12 +796,18 @@ def sourcing_invites_htmx_view(request, event_id):
             SourcingEvent.STATUS_BID_WINDOW,
         ),
         "eligible_vendors": (
-            get_eligible_vendors_for_event(event)[:100]
+            get_eligible_vendors_for_event(
+                event,
+                organization=None if request.user.is_superuser else getattr(request.user, "effective_organization", None),
+            )[:100]
             if sourcing_capabilities(request.user)["can_manage"]
             else []
         ),
         "pending_vendors": (
-            get_pending_onboarding_vendors(event)[:50]
+            get_pending_onboarding_vendors(
+                event,
+                organization=None if request.user.is_superuser else getattr(request.user, "effective_organization", None),
+            )[:50]
             if sourcing_capabilities(request.user)["can_manage"]
             else []
         ),

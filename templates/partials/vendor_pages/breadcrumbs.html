@@ -1,3 +1,4 @@
+{% load core_tags %}
 {% if user.role_code == 'PROC_MGR' %}
 <li class="breadcrumb-item"><a href="/manager/" class="text-decoration-none text-muted">Manager</a></li>
 <li class="breadcrumb-item"><a href="/manager/vendor-risk/" class="text-decoration-none text-muted">Vendor Risk</a></li>
@@ -5,5 +6,5 @@
 <li class="breadcrumb-item"><a href="/" class="text-decoration-none text-muted">Home</a></li>
 <li class="breadcrumb-item"><a href="{{ back_url|default:'/vendors/' }}" class="text-decoration-none text-muted">{{ back_label|default:'Vendor Master & Risk' }}</a></li>
 {% endif %}
-<li class="breadcrumb-item"><a href="{% url 'vendor_detail' vendor.id %}{% if request.GET.section %}?section={{ request.GET.section }}{% endif %}" class="text-decoration-none text-muted">{{ vendor.legal_name }}</a></li>
+<li class="breadcrumb-item"><a href="{% url 'vendor_detail' vendor.id %}{% if request.GET.section %}?section={{ request.GET.section }}{% endif %}" class="text-decoration-none text-muted">{{ vendor.legal_name|safe_display }}</a></li>
 <li class="breadcrumb-item active text-dark fw-semibold" aria-current="page">{{ page_label }}</li>
