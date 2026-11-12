@@ -388,3 +388,40 @@ def test_org_modal_uses_innerhtml_and_admin_edit_preserves_modal_and_admin():
     assert org.admin_user_id == org_admin.id
 
 
+@pytest.mark.django_db
+def test_admin_dashboard_does_not_render_duplicate_top_messagelist(client):
+    role_sa, _ = Role.objects.get_or_create(
+        code=Role.SUPER_ADMIN, defaults={"name": "Super Admin"}
+    )
+    sa_user = User.objects.create_superuser(
+        email="sa.msgcheck@example.com",
+        password="Password123!",
+        role=role_sa,
+    )
+    client.force_login(sa_user)
+
+    create_ok = client.post(
+        "/admin/organizations/create/",
+        {
+            "code": "TECHNOVA-ORG-002",
+            "name": "TechNova Solutions Pvt Ltd",
+            "tax_identifier": "TECHNOVA001_tax",
+            "address": "123 Enterprise Way",
+            "is_active": "on",
+            "admin_email": "admin@technova.example.com",
+            "admin_full_name": "TechNova Admin",
+            "admin_password": "Password123!",
+        },
+        follow=False,
+    )
+    assert create_ok.status_code == 200
+
+    dash_res = client.get("/admin/")
+    assert dash_res.status_code == 200
+    dash_html = dash_res.content.decode("utf-8")
+    assert 'class="messagelist"' not in dash_html
+    assert "TECHNOVA-ORG-002" in dash_html
+    assert dash_html.count("created successfully.") == 1
+
+
+
