@@ -433,7 +433,7 @@ class UserAdminForm(forms.ModelForm):
 
 
 
-            raise forms.ValidationError("This user does not belong to this organization.")
+            raise forms.ValidationError("A user with this email address already exists.")
 
 
 
@@ -727,8 +727,11 @@ class UserAdminForm(forms.ModelForm):
 
 
 
+        elif role and getattr(role, "code", "") == Role.DEPT_APPROVER:
+            # Department Approver: department assignment is permitted; cost center is restricted to Requesters
+            cleaned_data["cost_center"] = None
         else:
-            # All non-requester roles belong to the entire organization:
+            # All other non-requester roles belong to the entire organization:
             # strictly clear department and cost center!
             cleaned_data["department"] = None
             cleaned_data["cost_center"] = None

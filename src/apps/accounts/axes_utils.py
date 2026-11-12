@@ -53,3 +53,42 @@ def get_axes_client_ip(request):
         return x_forwarded_for.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR")
 
+
+def get_axes_lockout_response(request, original_response=None, credentials=None):
+    """
+    Unified lockout response for django-axes:
+    - Returns JSON 429 with ACCOUNT_LOCKED for API and AJAX requests.
+    - Returns rendered 429 HTML lockout page for standard browser navigation.
+    """
+    from django.http import JsonResponse
+    from django.shortcuts import render
+    from django.conf import settings
+
+    is_api = (
+        (getattr(request, "path_info", "") and request.path_info.startswith("/api/"))
+        or (getattr(request, "path", "") and request.path.startswith("/api/"))
+        or getattr(request, "content_type", "") == "application/json"
+        or request.META.get("HTTP_ACCEPT", "").find("application/json") != -1
+        or request.META.get("HTTP_X_REQUESTED_WITH") == "XMLHttpRequest"
+    )
+
+    if is_api:
+        return JsonResponse(
+            {
+                "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Too many failed login attempts. Account is locked temporarily.",
+                    "details": {"retry_after_seconds": 180},
+                }
+            },
+            status=429,
+        )
+
+    template = getattr(settings, "AXES_LOCKOUT_TEMPLATE", "pages/lockout.html")
+    context = {
+        "status": 429,
+        "username": (credentials.get("username") if isinstance(credentials, dict) else "") or "",
+    }
+    return render(request, template, context, status=429)
+
+

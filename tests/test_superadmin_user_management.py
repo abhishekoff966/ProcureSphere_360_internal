@@ -116,6 +116,7 @@ def test_duplicate_email_rejected(superadmin_client):
         {
             "email": admin_user.email,
             "phone_number": "1112223333",
+            "role": admin_user.role_id,
         },
     )
     assert response.status_code == 200

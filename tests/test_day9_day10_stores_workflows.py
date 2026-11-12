@@ -300,6 +300,18 @@ def test_day9_quantity_correction_blocked_if_less_than_handed_off_stock(day9_day
     )
     r_line = grn.lines.get(po_line=line1)
 
+    # Perform quality inspection
+    record_inspection_service(
+        receipt=grn,
+        inspected_by=receiver,
+        inspection_items=[
+            {
+                "receipt_line_id": str(r_line.id),
+                "passed": True,
+            }
+        ],
+    )
+
     # Hand off to stock
     handoff_goods_to_stock_service(
         receipt=grn,
@@ -632,6 +644,18 @@ def test_day10_stock_handoff_idempotency_prevents_duplicate_posting(day9_day10_s
             }
         ],
         delivery_note_number="DN-DAY10-004",
+    )
+
+    delivery_line = grn.lines.get(po_line=line1)
+    record_inspection_service(
+        receipt=grn,
+        inspected_by=receiver,
+        inspection_items=[
+            {
+                "receipt_line_id": str(delivery_line.id),
+                "passed": True,
+            }
+        ],
     )
 
     # First handoff submission

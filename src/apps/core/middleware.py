@@ -9,8 +9,16 @@ def get_current_request_id():
     return getattr(_request_context, "request_id", None)
 
 
+def set_current_request_id(request_id):
+    _request_context.request_id = request_id
+
+
 def get_current_user():
     return getattr(_request_context, "user", None)
+
+
+def set_current_user(user):
+    _request_context.user = user
 
 
 def get_client_ip():
@@ -19,6 +27,17 @@ def get_client_ip():
 
 def get_current_user_agent():
     return getattr(_request_context, "user_agent", "")
+
+
+def set_client_ip(ip):
+    _request_context.client_ip = ip
+
+
+def clear_request_context():
+    """Clears all thread-local request and correlation context."""
+    _request_context.request_id = None
+    _request_context.client_ip = None
+    _request_context.user = None
 
 
 class RequestIDMiddleware:
@@ -37,7 +56,7 @@ class RequestIDMiddleware:
 
         # Determine client IP address
         x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
+        if x_forwarded_for and x_forwarded_for.strip():
             ip = x_forwarded_for.split(",")[0].strip()
         else:
             ip = request.META.get("REMOTE_ADDR")
@@ -157,8 +176,9 @@ class VendorPortalIsolationMiddleware:
         "/audit",
         "/admin",
         "/api/v1/requisitions",
-                "/api/v1/budgets",
-                        "/api/v1/reports",
+        "/api/v1/contracts",
+        "/api/v1/budgets",
+        "/api/v1/reports",
         "/api/v1/audit",
         "/api/v1/manager",
     )

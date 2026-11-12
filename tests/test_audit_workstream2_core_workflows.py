@@ -13,7 +13,11 @@ from apps.approvals.services import add_approval_step_service, create_approval_p
 from apps.audit.models import AuditLog
 from apps.budgets.services import allocate_budget_service
 from apps.invoices.models import MatchException, SupplierInvoice
-from apps.invoices.services import create_supplier_invoice_service, run_3_way_match_service
+from apps.invoices.services import (
+    approve_supplier_invoice_service,
+    create_supplier_invoice_service,
+    run_3_way_match_service,
+)
 from apps.orders.models import PurchaseOrder
 from apps.orders.services import generate_purchase_order_service
 from apps.organization.models import CostCenter, Department, FiscalPeriod, Organization
@@ -99,7 +103,7 @@ def base_org_and_users(db_roles):
         tax_identification_number="27ABCDE1234F1Z5",
         category=cat,
         email="sales@apexservers.com",
-        phone="+1-555-0199",
+        phone="+919876543210",
         address="100 Technology Parkway",
         bank_name="Global Tech Bank",
         bank_account_number="98765432101",
@@ -183,8 +187,8 @@ def test_inv_cr_016_cumulative_quantity_match_exception(base_org_and_users):
         created_by_user=ctx["proc_exec"],
     )
     inv1, exc1 = run_3_way_match_service(invoice=inv1)
-    assert inv1.status == SupplierInvoice.STATUS_READY_FOR_PAYMENT
     assert len(exc1) == 0
+    assert inv1.status == SupplierInvoice.STATUS_READY_FOR_PAYMENT
 
     # Second invoice: 10 units ($10,000) -> cumulative 14 units > 10 units received!
     inv2 = create_supplier_invoice_service(
@@ -300,6 +304,7 @@ def test_smk_pr_050_multi_step_approval_and_smk_ap_005_role_validation(base_org_
         ],
     )
     submit_purchase_requisition_service(requisition=pr, user=ctx["requester"])
+    pr.refresh_from_db()
     assert pr.status == PurchaseRequisition.STATUS_MANAGER_REVIEW
 
     # SMK-AP-005: Finance approver tries to approve Step 1 (requires DEPT_APPROVER) -> rejected!

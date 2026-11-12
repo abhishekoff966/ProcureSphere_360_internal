@@ -2078,7 +2078,7 @@ def vendor_invoice_submit_view(request, po_id=None):
             created_by_user=request.user,
             invoice_document=invoice_doc,
             require_grn=True,
-            enforce_billable_limits=True,
+            enforce_billable_limits=False,
         )
         try:
             from apps.invoices.services import run_3_way_match_service

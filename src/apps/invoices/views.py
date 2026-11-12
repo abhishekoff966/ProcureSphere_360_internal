@@ -83,6 +83,7 @@ def list_view(request):
             "AUDITOR",
             "PROC_MGR",
             "PROC_EXEC",
+            "STORES_RECEIVER",
         ],
     )
     items = scope_invoices_queryset(

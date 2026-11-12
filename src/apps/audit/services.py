@@ -34,19 +34,47 @@ def create_audit_log_service(
     ip_address: Optional[str] = None,
     request_id: Optional[str] = None,
     user_agent: str = "",
+    request=None,
 ) -> AuditLog:
     """
     Centralized service to append an immutable AuditLog record across ProcureSphere 360.
-    Automatically retrieves thread-local actor, request_id, and client IP if omitted.
+    Automatically retrieves thread-local actor, request_id, and client IP if omitted,
+    or extracts them from the optional HTTP request object.
+    Supports headless services and background tasks safely without crashing.
     """
+    if request is not None:
+        if actor is None and hasattr(request, "user") and getattr(request.user, "is_authenticated", False):
+            actor = request.user
+        if request_id is None:
+            request_id = getattr(request, "request_id", None) or (
+                request.headers.get("X-Request-ID") if hasattr(request, "headers") else None
+            )
+        if ip_address is None and hasattr(request, "META"):
+            x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+            if x_forwarded_for and x_forwarded_for.strip():
+                ip_address = x_forwarded_for.split(",")[0].strip()
+            else:
+                ip_address = request.META.get("REMOTE_ADDR")
+        if not user_agent and hasattr(request, "META"):
+            user_agent = request.META.get("HTTP_USER_AGENT", "")
+
     if actor is None:
-        actor = get_current_user()
+        try:
+            actor = get_current_user()
+        except Exception:
+            actor = None
 
     if request_id is None:
-        request_id = get_current_request_id() or ""
+        try:
+            request_id = get_current_request_id() or ""
+        except Exception:
+            request_id = ""
 
     if ip_address is None:
-        ip_address = get_client_ip()
+        try:
+            ip_address = get_client_ip()
+        except Exception:
+            ip_address = None
 
     if target_object_id is not None:
         target_object_id = str(target_object_id)
@@ -61,8 +89,8 @@ def create_audit_log_service(
         previous_state=previous_state,
         new_state=new_state,
         ip_address=ip_address,
-        request_id=request_id,
-        user_agent=user_agent,
+        request_id=request_id or "",
+        user_agent=user_agent or "",
     )
 
 

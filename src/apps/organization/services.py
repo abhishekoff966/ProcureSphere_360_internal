@@ -21,10 +21,19 @@ from .validators import (
 
 @transaction.atomic
 def create_organization_service(
-    *, name: str, code: str, tax_identifier: str = "", address: str = "", is_active: bool = True
+    *,
+    name: str,
+    code: str,
+    tax_identifier: str = "",
+    address: str = "",
+    is_active: bool = True,
+    actor=None,
+    request=None,
+    _skip_audit: bool = False,
 ) -> Organization:
     """
     Service layer function to create an Organization entity inside a database transaction.
+    Records an append-only AuditLog entry for successful organization creation.
     """
     clean_code = validate_org_code(code)
     clean_name = validate_org_name(name)
@@ -38,6 +47,26 @@ def create_organization_service(
         address=clean_address,
         is_active=is_active,
     )
+
+    if not _skip_audit:
+        effective_actor = actor or (
+            request.user if request and getattr(request, "user", None) and request.user.is_authenticated else None
+        )
+        create_audit_log_service(
+            actor=effective_actor,
+            action=AuditLog.ACTION_CREATE,
+            target_model="Organization",
+            target_object_id=str(org.id),
+            previous_state=None,
+            new_state={
+                "name": org.name,
+                "code": org.code,
+                "tax_identifier": org.tax_identifier,
+                "is_active": org.is_active,
+            },
+            request=request,
+        )
+
     return org
 
 
@@ -75,6 +104,9 @@ def create_organization_with_admin_service(
         tax_identifier=tax_identifier,
         address=address,
         is_active=is_active,
+        actor=actor,
+        request=request,
+        _skip_audit=True,
     )
 
     admin_user = None

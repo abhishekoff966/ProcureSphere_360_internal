@@ -694,6 +694,18 @@ def test_day13_quantity_correction_cannot_reduce_below_handed_off_stock(stores_s
     )
     r_line1 = grn.lines.first()
 
+    # Perform quality inspection
+    record_inspection_service(
+        receipt=grn,
+        inspected_by=receiver,
+        inspection_items=[
+            {
+                "receipt_line_id": str(r_line1.id),
+                "passed": True,
+            }
+        ],
+    )
+
     # Hand off all 50 units into stock
     handoff_goods_to_stock_service(
         receipt=grn,
