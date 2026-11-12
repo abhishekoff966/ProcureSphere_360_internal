@@ -51,7 +51,12 @@
                     <!-- Transaction Reference / UTR # -->
                     <div class="mb-3">
                         <label for="pref_{{ invoice.id }}" class="form-label small fw-semibold text-dark">Transaction Reference / UTR # <span class="text-danger">*</span></label>
-                        <input type="text" name="payment_reference" id="pref_{{ invoice.id }}" class="form-control" placeholder="e.g. UTR-2026-981023" required>
+                        <input type="text" name="payment_reference" id="pref_{{ invoice.id }}" class="form-control" placeholder="e.g. UTR-2026-981023"
+                               pattern="^[A-Za-z0-9][A-Za-z0-9\-_/]{4,48}[A-Za-z0-9]$"
+                               minlength="6" maxlength="50"
+                               title="Alphanumeric reference or UTR (6-50 chars). Hyphens (-) and slashes (/) permitted. Disallowed special characters like !@#$%^&*() are prohibited."
+                               required>
+                        <div class="form-text small text-muted">Format: 6–50 alphanumeric characters (e.g. UTR-2026-981023, CMS123456789). No special characters (!@#$%).</div>
                     </div>
 
                     <!-- Payment Method -->
@@ -73,8 +78,7 @@
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary shadow-sm"
-                            onclick="this.disabled=true; this.innerHTML='<i class=\'fa-solid fa-spinner fa-spin me-1\'></i> Processing...';">
+                    <button type="submit" class="btn btn-primary shadow-sm" id="paySubmitBtn-{{ invoice.id }}">
                         <i class="fa-solid fa-arrow-right me-1"></i> Confirm &amp; Disburse Payment
                     </button>
                 </div>
@@ -121,4 +125,22 @@
         </table>
     </div>
 </div>
+
+<script>
+    document.querySelectorAll('form[id^="paymentForm-"]').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            if (!form.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                form.classList.add('was-validated');
+                return false;
+            }
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Processing...';
+            }
+        });
+    });
+</script>
 {% endblock %}

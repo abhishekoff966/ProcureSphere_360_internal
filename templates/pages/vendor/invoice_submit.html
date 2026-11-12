@@ -88,8 +88,12 @@
                     <div class="card-body p-4">
                         <div class="mb-3">
                             <label class="form-label small fw-semibold text-secondary">Invoice Reference Number <span class="text-danger">*</span></label>
-                            <input type="text" name="invoice_number" class="form-control" placeholder="e.g. INV-2026-0091" required>
-                            <small class="text-muted">Must be unique per vendor. Duplicate invoice numbers will be rejected.</small>
+                            <input type="text" name="invoice_number" class="form-control"
+                                   placeholder="e.g. INV-2026-0091"
+                                   pattern="^[A-Za-z0-9]([A-Za-z0-9\-_/]{0,48}[A-Za-z0-9])?$"
+                                   minlength="3" maxlength="50"
+                                   title="Alphanumeric invoice number. Hyphens, underscores, slashes allowed. No special characters like !@#$%^&*()." required>
+                            <small class="text-muted">Must be unique per vendor. Duplicate invoice numbers will be rejected. Format: alphanumeric (e.g. INV-2026-0091, CISCO/INV/0012).</small>
                         </div>
 
                         <div class="row g-2 mb-3">
@@ -132,8 +136,8 @@
                                     <tr>
                                         <th class="ps-4 small text-uppercase fw-bold text-secondary">Item Description</th>
                                         <th class="small text-uppercase fw-bold text-secondary text-center" style="width: 130px;">Billed Qty</th>
-                                        <th class="small text-uppercase fw-bold text-secondary text-end" style="width: 140px;">Unit Price ($)</th>
-                                        <th class="pe-4 small text-uppercase fw-bold text-secondary text-end" style="width: 140px;">Line Total ($)</th>
+                                        <th class="small text-uppercase fw-bold text-secondary text-end" style="width: 140px;">Unit Price (₹)</th>
+                                        <th class="pe-4 small text-uppercase fw-bold text-secondary text-end" style="width: 140px;">Line Total (₹)</th>
                                     </tr>
                                 </thead>
                                 <tbody>

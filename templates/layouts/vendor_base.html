@@ -220,9 +220,9 @@
         }
     }
 
-    /* Preserve sticky sidebar and navbar when Bootstrap modal opens */
+    /* Lock background scrolling when modal opens to prevent duplicate scrollbars (BUG-006) */
     body.modal-open {
-        overflow: visible !important;
+        overflow: hidden !important;
     }
 
     @media (min-width: 992px) {
