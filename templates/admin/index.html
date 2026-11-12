@@ -658,6 +658,14 @@
                 <li class="sa-nav-separator"></li>
                 <li class="sa-nav-label">Oversight &amp; Audit</li>
                 <li class="nav-item">
+<<<<<<< Updated upstream
+=======
+                    <a href="/superadmin/contact-enquiries/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                        <span>Contact Enquiries</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+>>>>>>> Stashed changes
                     <a href="/superadmin/notifications/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
                         <span>Notifications &amp; Alerts</span>
                     </a>
@@ -1166,7 +1174,7 @@
             <!-- Reusable HTMX Modal Container for Frontend Workflows -->
             <div id="modal-container" class="modal fade" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
-                    <div class="modal-content" id="modal-content-body">
+                    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden bg-white" id="modal-content-body">
                         <!-- Dynamic HTMX content injected here -->
                     </div>
                 </div>
@@ -1181,11 +1189,31 @@
 <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 <script>
     document.body.addEventListener('htmx:configRequest', (event) => {
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        const cookieMatch = document.cookie.match(/csrftoken=([\w-]+)/);
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || (cookieMatch ? cookieMatch[1] : null);
         if (csrfToken) {
             event.detail.headers['X-CSRFToken'] = csrfToken;
         }
     });
+
+    document.body.addEventListener('htmx:beforeSwap', function(evt) {
+        if (evt.detail.xhr && evt.detail.xhr.status === 400) {
+            evt.detail.shouldSwap = true;
+            evt.detail.isError = false;
+        }
+    });
+
+    (function() {
+        const modalEl = document.getElementById('modal-container');
+        if (modalEl) {
+            modalEl.addEventListener('hidden.bs.modal', function() {
+                const bodyEl = document.getElementById('modal-content-body');
+                if (bodyEl) {
+                    bodyEl.innerHTML = '<div class="modal-body p-5 text-center text-muted"><div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>Loading...</div>';
+                }
+            });
+        }
+    })();
 
     function updateSidebarToggleState(isCollapsed) {
         const toggleBtns = document.querySelectorAll('.sidebar-toggle-btn');

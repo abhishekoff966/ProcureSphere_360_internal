@@ -35,6 +35,7 @@
                     </div>
                     <div class="small text-secondary">{{ n.message|truncatechars:300 }}</div>
                 </div>
+<<<<<<< Updated upstream
                 {% if is_proc_exec %}
                     {% if not n.is_read %}
                     <form method="post" action="{% url 'notification_open' n.id %}" class="align-self-center flex-shrink-0">{% csrf_token %}
@@ -48,6 +49,8 @@
                     </span>
                     {% endif %}
                 {% else %}
+=======
+>>>>>>> Stashed changes
                 <form method="post" action="{% if '/admin/' in request.path %}{% url 'admin_notification_open' n.id %}{% else %}{% url 'notification_open' n.id %}{% endif %}" class="align-self-center flex-shrink-0">{% csrf_token %}
                     <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold">
                         {% if n.target_url %}<i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Open{% else %}<i class="fa-solid fa-check me-1"></i> Mark read{% endif %}

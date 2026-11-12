@@ -11,7 +11,11 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
+<<<<<<< Updated upstream
+<form hx-post="{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/delete/" hx-target="#modal-content-body" hx-swap="innerHTML">
+=======
 <form hx-post="{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/delete/" hx-target="#modal-content-body" hx-swap="outerHTML">
+>>>>>>> Stashed changes
     {% csrf_token %}
     <div class="modal-body pt-3">
         <div class="alert alert-danger bg-danger bg-opacity-10 border-danger border-opacity-25 rounded-3 mb-3">

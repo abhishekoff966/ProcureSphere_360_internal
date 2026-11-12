@@ -10,8 +10,8 @@ ORG_CODE_REGEX = re.compile(r"^[A-Z0-9_\-]+$")
 # Organization Name: 2-255 characters, letters, numbers, spaces, and standard enterprise punctuation (&, ., ,, -, ', /, ()).
 ORG_NAME_REGEX = re.compile(r"^[A-Za-z0-9\s&.,'/\(\)\-]+$")
 
-# Tax Identifier: 2-100 characters, alphanumeric, hyphens, periods, slashes, spaces.
-ORG_TAX_ID_REGEX = re.compile(r"^[A-Za-z0-9\-\.\/ ]+$")
+# Tax Identifier: 2-100 characters, alphanumeric, underscores, hyphens, periods, slashes, spaces.
+ORG_TAX_ID_REGEX = re.compile(r"^[A-Za-z0-9_\-\.\/ ]+$")
 
 
 def validate_org_code(value: str) -> str:
@@ -75,7 +75,7 @@ def validate_org_tax_identifier(value: str) -> str:
         raise ValidationError("Tax identifier cannot contain HTML, script, or control characters.")
     if not ORG_TAX_ID_REGEX.match(tax_id):
         raise ValidationError(
-            "Tax identifier contains invalid characters. Only letters, numbers, hyphens (-), dots (.), slashes (/), and spaces are allowed."
+            "Tax identifier contains invalid characters. Only letters, numbers, underscores (_), hyphens (-), dots (.), slashes (/), and spaces are allowed."
         )
     return tax_id
 

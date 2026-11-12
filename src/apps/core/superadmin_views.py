@@ -988,6 +988,8 @@ def org_edit_view(request, org_id):
 
     if request.method == "POST":
 
+        prior_admin_user = org.admin_user
+
         form = OrganizationAdminForm(request.POST, instance=org)
 
         if form.is_valid():
@@ -1015,6 +1017,12 @@ def org_edit_view(request, org_id):
                     admin_user_dropdown.organization = org
 
                     admin_user_dropdown.save(update_fields=["organization"])
+
+            elif not admin_user_dropdown and "admin_user" not in request.POST and prior_admin_user:
+
+                org.admin_user = prior_admin_user
+
+                org.save(update_fields=["admin_user"])
 
 
             # Handle dedicated Procurement Manager update (1:1)
