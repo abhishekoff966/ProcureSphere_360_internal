@@ -1,11 +1,13 @@
-import pytest
 from decimal import Decimal
+
+import pytest
 from django.utils import timezone
+
 from apps.accounts.models import Role, User
-from apps.organization.models import Organization, Department, CostCenter, FiscalPeriod
+from apps.approvals.models import ApprovalAction, ApprovalPolicy, ApprovalStep
 from apps.budgets.models import Budget
-from apps.requisitions.models import PurchaseRequisition, PRLine
-from apps.approvals.models import ApprovalPolicy, ApprovalStep, ApprovalAction
+from apps.organization.models import CostCenter, Department, FiscalPeriod, Organization
+from apps.requisitions.models import PRLine, PurchaseRequisition
 
 
 @pytest.fixture
@@ -367,4 +369,148 @@ def test_approver_dashboard_pending_links_auto_filter_pending_prs_only(client, s
     assert pending_pr.pr_number in inbox_html
     assert approved_pr.pr_number not in inbox_html
     assert rejected_pr.pr_number not in inbox_html
+
+
+@pytest.mark.django_db
+def test_approver_dashboard_shows_available_budget_across_multiple_open_periods(
+    client, setup_approver_env
+):
+    """Dashboard must display active Cost Center budget even when an earlier open FiscalPeriod has no budget."""
+    env = setup_approver_env
+    today = timezone.now().date()
+
+    # Create a second open fiscal period holding the actual active budget (simulating Q1 vs Annual/Q4)
+    second_fp = FiscalPeriod.objects.create(
+        organization=env["org"],
+        year=today.year,
+        period_number=99,
+        name="FY-ALT-OPEN",
+        start_date=today - timezone.timedelta(days=5),
+        end_date=today + timezone.timedelta(days=90),
+        is_closed=False,
+    )
+    Budget.objects.create(
+        cost_center=env["cc"],
+        fiscal_period=second_fp,
+        allocated_amount=Decimal("9900000.00"),
+        reserved_amount=Decimal("400.00"),
+        committed_amount=Decimal("0.00"),
+        actual_amount=Decimal("0.00"),
+    )
+
+    pr = PurchaseRequisition.objects.create(
+        requester=env["requester"],
+        department=env["dept"],
+        cost_center=env["cc"],
+        title="Checking PR Budget Sync",
+        status=PurchaseRequisition.STATUS_MANAGER_REVIEW,
+        pr_number="PR-SYNC-BUDGET-01",
+        total_amount=Decimal("400.00"),
+        requested_delivery_date=today,
+    )
+
+    client.force_login(env["approver"])
+    resp = client.get("/approver/")
+    assert resp.status_code == 200
+    html = resp.content.decode("utf-8")
+
+    assert resp.context["metrics"]["available_budget"] == 9899600.0
+    assert resp.context["metrics"]["is_budget_overdrawn"] is False
+    assert "₹9899600.00" in html
+    assert pr.pr_number in html
+    # Within-budget pending PR renders Approve, Reject, and always-visible comment box
+    assert 'name="action" value="APPROVED"' in html
+    assert 'name="action" value="REJECTED"' in html
+    assert 'name="comments"' in html
+    assert 'd-none d-xl-inline-block rounded-pill px-3" style="width: 120px;' not in html
+
+
+@pytest.mark.django_db
+def test_incoming_pr_renders_approve_reject_and_comment_box_in_detail_and_inbox(
+    client, setup_approver_env
+):
+    """Within-budget pending PR shows Approve, Reject, and comment box on detail & inbox and preserves 2-step workflow."""
+    env = setup_approver_env
+    today = timezone.now().date()
+
+    finance_role, _ = Role.objects.get_or_create(
+        code=Role.FINANCE_AP, defaults={"name": "Finance & AP"}
+    )
+    policy = ApprovalPolicy.objects.get(department=env["dept"])
+    ApprovalStep.objects.create(
+        policy=policy,
+        step_number=2,
+        approver_role=finance_role,
+        description="Finance / AP Approval",
+    )
+
+    Budget.objects.create(
+        cost_center=env["cc"],
+        fiscal_period=env["fp"],
+        allocated_amount=Decimal("9900000.00"),
+        reserved_amount=Decimal("400.00"),
+    )
+
+    ok_pr = PurchaseRequisition.objects.create(
+        requester=env["requester"],
+        department=env["dept"],
+        cost_center=env["cc"],
+        title="Incoming Actionable PR",
+        status=PurchaseRequisition.STATUS_MANAGER_REVIEW,
+        pr_number="PR-ACTIONABLE-01",
+        total_amount=Decimal("400.00"),
+        requested_delivery_date=today,
+    )
+    over_pr = PurchaseRequisition.objects.create(
+        requester=env["requester"],
+        department=env["dept"],
+        cost_center=env["cc"],
+        title="Over Budget Locked PR",
+        status=PurchaseRequisition.STATUS_BUDGET_REVIEW,
+        pr_number="PR-LOCKED-OVER-01",
+        total_amount=Decimal("15000000.00"),
+        requested_delivery_date=today,
+    )
+
+    client.force_login(env["approver"])
+
+    # 1. Requisition detail renders Approve PR, Reject PR, and Decision Comments card + buttons
+    detail_resp = client.get(f"/requisitions/{ok_pr.pk}/")
+    assert detail_resp.status_code == 200
+    assert detail_resp.context["can_approve"] is True
+    detail_html = detail_resp.content.decode("utf-8")
+    assert 'id="approvalActionDecision"' in detail_html
+    assert 'id="decisionCommentsSidebar"' in detail_html
+    assert "Approve PR" in detail_html
+    assert "Reject PR" in detail_html
+
+    # 2. Approvals inbox renders inline comment + Approve + Reject for ok_pr, while locking over_pr
+    inbox_resp = client.get("/approvals/inbox/?status=PENDING")
+    assert inbox_resp.status_code == 200
+    inbox_html = inbox_resp.content.decode("utf-8")
+    assert ok_pr.pr_number in inbox_html
+    assert f'value="{ok_pr.id}"' in inbox_html
+    assert 'name="comments"' in inbox_html
+    assert 'name="action" value="APPROVED"' in inbox_html
+    assert 'name="action" value="REJECTED"' in inbox_html
+    # Over-budget PR must NOT get an inline approval form for DEPT_APPROVER
+    assert over_pr.pr_number in inbox_html
+    assert f'<input type="hidden" name="pr_id" value="{over_pr.id}">' not in inbox_html
+
+    # 3. Submitting Approve with comment advances Step 1 while keeping Step 2 (Finance) workflow intact
+    post_resp = client.post(
+        "/approvals/inbox/",
+        {"pr_id": str(ok_pr.id), "action": "APPROVED", "comments": "Verified by dept approver"},
+    )
+    assert post_resp.status_code in (302, 200)
+    ok_pr.refresh_from_db()
+    assert ok_pr.status == PurchaseRequisition.STATUS_MANAGER_REVIEW
+    recorded = ApprovalAction.objects.filter(
+        target_object_id=ok_pr.id,
+        target_model_name="PurchaseRequisition",
+        actor=env["approver"],
+        action=ApprovalAction.ACTION_APPROVE,
+    ).first()
+    assert recorded is not None
+    assert recorded.comments == "Verified by dept approver"
 

@@ -630,6 +630,15 @@ def detail_view(request, pk):
         fiscal_period__end_date__gte=today,
         fiscal_period__is_closed=False,
     ).first()
+    if not active_budget and pr.cost_center_id:
+        active_budget = (
+            Budget.objects.filter(
+                cost_center=pr.cost_center,
+                fiscal_period__is_closed=False,
+            )
+            .order_by("-fiscal_period__start_date")
+            .first()
+        )
     available_budget = active_budget.available_amount if active_budget else None
     is_pending_review = pr.status in [
         PurchaseRequisition.STATUS_DRAFT,
@@ -652,6 +661,8 @@ def detail_view(request, pk):
         module=ApprovalPolicy.MODULE_PR,
         amount=pr.total_amount,
         department=pr.department,
+        cost_center=pr.cost_center,
+        organization=pr_org,
     )
     existing_approvals = ApprovalAction.objects.filter(
         target_object_id=str(pr.id),
@@ -685,8 +696,11 @@ def detail_view(request, pk):
             else:
                 approver_role_code = getattr(user.role, "code", None)
                 if (getattr(user, "role_id", None) == req_role.id) or (approver_role_code == req_role.code):
-                    if req_role.code == Role.DEPT_APPROVER and pr.department and user.department:
-                        if user.department == pr.department or (pr.cost_center and user == pr.cost_center.manager):
+                    pr_dept = pr.department or (
+                        pr.cost_center.department if pr.cost_center else None
+                    )
+                    if req_role.code == Role.DEPT_APPROVER and pr_dept and user.department:
+                        if user.department == pr_dept or (pr.cost_center and user == pr.cost_center.manager):
                             can_approve = True
                     else:
                         can_approve = True

@@ -373,9 +373,36 @@
                     </div>
                     {% endif %}
 
+                    {% if pr.can_inline_decide %}
+                    <form method="POST" action="/approvals/inbox/" class="pt-1">
+                        {% csrf_token %}
+                        <input type="hidden" name="pr_id" value="{{ pr.id }}">
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <input type="text" name="comments" class="form-control form-control-sm rounded-pill px-3" placeholder="Add comment..." aria-label="Approval comments" style="height: 36px; font-size: 0.85rem;">
+                            </div>
+                            <div class="col-6">
+                                <button type="submit" name="action" value="APPROVED" class="btn btn-success btn-sm rounded-pill w-100 fw-semibold shadow-sm d-inline-flex align-items-center justify-content-center" style="height: 38px;">
+                                    <i class="fa-solid fa-check me-1"></i> Approve
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button type="submit" name="action" value="REJECTED" class="btn btn-danger btn-sm rounded-pill w-100 fw-semibold shadow-sm d-inline-flex align-items-center justify-content-center" style="height: 38px;">
+                                    <i class="fa-solid fa-xmark me-1"></i> Reject
+                                </button>
+                            </div>
+                            <div class="col-12">
+                                <a href="{% url 'requisition_detail' pr.pk %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-2 fw-semibold text-nowrap w-100 text-center d-inline-flex align-items-center justify-content-center" style="height: 36px;">
+                                    <i class="fa-solid fa-arrow-right me-2"></i> Review & Decision
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                    {% else %}
                     <a href="{% url 'requisition_detail' pr.pk %}" class="btn btn-sm btn-primary rounded-pill px-3 py-2 fw-semibold shadow-sm text-nowrap w-100 text-center d-inline-flex align-items-center justify-content-center" style="height: 38px;">
                         <i class="fa-solid fa-arrow-right me-2"></i> Review & Decision
                     </a>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
@@ -443,9 +470,26 @@
                                 {% endif %}
                             </td>
                             <td class="pe-4 text-end" style="white-space: nowrap !important; min-width: 190px;">
+                                {% if pr.can_inline_decide %}
+                                <form method="POST" action="/approvals/inbox/" class="d-inline-flex flex-nowrap justify-content-end align-items-center gap-1.5 mb-0">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="pr_id" value="{{ pr.id }}">
+                                    <input type="text" name="comments" class="form-control form-control-sm d-inline-block rounded-pill px-3" style="width: 145px; height: 32px; font-size: 0.8rem;" placeholder="Add comment..." aria-label="Approval comments">
+                                    <button type="submit" name="action" value="APPROVED" class="btn btn-success btn-sm rounded-pill px-3 py-1 fw-semibold shadow-sm text-nowrap d-inline-flex align-items-center" style="height: 32px;">
+                                        <i class="fa-solid fa-check me-1"></i> Approve
+                                    </button>
+                                    <button type="submit" name="action" value="REJECTED" class="btn btn-danger btn-sm rounded-pill px-3 py-1 fw-semibold shadow-sm text-nowrap d-inline-flex align-items-center" style="height: 32px;">
+                                        <i class="fa-solid fa-xmark me-1"></i> Reject
+                                    </button>
+                                    <a href="{% url 'requisition_detail' pr.pk %}" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 fw-semibold text-nowrap d-inline-flex align-items-center" style="height: 32px;" title="Review &amp; Decision">
+                                        <i class="fa-solid fa-arrow-right me-1"></i> Review &amp; Decision
+                                    </a>
+                                </form>
+                                {% else %}
                                 <a href="{% url 'requisition_detail' pr.pk %}" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm text-nowrap d-inline-flex align-items-center" style="height: 34px;">
                                     <i class="fa-solid fa-arrow-right me-1.5"></i> Review &amp; Decision
                                 </a>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
