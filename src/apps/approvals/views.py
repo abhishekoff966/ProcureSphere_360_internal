@@ -362,6 +362,94 @@ def approvals_inbox_view(request):
             pending_display = page_obj
             history_display = history_prs
 
+            # Annotate inline approval eligibility and budget overrun status without altering routing rules
+            from apps.approvals.models import ApprovalPolicy
+            from apps.approvals.services import evaluate_approval_chain
+            from apps.budgets.models import Budget
+
+            today_date = timezone.now().date()
+            pending_items = list(page_obj.object_list)
+            cc_ids = [pr.cost_center_id for pr in pending_items if pr.cost_center_id]
+            active_budgets = {}
+            if cc_ids:
+                for b in Budget.objects.filter(
+                    cost_center_id__in=cc_ids,
+                    fiscal_period__start_date__lte=today_date,
+                    fiscal_period__end_date__gte=today_date,
+                    fiscal_period__is_closed=False,
+                ).order_by("-fiscal_period__start_date"):
+                    active_budgets.setdefault(b.cost_center_id, b)
+                missing_cc_ids = [cid for cid in cc_ids if cid not in active_budgets]
+                if missing_cc_ids:
+                    for b in Budget.objects.filter(
+                        cost_center_id__in=missing_cc_ids,
+                        fiscal_period__is_closed=False,
+                    ).order_by("-fiscal_period__start_date"):
+                        active_budgets.setdefault(b.cost_center_id, b)
+
+            is_restricted_role = not user.is_superuser and role_code in [
+                Role.AUDITOR,
+                Role.PROC_MGR,
+                "PROC_MGR",
+                Role.LEGAL_MGR,
+                Role.STORES_RECEIVER,
+                Role.REQUESTER,
+            ]
+            for pr in pending_items:
+                b = active_budgets.get(pr.cost_center_id)
+                pr.is_over_budget = bool(
+                    pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW
+                    or (b is not None and (b.available_amount <= 0 or pr.total_amount > b.available_amount))
+                )
+                can_decide = False
+                if not is_restricted_role and pr.status in [
+                    PurchaseRequisition.STATUS_SUBMITTED,
+                    PurchaseRequisition.STATUS_MANAGER_REVIEW,
+                ] and not (pr.is_over_budget and role_code == Role.DEPT_APPROVER):
+                    if user.is_superuser:
+                        can_decide = True
+                    else:
+                        pr_org = (
+                            getattr(getattr(pr, "department", None), "organization", None)
+                            or getattr(getattr(getattr(pr, "cost_center", None), "department", None), "organization", None)
+                            or getattr(pr.requester, "effective_organization", None)
+                        )
+                        chain = evaluate_approval_chain(
+                            module=ApprovalPolicy.MODULE_PR,
+                            amount=pr.total_amount,
+                            department=pr.department,
+                            cost_center=pr.cost_center,
+                            organization=pr_org,
+                        )
+                        step_idx = ApprovalAction.objects.filter(
+                            target_object_id=str(pr.id),
+                            target_model_name="PurchaseRequisition",
+                            action=ApprovalAction.ACTION_APPROVE,
+                        ).count()
+                        if chain and step_idx < len(chain):
+                            step_info = chain[step_idx]
+                            req_role = step_info["approver_role"]
+                            spec_app = step_info["specific_approver"]
+                            eff_app = step_info["effective_approver"]
+                            if spec_app:
+                                can_decide = user == eff_app or user == spec_app
+                            else:
+                                approver_role_code = getattr(getattr(user, "role", None), "code", None)
+                                if (getattr(user, "role_id", None) == req_role.id) or (approver_role_code == req_role.code):
+                                    pr_dept = pr.department or (
+                                        pr.cost_center.department if pr.cost_center else None
+                                    )
+                                    if req_role.code == Role.DEPT_APPROVER and pr_dept and user.department:
+                                        can_decide = (
+                                            user.department == pr_dept
+                                            or (pr.cost_center and user == pr.cost_center.manager)
+                                        )
+                                    else:
+                                        can_decide = True
+                        elif not chain and role_code in [Role.DEPT_APPROVER, Role.SUPER_ADMIN]:
+                            can_decide = True
+                pr.can_inline_decide = can_decide
+
         legal_pending_display = []
         legal_history_display = []
 

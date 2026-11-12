@@ -8,9 +8,9 @@ from django.core.exceptions import PermissionDenied
 from django.db import connection
 from django.db.models import Avg, Count, Q, Sum
 from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
 from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_http_methods
 from redis import Redis
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
@@ -552,35 +552,52 @@ def approver_dashboard_view(request):
     budget_overrun_count = budget_overrun_qs.count()
 
     now = timezone.now()
+    today_date = now.date()
     user_org = getattr(user, "organization", None) or (
         user_department.organization if user_department else None
     )
-    period_filter = Q(start_date__lte=now, end_date__gte=now, is_closed=False)
+    period_filter = Q(start_date__lte=today_date, end_date__gte=today_date, is_closed=False)
     if user_org:
-        current_period = FiscalPeriod.objects.filter(
+        has_open_period = FiscalPeriod.objects.filter(
             period_filter, organization=user_org
-        ).first()
+        ).exists()
     else:
-        current_period = FiscalPeriod.objects.filter(period_filter).first()
+        has_open_period = FiscalPeriod.objects.filter(period_filter).exists()
 
-    raw_available_budget = Decimal("0.00")
-    available_budget = Decimal("0.00")
-    if current_period:
-        if getattr(user, "department_id", None):
-            dept_ccs = CostCenter.objects.filter(department_id=user.department_id)
-        elif user_department:
-            dept_ccs = CostCenter.objects.filter(
-                Q(department=user_department) | Q(manager=user)
-            ).distinct()
-        elif getattr(user, "organization", None):
-            dept_ccs = CostCenter.objects.filter(department__organization=user.organization)
-        else:
-            dept_ccs = CostCenter.objects.filter(manager=user)
-        budgets = Budget.objects.filter(
-            cost_center__in=dept_ccs, fiscal_period=current_period
+    if getattr(user, "department_id", None):
+        dept_ccs = CostCenter.objects.filter(department_id=user.department_id)
+    elif user_department:
+        dept_ccs = CostCenter.objects.filter(
+            Q(department=user_department) | Q(manager=user)
+        ).distinct()
+    elif getattr(user, "organization", None):
+        dept_ccs = CostCenter.objects.filter(department__organization=user.organization)
+    else:
+        dept_ccs = CostCenter.objects.filter(manager=user)
+
+    # Query active budgets directly for department cost centers (consistent with
+    # detail_view / validate_budget_availability_service) instead of binding to a
+    # single arbitrary FiscalPeriod.first().
+    budgets = list(
+        Budget.objects.filter(
+            cost_center__in=dept_ccs,
+            fiscal_period__start_date__lte=today_date,
+            fiscal_period__end_date__gte=today_date,
+            fiscal_period__is_closed=False,
         )
-        raw_available_budget = sum((b.available_amount for b in budgets), Decimal("0.00"))
-        available_budget = max(Decimal("0.00"), raw_available_budget)
+    )
+    if not budgets:
+        budgets = list(
+            Budget.objects.filter(
+                cost_center__in=dept_ccs,
+                fiscal_period__is_closed=False,
+            )
+        )
+    if not has_open_period:
+        has_open_period = bool(budgets) or FiscalPeriod.objects.filter(is_closed=False).exists()
+
+    raw_available_budget = sum((b.available_amount for b in budgets), Decimal("0.00"))
+    available_budget = max(Decimal("0.00"), raw_available_budget)
 
     is_budget_overdrawn = raw_available_budget < Decimal("0.00")
     budget_overrun_amount = (
@@ -588,7 +605,6 @@ def approver_dashboard_view(request):
     )
 
     # Budget validation for pending PR queue to prevent unauthorized approval of over-budget or unfunded PRs
-    today_date = now.date()
     pending_list = list(pending_prs_qs[:10])
     cc_ids = [pr.cost_center_id for pr in pending_list if pr.cost_center_id]
     active_budgets = {}
@@ -598,9 +614,17 @@ def approver_dashboard_view(request):
             fiscal_period__start_date__lte=today_date,
             fiscal_period__end_date__gte=today_date,
             fiscal_period__is_closed=False,
-        )
+        ).order_by("-fiscal_period__start_date")
         for b in cc_budgets:
-            active_budgets[b.cost_center_id] = b
+            active_budgets.setdefault(b.cost_center_id, b)
+        missing_cc_ids = [cid for cid in cc_ids if cid not in active_budgets]
+        if missing_cc_ids:
+            fallback_cc_budgets = Budget.objects.filter(
+                cost_center_id__in=missing_cc_ids,
+                fiscal_period__is_closed=False,
+            ).order_by("-fiscal_period__start_date")
+            for b in fallback_cc_budgets:
+                active_budgets.setdefault(b.cost_center_id, b)
 
     for pr in pending_list:
         b = active_budgets.get(pr.cost_center_id)
@@ -611,7 +635,7 @@ def approver_dashboard_view(request):
         elif (
             b is None
             and raw_available_budget <= 0
-            and current_period
+            and has_open_period
             and (user_department or getattr(user, "organization", None))
         ):
             pr.is_over_budget = True

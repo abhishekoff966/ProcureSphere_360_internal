@@ -165,10 +165,21 @@ def submit_purchase_requisition_service(
         raise ValidationError("Requisition total amount must be greater than zero.")
 
     # Evaluate approval policy (PR-08 fail-closed on missing policy)
+    req_org = (
+        requisition.department.organization
+        if requisition.department and requisition.department.organization
+        else (
+            requisition.cost_center.department.organization
+            if requisition.cost_center and requisition.cost_center.department
+            else getattr(requisition.requester, "effective_organization", None)
+        )
+    )
     chain = evaluate_approval_chain(
         module=ApprovalPolicy.MODULE_PR,
         amount=requisition.total_amount,
         department=requisition.department,
+        cost_center=requisition.cost_center,
+        organization=req_org,
     )
     if not chain:
         dept_name = requisition.department.name if requisition.department else "Global"
@@ -373,10 +384,21 @@ def approve_purchase_requisition_service(
         return requisition
 
     # Evaluate approval chain for this requisition
+    req_org = (
+        requisition.department.organization
+        if requisition.department and requisition.department.organization
+        else (
+            requisition.cost_center.department.organization
+            if requisition.cost_center and requisition.cost_center.department
+            else getattr(requisition.requester, "effective_organization", None)
+        )
+    )
     chain = evaluate_approval_chain(
         module=ApprovalPolicy.MODULE_PR,
         amount=requisition.total_amount,
         department=requisition.department,
+        cost_center=requisition.cost_center,
+        organization=req_org,
     )
 
     # Determine completed approval steps

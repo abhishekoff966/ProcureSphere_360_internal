@@ -618,13 +618,30 @@
                     </h6>
                     <p class="small text-muted mb-3">Review business justification and budget impact, then enter any decision remarks or notes below.</p>
 
-                    <div class="mb-0">
-                        <label class="form-label small fw-semibold text-dark">Decision Comments</label>
+                    <div class="mb-3">
+                        <label for="decisionCommentsSidebar" class="form-label small fw-semibold text-dark">Decision Comments</label>
                         <textarea id="decisionCommentsSidebar" name="comments" class="form-control form-control-sm bg-white" rows="3"
-                            placeholder="Optional comments or notes..."></textarea>
+                            placeholder="Add approval or rejection comments..."></textarea>
                         <div class="form-text small text-muted mt-1">
                             <i class="fa-solid fa-info-circle me-1"></i>Remarks will be recorded with your approval or rejection action.
                         </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <form method="POST" action="{% url 'requisition_approve' pr.pk %}" class="flex-fill" onsubmit="this.querySelector('input[name=comments]').value = (document.getElementById('decisionCommentsSidebar')?.value || '').trim()">
+                            {% csrf_token %}
+                            <input type="hidden" name="comments" value="">
+                            <button type="submit" class="btn btn-success btn-sm rounded-pill shadow-sm w-100 fw-bold py-2">
+                                <i class="fa-solid fa-check me-1"></i>Approve PR
+                            </button>
+                        </form>
+                        <form method="POST" action="{% url 'requisition_reject' pr.pk %}" class="flex-fill" onsubmit="this.querySelector('input[name=comments]').value = (document.getElementById('decisionCommentsSidebar')?.value || 'Rejected').trim()">
+                            {% csrf_token %}
+                            <input type="hidden" name="comments" value="Rejected">
+                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill shadow-sm w-100 fw-bold py-2 bg-white">
+                                <i class="fa-solid fa-times me-1"></i>Reject PR
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -636,13 +653,30 @@
                     </h6>
                     <p class="small text-muted mb-3">This PR exceeds the available budget limit for its Cost Center. Enter required justification below.</p>
 
-                    <div class="mb-0">
-                        <label class="form-label small fw-semibold text-dark">Exception Comments</label>
+                    <div class="mb-3">
+                        <label for="decisionCommentsSidebarBudget" class="form-label small fw-semibold text-dark">Exception Comments</label>
                         <textarea id="decisionCommentsSidebarBudget" name="comments" class="form-control form-control-sm bg-white" rows="3"
                             placeholder="Required justification for budget overrun..."></textarea>
                         <div class="form-text small text-muted mt-1">
                             <i class="fa-solid fa-info-circle me-1"></i>Remarks will be recorded with your exception approval or rejection action.
                         </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <form method="POST" action="{% url 'requisition_approve' pr.pk %}" class="flex-fill" onsubmit="this.querySelector('input[name=comments]').value = (document.getElementById('decisionCommentsSidebarBudget')?.value || '').trim()">
+                            {% csrf_token %}
+                            <input type="hidden" name="comments" value="">
+                            <button type="submit" class="btn btn-warning btn-sm rounded-pill shadow-sm w-100 fw-bold text-dark py-2">
+                                <i class="fa-solid fa-check-double me-1"></i>Approve Exception
+                            </button>
+                        </form>
+                        <form method="POST" action="{% url 'requisition_reject' pr.pk %}" class="flex-fill" onsubmit="this.querySelector('input[name=comments]').value = (document.getElementById('decisionCommentsSidebarBudget')?.value || 'Budget Rejected').trim()">
+                            {% csrf_token %}
+                            <input type="hidden" name="comments" value="Budget Rejected">
+                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill shadow-sm w-100 fw-bold py-2 bg-white">
+                                <i class="fa-solid fa-times me-1"></i>Reject Exception
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
