@@ -586,12 +586,21 @@ def bid_portal_dashboard_view(request):
     """Vendor Bid Portal dashboard: live bid windows and response tracking (sealed)."""
     _require_bid_access(request.user)
     services.sync_all_event_windows()
+    allowed_sizes = (10, 20, 50)
+    raw_size = (request.GET.get("per_page") or "").strip()
+    per_page = int(raw_size) if raw_size.isdigit() and int(raw_size) in allowed_sizes else PAGE_SIZE
+    page_obj = Paginator(get_bid_portal_events(), per_page).get_page(request.GET.get("page"))
+    querystring = f"per_page={per_page}" if per_page != PAGE_SIZE else ""
     return render(
         request,
         "sourcing/bid_portal_dashboard.html",
         {
             "metrics": get_bid_portal_metrics(),
-            "events": get_bid_portal_events(),
+            "events": page_obj.object_list,
+            "page_obj": page_obj,
+            "querystring": querystring,
+            "per_page": per_page,
+            "per_page_choices": list(allowed_sizes),
             "caps": sourcing_capabilities(request.user),
         },
     )

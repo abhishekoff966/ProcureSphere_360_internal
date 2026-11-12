@@ -406,11 +406,17 @@
                             </div>
                         </div>
                         <div class="d-flex align-items-center gap-2 flex-shrink-0 w-100 w-sm-auto justify-content-end">
-                            <a href="{% url 'requisition_attachment_download' pr.pk attachment.pk %}?action=view" target="_blank"
+                            <button type="button"
                                 class="btn btn-sm btn-outline-secondary rounded-pill px-3 flex-fill flex-sm-grow-0 text-center"
-                                title="View {{ attachment.title }}">
+                                title="View {{ attachment.title }}"
+                                data-doc-title="{{ attachment.title }}"
+                                data-doc-size="{{ attachment.file_size|filesizeformat }}"
+                                data-doc-date="{{ attachment.created_at|date:'M d, Y H:i' }}"
+                                data-doc-view-url="{% url 'requisition_attachment_download' pr.pk attachment.pk %}?action=view"
+                                data-doc-download-url="{% url 'requisition_attachment_download' pr.pk attachment.pk %}?action=download"
+                                onclick="openPrDocPreview(this)">
                                 <i class="fa-solid fa-eye me-1"></i>View
-                            </a>
+                            </button>
                             <a href="{% url 'requisition_attachment_download' pr.pk attachment.pk %}?action=download"
                                 class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm text-white flex-fill flex-sm-grow-0 text-center"
                                 title="Download {{ attachment.title }}">
@@ -827,4 +833,57 @@
         </div>
     </div>
 </div>
+<!-- In-App Supporting Document Preview Modal (BUG-009) -->
+<div class="modal fade" id="prDocumentPreviewModal" tabindex="-1" aria-labelledby="prDocPreviewTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-light border-bottom px-4 py-3">
+                <div class="min-width-0">
+                    <h5 class="modal-title fw-bold text-dark text-truncate mb-0" id="prDocPreviewTitle">Document Preview</h5>
+                    <div class="text-muted small" id="prDocPreviewMeta"></div>
+                </div>
+                <div class="d-flex align-items-center gap-2 ms-auto">
+                    <a id="prDocDownloadBtn" href="#" class="btn btn-sm btn-primary rounded-pill px-3">
+                        <i class="fa-solid fa-download me-1"></i>Download
+                    </a>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0 bg-body-tertiary" id="prDocPreviewBody" style="min-height: 420px;"></div>
+        </div>
+    </div>
+</div>
+<script>
+function openPrDocPreview(btn) {
+    const title = btn.getAttribute("data-doc-title") || "Document";
+    const size = btn.getAttribute("data-doc-size") || "";
+    const uploaded = btn.getAttribute("data-doc-date") || "";
+    const viewUrl = btn.getAttribute("data-doc-view-url") || "#";
+    const downloadUrl = btn.getAttribute("data-doc-download-url") || viewUrl;
+
+    document.getElementById("prDocPreviewTitle").textContent = title;
+    document.getElementById("prDocPreviewMeta").textContent = [size, uploaded ? ("Uploaded " + uploaded) : ""].filter(Boolean).join(" • ");
+    document.getElementById("prDocDownloadBtn").setAttribute("href", downloadUrl);
+
+    const bodyEl = document.getElementById("prDocPreviewBody");
+    const ext = title.split(".").pop().toLowerCase();
+    if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) {
+        bodyEl.innerHTML = `<div class="p-4 text-center"><img src="${viewUrl}" alt="" class="img-fluid rounded shadow-sm" style="max-height: 70vh;"></div>`;
+    } else if (["pdf", "txt", "csv"].includes(ext)) {
+        bodyEl.innerHTML = `<iframe src="${viewUrl}" title="${title}" class="w-100 border-0" style="height: 72vh;"></iframe>`;
+    } else {
+        bodyEl.innerHTML = `
+            <div class="p-5 text-center">
+                <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px;">
+                    <i class="fa-solid fa-file-lines fs-2"></i>
+                </div>
+                <h6 class="fw-bold text-dark mb-1">${title}</h6>
+                <p class="text-muted small mb-3">Inline browser rendering is not supported for <code>.${ext}</code> files. Use the Download button above or below to open this document locally.</p>
+                <a href="${downloadUrl}" class="btn btn-primary btn-sm rounded-pill px-4"><i class="fa-solid fa-download me-1"></i>Download ${title}</a>
+            </div>
+        `;
+    }
+    new bootstrap.Modal(document.getElementById("prDocumentPreviewModal")).show();
+}
+</script>
 {% endblock %}

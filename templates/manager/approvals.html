@@ -19,12 +19,15 @@
                 <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-bold px-3 py-1 rounded-pill shadow-xs" style="font-size: 0.75rem; letter-spacing: 0.04em;">
                     <i class="fa-solid fa-eye me-1 text-primary"></i> EXECUTIVE APPROVAL OVERSIGHT
                 </span>
-                <span class="text-muted small">Enterprise pipeline oversight, tier progression, and bottleneck tracking</span>
             </div>
             <h1 class="h3 fw-bold text-dark mb-1 font-heading">Pending Approvals Oversight Desk</h1>
+            <p class="text-muted small mb-1 fw-semibold">Enterprise pipeline oversight, tier progression, and bottleneck tracking</p>
             <p class="text-muted small mb-0">Monitor enterprise purchase requisitions and change order amendments awaiting authorization across departments. Direct approval decisions are rendered by designated department and finance approvers.</p>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a href="/manager/" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-2xs">
+                <i class="fa-solid fa-arrow-left me-1"></i>Back to Dashboard
+            </a>
             <button onclick="loadApprovals()" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-2xs" id="approvalsRefreshBtn">
                 <i class="fa-solid fa-arrows-rotate me-1" id="approvalsRefreshIcon"></i> Refresh Queue
             </button>
@@ -214,6 +217,9 @@
 <script>
     let currentTab = 'pending';
     let allApprovalItems = [];
+    let filteredApprovalItems = [];
+    let currentApprovalPage = 1;
+    const APPROVALS_PAGE_SIZE = 15;
     let activeDecisionContext = null;
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -222,6 +228,7 @@
 
     function switchTab(tab) {
         currentTab = tab;
+        currentApprovalPage = 1;
         const pendingBtn = document.getElementById('tabPendingBtn');
         const historyBtn = document.getElementById('tabHistoryBtn');
         if (tab === 'pending') {
@@ -324,7 +331,15 @@
             return matchType && matchQuery;
         });
 
+        filteredApprovalItems = filtered;
+        currentApprovalPage = 1;
         renderApprovalsList(filtered);
+    }
+
+    function goToApprovalPage(page) {
+        const totalPages = Math.max(1, Math.ceil(filteredApprovalItems.length / APPROVALS_PAGE_SIZE));
+        currentApprovalPage = Math.min(Math.max(1, page), totalPages);
+        renderApprovalsList(filteredApprovalItems);
     }
 
     function renderApprovalsList(items) {
@@ -365,7 +380,13 @@
                         <tbody class="divide-y">
         `;
 
-        items.forEach(it => {
+        const totalItems = items.length;
+        const totalPages = Math.max(1, Math.ceil(totalItems / APPROVALS_PAGE_SIZE));
+        if (currentApprovalPage > totalPages) currentApprovalPage = totalPages;
+        const startIdx = (currentApprovalPage - 1) * APPROVALS_PAGE_SIZE;
+        const pageItems = items.slice(startIdx, startIdx + APPROVALS_PAGE_SIZE);
+
+        pageItems.forEach(it => {
             const isPR = it.type === 'PR';
             const typeBadge = isPR
                 ? `<span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1 fw-bold"><i class="fa-solid fa-file-lines me-1"></i>Requisition</span>`
@@ -435,9 +456,34 @@
             `;
         });
 
+        const showStart = startIdx + 1;
+        const showEnd = Math.min(startIdx + pageItems.length, totalItems);
+        let pageButtonsHtml = '';
+        for (let p = 1; p <= totalPages; p++) {
+            if (p === 1 || p === totalPages || Math.abs(p - currentApprovalPage) <= 1) {
+                pageButtonsHtml += `<li class="page-item ${p === currentApprovalPage ? 'active' : ''}"><button type="button" class="page-link" onclick="goToApprovalPage(${p})">${p}</button></li>`;
+            } else if (Math.abs(p - currentApprovalPage) === 2) {
+                pageButtonsHtml += `<li class="page-item disabled"><span class="page-link">&hellip;</span></li>`;
+            }
+        }
+
         html += `
                         </tbody>
                     </table>
+                </div>
+                <div class="card-footer bg-white border-top px-3 py-2 d-flex flex-wrap justify-content-between align-items-center gap-2" id="approvalsPaginationBar">
+                    <div class="text-muted small" id="approvalsRowSummary">Showing ${showStart}–${showEnd} of ${totalItems} entries</div>
+                    <nav aria-label="Pending approvals pagination">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item ${currentApprovalPage <= 1 ? 'disabled' : ''}">
+                                <button type="button" class="page-link" onclick="goToApprovalPage(${currentApprovalPage - 1})" ${currentApprovalPage <= 1 ? 'disabled' : ''}>Previous</button>
+                            </li>
+                            ${pageButtonsHtml}
+                            <li class="page-item ${currentApprovalPage >= totalPages ? 'disabled' : ''}">
+                                <button type="button" class="page-link" onclick="goToApprovalPage(${currentApprovalPage + 1})" ${currentApprovalPage >= totalPages ? 'disabled' : ''}>Next</button>
+                            </li>
+                        </ul>
+                    </nav>
                 </div>
             </div>
         `;
