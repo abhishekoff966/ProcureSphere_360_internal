@@ -786,11 +786,6 @@ def _admin_index(request, extra_context=None):
 
     is_global_superadmin = bool(request.user.is_superuser and not scoped_org)
 
-<<<<<<< Updated upstream
-=======
-
-
->>>>>>> Stashed changes
     org_qs = Organization.objects.select_related("admin_user").order_by("-created_at", "name")
 
     if scoped_org:
