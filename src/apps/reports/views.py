@@ -1,20 +1,13 @@
 import csv
-
-
-
-
-
-
+from urllib.parse import urlencode
 
 from django.contrib import messages
 
 
 
 from django.contrib.auth.decorators import login_required
-
-
-
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 
 
 
@@ -73,6 +66,31 @@ from apps.reports.services import (
 PROC_REPORT_ROLES = {"PROC_EXEC", "PROCUREMENT_EXECUTIVE", "PROC_MGR", "SUPER_ADMIN"}
 
 AUDIT_REPORT_ROLES = {"AUDITOR", "COMPLIANCE_AUDITOR", "AUDIT", "SUPER_ADMIN", "ADMIN"}
+REPORT_PAGE_SIZE = 10
+REPORT_ALLOWED_PAGE_SIZES = (5, 10, 20, 50)
+
+
+def _resolve_report_page_size(request, default=REPORT_PAGE_SIZE) -> int:
+    raw = (request.GET.get("per_page") or "").strip()
+    if raw.isdigit():
+        parsed = int(raw)
+        if parsed in REPORT_ALLOWED_PAGE_SIZES:
+            return parsed
+    return default
+
+
+def _paginate_report_rows(request, rows, filter_keys=("q", "status"), per_page=None):
+    """Paginate report rows while preserving active GET filter and page-size query params."""
+    resolved_size = per_page or _resolve_report_page_size(request)
+    page_obj = Paginator(rows, resolved_size).get_page(request.GET.get("page"))
+    params = {}
+    for key in filter_keys:
+        val = (request.GET.get(key) or "").strip()
+        if val:
+            params[key] = val
+    if resolved_size != REPORT_PAGE_SIZE:
+        params["per_page"] = str(resolved_size)
+    return page_obj, page_obj.object_list, urlencode(params), resolved_size
 
 
 
@@ -927,30 +945,19 @@ def proc_exec_pr_aging_view(request):
 
 
     statuses = sorted({str(r.get("status", "")) for r in rows if r.get("status")})
-
-
+    total_rows = len(rows)
+    page_obj, page_rows, querystring, per_page = _paginate_report_rows(request, rows)
 
     return render(
-
-
-
         request,
-
-
-
         "pages/reports/proc_exec_pr_aging.html",
-
-
-
         {
-
-
-
-            "rows": rows,
-
-
-
-            "total": len(rows),
+            "rows": page_rows,
+            "page_obj": page_obj,
+            "querystring": querystring,
+            "per_page": per_page,
+            "per_page_choices": list(REPORT_ALLOWED_PAGE_SIZES),
+            "total": total_rows,
 
 
 
@@ -1195,30 +1202,19 @@ def proc_exec_sourcing_cycle_view(request):
 
 
     statuses = sorted({str(r.get("status", "")) for r in rows if r.get("status")})
-
-
+    total_rows = len(rows)
+    page_obj, page_rows, querystring, per_page = _paginate_report_rows(request, rows)
 
     return render(
-
-
-
         request,
-
-
-
         "pages/reports/proc_exec_sourcing_cycle.html",
-
-
-
         {
-
-
-
-            "rows": rows,
-
-
-
-            "total": len(rows),
+            "rows": page_rows,
+            "page_obj": page_obj,
+            "querystring": querystring,
+            "per_page": per_page,
+            "per_page_choices": list(REPORT_ALLOWED_PAGE_SIZES),
+            "total": total_rows,
 
 
 
@@ -1423,30 +1419,19 @@ def proc_exec_po_status_view(request):
 
 
     statuses = sorted({str(r.get("status", "")) for r in rows if r.get("status")})
-
-
+    total_rows = len(rows)
+    page_obj, page_rows, querystring, per_page = _paginate_report_rows(request, rows)
 
     return render(
-
-
-
         request,
-
-
-
         "pages/reports/proc_exec_po_status.html",
-
-
-
         {
-
-
-
-            "rows": rows,
-
-
-
-            "total": len(rows),
+            "rows": page_rows,
+            "page_obj": page_obj,
+            "querystring": querystring,
+            "per_page": per_page,
+            "per_page_choices": list(REPORT_ALLOWED_PAGE_SIZES),
+            "total": total_rows,
 
 
 
@@ -1779,30 +1764,21 @@ def proc_exec_audit_report_view(request):
 
 
     actions = sorted({r["action"] for r in rows})
-
-
+    total_rows = len(rows)
+    page_obj, page_rows, querystring, per_page = _paginate_report_rows(
+        request, rows, filter_keys=("q", "action")
+    )
 
     return render(
-
-
-
         request,
-
-
-
         "pages/reports/proc_exec_audit_report.html",
-
-
-
         {
-
-
-
-            "rows": rows,
-
-
-
-            "total": len(rows),
+            "rows": page_rows,
+            "page_obj": page_obj,
+            "querystring": querystring,
+            "per_page": per_page,
+            "per_page_choices": list(REPORT_ALLOWED_PAGE_SIZES),
+            "total": total_rows,
 
 
 

@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
 
 from .models import Notification
+from .selectors import scope_notifications_for_user
 
 HIGH_PRIORITY_TYPES = [
     Notification.TYPE_APPROVAL_REQUIRED,
@@ -122,7 +123,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        qs = self.queryset.filter(recipient=user).order_by("-created_at")
+        qs = scope_notifications_for_user(
+            self.queryset.filter(recipient=user), user
+        ).order_by("-created_at")
 
         # Filter by read status
         is_read_param = self.request.query_params.get("is_read", "").strip().lower()
@@ -164,7 +167,9 @@ class NotificationViewSet(viewsets.ModelViewSet):
         Returns live KPI counters for the user's notification inbox.
         """
         user = request.user
-        base_qs = Notification.objects.filter(recipient=user)
+        base_qs = scope_notifications_for_user(
+            Notification.objects.filter(recipient=user), user
+        )
 
         total_count = base_qs.count()
         unread_count = base_qs.filter(is_read=False).count()
@@ -230,7 +235,10 @@ class NotificationViewSet(viewsets.ModelViewSet):
         POST /api/v1/notifications/mark-all-read/
         Marks all notifications for the authenticated user as read.
         """
-        updated_count = Notification.objects.filter(recipient=request.user, is_read=False).update(
+        updated_count = scope_notifications_for_user(
+            Notification.objects.filter(recipient=request.user, is_read=False),
+            request.user,
+        ).update(
             is_read=True, updated_at=timezone.now()
         )
         return Response(
