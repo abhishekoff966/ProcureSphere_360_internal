@@ -4,19 +4,11 @@
 {% block title %}{% block sa_title %}Admin Control Center{% endblock %} — ProcureSphere 360{% endblock %}
 
 {% block navbar %}
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 {% if request.user.is_superuser and not request.user.effective_organization %}
 {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/admin/' profile_dropdown_id='saProfileDropdown' notification_url='/superadmin/notifications/' %}
 {% else %}
 {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' profile_dropdown_id='saProfileDropdown' notification_url='/superadmin/notifications/' %}
 {% endif %}
-=======
-{% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' profile_dropdown_id='saProfileDropdown' notification_url='/superadmin/notifications/' %}
->>>>>>> Stashed changes
-=======
-{% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' profile_dropdown_id='saProfileDropdown' notification_url='/superadmin/notifications/' %}
->>>>>>> Stashed changes
 {% endblock navbar %}
 
 {% block layout %}
@@ -364,16 +356,8 @@
                 <span>Admin Workspace</span>
             </div>
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
             {% if request.user.is_superuser and not request.user.effective_organization %}
             <a href="/admin/" class="sa-nav-link {% if request.path == '/admin/' or request.path == '/admin/dashboard/' %}active{% endif %}">
-=======
-            <a href="/superadmin/" class="sa-nav-link {% if request.path == '/superadmin/' or request.path == '/superadmin/dashboard/' or request.path == '/admin/dashboard/' or request.path == '/' %}active{% endif %}">
->>>>>>> Stashed changes
-=======
-            <a href="/superadmin/" class="sa-nav-link {% if request.path == '/superadmin/' or request.path == '/superadmin/dashboard/' or request.path == '/admin/dashboard/' or request.path == '/' %}active{% endif %}">
->>>>>>> Stashed changes
                 <span>Dashboard</span>
             </a>
             {% else %}
