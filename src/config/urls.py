@@ -1,8 +1,8 @@
-from django.views.decorators.http import require_GET
 from django.contrib import admin
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import include, path, re_path
+from django.views.decorators.http import require_GET
 from django.views.generic.base import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
@@ -60,11 +60,7 @@ urlpatterns = [
     path("readyz", readyz, name="readyz"),
     re_path(r"^[Qq]uit/?$", RedirectView.as_view(url="/", permanent=False)),
     re_path(r"^.*prompts\.json$", lambda request: JsonResponse({})),
-<<<<<<< Updated upstream
     path("admin/dashboard/", admin_dashboard_dispatch_view, name="admin_dashboard"),
-=======
-    path("admin/dashboard/", RedirectView.as_view(url="/superadmin/", permanent=False), name="admin_dashboard"),
->>>>>>> Stashed changes
     path("admin/logout/", portal_logout_view, name="admin_logout_override"),
     path("admin/", admin.site.urls),
     path("login/", portal_login_view, name="login"),
