@@ -2,21 +2,23 @@
     <h5 class="modal-title"><i class="fa-solid fa-pen-to-square text-warning me-2"></i>Amend {{ po.po_number }} (V{{ po.version }})</h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
-<form method="post" action="{% url 'orders_amend_modal' po.id %}"
+<form id="po-amend-form" method="post" action="{% url 'orders_amend_modal' po.id %}"
       hx-post="{% url 'orders_amend_modal' po.id %}"
-      hx-target="#modal-content-body" hx-swap="innerHTML">
+      hx-target="#modal-content-body" hx-swap="innerHTML" novalidate>
     {% csrf_token %}
     <div class="modal-body">
         <div class="alert alert-warning small">
             <i class="fa-solid fa-triangle-exclamation me-1"></i>
-            A JSON snapshot of V{{ po.version }} (total ₹{{ po.total_amount|floatformat:2 }}) is preserved
-            immutably in <code>POAmendment</code> + <code>AuditLog</code>. The version increments on save.
+            Previous version details for V{{ po.version }} (total ₹{{ po.total_amount|floatformat:2 }}) will be saved to the audit log.
+            Saving submits a new revision for approval.
         </div>
         {% if form.non_field_errors %}<div class="alert alert-danger small">{{ form.non_field_errors }}</div>{% endif %}
         <div class="mb-3">
             <label class="form-label fw-semibold" for="{{ form.reason.id_for_label }}">Amendment reason *</label>
             {{ form.reason }}
-            {% if form.reason.errors %}<div class="text-danger small">{{ form.reason.errors }}</div>{% endif %}
+            <div class="text-danger small mt-1 {% if not form.reason.errors %}d-none{% endif %}" id="po-amend-reason-error">
+                {% for err in form.reason.errors %}{{ err }}{% endfor %}
+            </div>
         </div>
         <div class="small fw-semibold mb-2">Line items (edit quantity / unit price)</div>
         {% for row in line_rows %}
@@ -27,20 +29,130 @@
                 <div class="col-6">
                     <label class="form-label small" for="{{ row.qty_field.id_for_label }}">Quantity</label>
                     {{ row.qty_field }}
-                    {% if row.qty_field.errors %}<div class="text-danger small">{{ row.qty_field.errors }}</div>{% endif %}
+                    <div class="text-danger small mt-1 {% if not row.qty_field.errors %}d-none{% endif %}" data-field-error="{{ row.qty_field.id_for_label }}">
+                        {% for err in row.qty_field.errors %}{{ err }}{% endfor %}
+                    </div>
                 </div>
                 <div class="col-6">
-                    <label class="form-label small" for="{{ row.price_field.id_for_label }}">Unit price ($)</label>
+                    <label class="form-label small" for="{{ row.price_field.id_for_label }}">Unit price (₹)</label>
                     {{ row.price_field }}
-                    {% if row.price_field.errors %}<div class="text-danger small">{{ row.price_field.errors }}</div>{% endif %}
+                    <div class="text-danger small mt-1 {% if not row.price_field.errors %}d-none{% endif %}" data-field-error="{{ row.price_field.id_for_label }}">
+                        {% for err in row.price_field.errors %}{{ err }}{% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
         {% endfor %}
-        <p class="text-muted small mb-0">Submit persists via <code>amend_purchase_order_service()</code>. Errors re-render inside this modal.</p>
+        <p class="text-muted small mb-0">Submitting records a new change-order revision while keeping earlier order versions preserved for audit review.</p>
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="btn btn-warning text-dark fw-bold">Save amendment</button>
+        <button id="po-amend-save-btn" type="submit" class="btn btn-warning text-dark fw-bold" {% if not form.is_bound %}disabled{% endif %}>Save amendment</button>
     </div>
 </form>
+<script>
+(function () {
+    var form = document.getElementById("po-amend-form");
+    if (!form) return;
+    var saveBtn = document.getElementById("po-amend-save-btn");
+    var reasonInput = form.querySelector('textarea[name="reason"]');
+    var reasonErr = document.getElementById("po-amend-reason-error");
+    var numInputs = Array.prototype.slice.call(
+        form.querySelectorAll('input[name^="quantity_"], input[name^="unit_price_"]')
+    );
+
+    numInputs.forEach(function (el) {
+        if (!el.hasAttribute("data-initial-value")) {
+            el.setAttribute("data-initial-value", (el.value || "").trim());
+        }
+    });
+
+    function markInvalid(el, errEl, message) {
+        if (!el) return;
+        if (message) {
+            el.classList.add("is-invalid");
+            if (errEl) {
+                errEl.textContent = message;
+                errEl.classList.remove("d-none");
+            }
+        } else {
+            el.classList.remove("is-invalid");
+            if (errEl) {
+                errEl.textContent = "";
+                errEl.classList.add("d-none");
+            }
+        }
+    }
+
+    function validateField(el) {
+        var val = parseFloat(el.value);
+        var errEl = form.querySelector('[data-field-error="' + el.id + '"]');
+        if (el.value.trim() === "" || isNaN(val) || val < 0.01) {
+            markInvalid(el, errEl, "Enter a valid positive number (at least 0.01).");
+            return false;
+        }
+        markInvalid(el, errEl, "");
+        return true;
+    }
+
+    function updateState() {
+        var reasonVal = reasonInput ? reasonInput.value.trim() : "";
+        var hasDirtyLine = numInputs.some(function (el) {
+            var initial = parseFloat(el.getAttribute("data-initial-value") || "");
+            var current = parseFloat((el.value || "").trim());
+            if (!isNaN(initial) && !isNaN(current)) {
+                return Math.abs(initial - current) > 1e-6;
+            }
+            return (el.value || "").trim() !== (el.getAttribute("data-initial-value") || "");
+        });
+        var allNumbersValid = numInputs.every(function (el) {
+            var val = parseFloat(el.value);
+            return el.value.trim() !== "" && !isNaN(val) && val >= 0.01;
+        });
+        var isDirty = hasDirtyLine || reasonVal.length > 0;
+        if (saveBtn) {
+            saveBtn.disabled = !(isDirty && allNumbersValid);
+        }
+    }
+
+    numInputs.forEach(function (el) {
+        var errEl = form.querySelector('[data-field-error="' + el.id + '"]');
+        if (errEl && errEl.textContent.trim()) {
+            el.classList.add("is-invalid");
+        }
+        el.addEventListener("input", function () {
+            validateField(el);
+            updateState();
+        });
+    });
+
+    if (reasonInput) {
+        if (reasonErr && reasonErr.textContent.trim()) {
+            reasonInput.classList.add("is-invalid");
+        }
+        reasonInput.addEventListener("input", function () {
+            if (reasonInput.value.trim()) {
+                markInvalid(reasonInput, reasonErr, "");
+            }
+            updateState();
+        });
+    }
+
+    form.addEventListener("submit", function (evt) {
+        var valid = true;
+        numInputs.forEach(function (el) {
+            if (!validateField(el)) valid = false;
+        });
+        if (reasonInput && !reasonInput.value.trim()) {
+            markInvalid(reasonInput, reasonErr, "Amendment justification reason is required.");
+            valid = false;
+        }
+        if (!valid) {
+            evt.preventDefault();
+            evt.stopPropagation();
+        }
+    });
+
+    updateState();
+})();
+</script>

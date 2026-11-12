@@ -32,7 +32,9 @@ def api_schema_dispatch_view(request):
     """
     format_param = request.GET.get("format", "").lower()
     accept_header = request.META.get("HTTP_ACCEPT", "").lower()
-    if format_param in ["json", "yaml"] or ("application/json" in accept_header and "text/html" not in accept_header):
+    if format_param in ["json", "yaml"] or (
+        "application/json" in accept_header and "text/html" not in accept_header
+    ):
         return SpectacularAPIView.as_view()(request)
     return SpectacularSwaggerView.as_view(url_name="schema")(request)
 
@@ -55,7 +57,11 @@ def admin_dashboard_dispatch_view(request):
 urlpatterns = [
     path("robots.txt", robots_txt, name="robots_txt"),
     path("sitemap.xml", sitemap_xml, name="sitemap_xml"),
-    path("favicon.ico", RedirectView.as_view(url="/static/icons/favicon.ico", permanent=False), name="favicon"),
+    path(
+        "favicon.ico",
+        RedirectView.as_view(url="/static/icons/favicon.ico", permanent=False),
+        name="favicon",
+    ),
     path("health", health, name="health"),
     path("readyz", readyz, name="readyz"),
     re_path(r"^[Qq]uit/?$", RedirectView.as_view(url="/", permanent=False)),
@@ -69,18 +75,15 @@ urlpatterns = [
     path("logout/", portal_logout_view, name="logout"),
     path("password-change/", password_change_view, name="password_change"),
     path("accounts/change-password/", change_password_view, name="change_password"),
-
     # Superadmin, Manager & Vendor Portals
     path("superadmin/", include("apps.core.superadmin_urls")),
     path("manager/", include("apps.core.manager_urls")),
     path("manager/api/", include("apps.core.manager_api_urls")),
     path("vendor/", include("apps.vendors.vendor_dashboard_urls")),
-
     # Public landing website - included BEFORE apps.core.urls so that
     # anonymous traffic to "/" resolves to landing_home. Authenticated
     # users are forwarded inside landing_home via direct Python call.
     path("", include("apps.core.landing_urls")),
-
     # Core & Auth & Page Views
     path("", include("apps.core.urls")),
     path("", include("apps.accounts.urls")),
@@ -97,7 +100,6 @@ urlpatterns = [
     path("reports/", include("apps.reports.urls")),
     path("", include("apps.audit.urls")),
     path("budgets/", include("apps.budgets.urls")),
-
     # REST API v1
     path("api/v1/auth/login/", SessionLoginView.as_view(), name="session_login"),
     path("api/v1/auth/token/", SessionLoginView.as_view(), name="token_obtain_pair"),
@@ -122,7 +124,6 @@ urlpatterns = [
     path("api/v1/reports/", include("apps.reports.api_urls")),
     path("api/v1/audit/", include("apps.audit.api_urls")),
     path("api/v1/manager/", include("apps.core.manager_api_urls")),
-
     # OpenAPI Schema & Documentation
     path("api/schema", SpectacularAPIView.as_view()),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
@@ -132,19 +133,20 @@ urlpatterns = [
     path("api/v1/schema/", api_schema_dispatch_view, name="v1-schema"),
     path("api/v1/docs", SpectacularSwaggerView.as_view(url_name="schema")),
     path("api/v1/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="v1-swagger-ui"),
-
     # Catch-all for unknown /api/ routes ensuring consistent JSON error response
     re_path(r"^api/.*$", custom_api_404_view, name="api_not_found"),
-
     # Protected Media Serving (Audit-controlled access)
     re_path(
         r"^media/vendor_docs/(?P<file_path>.*)$",
         protected_vendor_document_view,
         name="protected_vendor_document",
     ),
-    path("media/vendor_documents/<path:file_path>", protected_vendor_document_view, name="protected_vendor_document_alt"),
+    path(
+        "media/vendor_documents/<path:file_path>",
+        protected_vendor_document_view,
+        name="protected_vendor_document_alt",
+    ),
     re_path(r"^media/(?P<file_path>.*)$", protected_media_view, name="protected_media"),
-
     # Catch-all fallback for non-existent routes (ensures branded 404 is rendered even in DEBUG mode)
     re_path(r"^.*$", custom_404_view, name="custom_404_fallback"),
 ]

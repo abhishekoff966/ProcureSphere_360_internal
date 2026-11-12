@@ -1,4 +1,5 @@
 {% extends base_layout|default:'base.html' %}
+{% load core_tags %}
 
 
 
@@ -310,7 +311,7 @@
 
                     <td>
 
-                        <a href="{% if mode == 'governance' %}{% url 'vendor_detail_status' vendor.id %}?section=governance{% else %}{% url 'vendor_detail' vendor.id %}?section={{ mode|default:'master' }}{% endif %}" class="fw-semibold text-decoration-none text-dark">{{ vendor.legal_name }}</a>
+                        <a href="{% if mode == 'governance' %}{% url 'vendor_detail_status' vendor.id %}?section=governance{% else %}{% url 'vendor_detail' vendor.id %}?section={{ mode|default:'master' }}{% endif %}" class="fw-semibold text-decoration-none text-dark">{{ vendor.legal_name|safe_display }}</a>
 
                         {% if vendor.trade_name %}<div class="small text-muted">{{ vendor.trade_name }}</div>{% endif %}
 
@@ -479,7 +480,7 @@
 
                     <a href="{% if mode == 'governance' %}{% url 'vendor_detail_status' vendor.id %}?section=governance{% else %}{% url 'vendor_detail' vendor.id %}?section={{ mode|default:'master' }}{% endif %}" class="fw-bold fs-6 text-dark text-decoration-none text-break d-block mb-0">
 
-                        {{ vendor.legal_name }}
+                        {{ vendor.legal_name|safe_display }}
 
                     </a>
 
