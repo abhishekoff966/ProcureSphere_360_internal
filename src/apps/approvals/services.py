@@ -186,7 +186,43 @@ def evaluate_approval_chain(
     else:
         policies = base_qs
 
+    def _policy_rank(policy):
+        policy_steps = sorted(policy.steps.all(), key=lambda s: s.step_number)
+        has_steps = 1 if policy_steps else 0
+        first_code = (
+            getattr(policy_steps[0].approver_role, "code", "")
+            if policy_steps
+            else ""
+        )
+        # Step-1 PROC_MGR policies cannot be actioned for PRs (PROC_MGR is read-only on Step 1)
+        # unless a specific_approver is explicitly configured or no actionable fallback exists.
+        first_specific = getattr(policy_steps[0], "specific_approver_id", None) if policy_steps else None
+        actionable_pr = (
+            1
+            if (
+                module != ApprovalPolicy.MODULE_PR
+                or first_specific is not None
+                or (first_code and first_code != "PROC_MGR")
+            )
+            else 0
+        )
+        is_std_global = 1 if policy.name == "Standard PR Approval — Global" else 0
+        return (has_steps, actionable_pr, policy.min_amount, is_std_global)
+
+    def _select_best_policy(candidates, *, require_actionable=True):
+        if not candidates:
+            return None
+        pool = (
+            [p for p in candidates if _policy_rank(p)[0] == 1 and _policy_rank(p)[1] == 1]
+            if require_actionable
+            else list(candidates)
+        )
+        if not pool:
+            return None
+        return sorted(pool, key=_policy_rank, reverse=True)[0]
+
     selected_policy = None
+    fallback_candidates = []
 
     # Priority 1: Organization + Department + Cost Center + Module
     if cost_center and department:
@@ -195,8 +231,8 @@ def evaluate_approval_chain(
             if (p.cost_center_id == cost_center.id or cost_center in p.cost_centers.all())
             and (p.department_id == department.id or department in p.departments.all())
         ]
-        if b1:
-            selected_policy = sorted(b1, key=lambda x: x.min_amount, reverse=True)[0]
+        fallback_candidates.extend(b1)
+        selected_policy = _select_best_policy(b1)
 
     # Priority 2: Organization + Department + Module
     if not selected_policy and department:
@@ -205,8 +241,8 @@ def evaluate_approval_chain(
             if (p.department_id == department.id or department in p.departments.all())
             and p.cost_center_id is None and not p.cost_centers.exists() and not p.all_cost_centers
         ]
-        if b2:
-            selected_policy = sorted(b2, key=lambda x: x.min_amount, reverse=True)[0]
+        fallback_candidates.extend(b2)
+        selected_policy = _select_best_policy(b2)
 
     # Priority 3: Organization + Cost Center + Module
     if not selected_policy and cost_center:
@@ -215,8 +251,8 @@ def evaluate_approval_chain(
             if (p.cost_center_id == cost_center.id or cost_center in p.cost_centers.all())
             and p.department_id is None and not p.departments.exists() and not p.all_departments
         ]
-        if b3:
-            selected_policy = sorted(b3, key=lambda x: x.min_amount, reverse=True)[0]
+        fallback_candidates.extend(b3)
+        selected_policy = _select_best_policy(b3)
 
     # Priority 4: Organization + Module (Org default / All Departments & Cost Centers)
     if not selected_policy and organization:
@@ -226,8 +262,8 @@ def evaluate_approval_chain(
             and p.department_id is None and not p.departments.exists()
             and p.cost_center_id is None and not p.cost_centers.exists()
         ]
-        if b4:
-            selected_policy = sorted(b4, key=lambda x: x.min_amount, reverse=True)[0]
+        fallback_candidates.extend(b4)
+        selected_policy = _select_best_policy(b4)
 
     # Priority 5: Global Fallback Policy
     if not selected_policy:
@@ -237,12 +273,18 @@ def evaluate_approval_chain(
             and p.cost_center_id is None and not p.cost_centers.exists()
             and p.organization_id is None
         ]
-        if b5:
-            selected_policy = sorted(b5, key=lambda x: x.min_amount, reverse=True)[0]
+        fallback_candidates.extend(b5)
+        selected_policy = _select_best_policy(b5)
 
     if not selected_policy:
-        # Final fallback across matching amount
-        selected_policy = policies.order_by("-min_amount").first()
+        # Final fallback across matching amount (actionable first, then any configured policy)
+        all_policies = list(policies)
+        selected_policy = _select_best_policy(all_policies, require_actionable=True)
+        if not selected_policy:
+            selected_policy = _select_best_policy(
+                fallback_candidates or all_policies,
+                require_actionable=False,
+            )
 
     if not selected_policy:
         return []

@@ -104,12 +104,14 @@ def test_finance_dashboard_multi_tenant_isolation(client, workflow_setup):
 
 
 @pytest.mark.django_db
-def test_requisition_within_budget_routes_to_finance_for_approval(workflow_setup):
+def test_requisition_within_budget_routes_to_proc_manager_for_approval(client, workflow_setup):
     """
     Requisition within budget:
     Step 1: Department Approver
-    Step 2: Finance / AP Approval
+    Step 2: Procurement Manager Approval (not Finance AP)
     """
+    from apps.notifications.models import Notification
+
     today = timezone.now().date()
     pr = create_purchase_requisition_service(
         title="Defence Radios",
@@ -125,26 +127,60 @@ def test_requisition_within_budget_routes_to_finance_for_approval(workflow_setup
     pr = submit_purchase_requisition_service(requisition=pr, user=workflow_setup["requester_new"])
     assert pr.status == PurchaseRequisition.STATUS_MANAGER_REVIEW
 
-    # Step 1: Department Approver approves -> advances to Step 2
+    # Step 1: Department Approver approves -> advances to Step 2 (Procurement Manager)
     pr = approve_purchase_requisition_service(
         requisition=pr, approver=workflow_setup["dept_approver_new"], comments="Dept approval verified."
     )
     assert pr.status == PurchaseRequisition.STATUS_MANAGER_REVIEW
+    assert Notification.objects.filter(
+        recipient=workflow_setup["proc_mgr_new"],
+        target_url=f"/requisitions/{pr.id}/",
+    ).exists()
 
-    # Step 2: Finance / AP approves -> PR transitions to APPROVED
-    pr = approve_purchase_requisition_service(
-        requisition=pr, approver=workflow_setup["fin_user_new"], comments="Finance budget approval granted."
+    # Step 2 PR must NOT appear in Finance AP PR approval queue
+    client.force_login(workflow_setup["fin_user_new"])
+    fin_resp = client.get(reverse("home"))
+    assert fin_resp.status_code == 200
+    assert pr.id not in [p.id for p in fin_resp.context["pending_finance_prs"]]
+
+    # Finance / AP attempting to approve Step 2 must be blocked
+    with pytest.raises(ValidationError, match="Procurement Manager"):
+        approve_purchase_requisition_service(
+            requisition=pr, approver=workflow_setup["fin_user_new"], comments="Finance attempting Step 2"
+        )
+
+    # Step 2 PR appears as actionable on Procurement Manager Desk & Manager approves via API
+    client.force_login(workflow_setup["proc_mgr_new"])
+    mgr_list = client.get(reverse("manager-approvals-api") + "?tab=pending&type=pr")
+    assert mgr_list.status_code == 200
+    matched = [r for r in mgr_list.json()["results"] if r["id"] == str(pr.id)]
+    assert len(matched) == 1
+    assert matched[0]["can_approve"] is True
+
+    act_resp = client.post(
+        reverse("manager-approval-action-api"),
+        data={
+            "item_type": "PR",
+            "item_id": str(pr.id),
+            "action": "APPROVE",
+            "comments": "Procurement Manager Step 2 approved.",
+        },
+        content_type="application/json",
     )
+    assert act_resp.status_code == 200
+    pr.refresh_from_db()
     assert pr.status == PurchaseRequisition.STATUS_APPROVED
 
 
 @pytest.mark.django_db
-def test_requisition_out_of_budget_requires_procurement_manager_approval(workflow_setup):
+def test_requisition_out_of_budget_routes_to_finance_ap_for_approval(client, workflow_setup):
     """
     Requisition out of budget:
-    Routes to STATUS_BUDGET_REVIEW.
-    Requires Procurement Manager approval to authorize overrun exception.
+    Routes to STATUS_BUDGET_REVIEW and appears on Finance AP Dashboard.
+    Finance AP approves/rejects budget overrun exception.
     """
+    from apps.notifications.models import Notification
+
     today = timezone.now().date()
     # Cost center budget is $50,000. Creating PR totaling $80,000 (exceeds budget)
     pr = create_purchase_requisition_service(
@@ -160,15 +196,36 @@ def test_requisition_out_of_budget_requires_procurement_manager_approval(workflo
     )
     pr = submit_purchase_requisition_service(requisition=pr, user=workflow_setup["requester_new"])
     assert pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW
+    assert Notification.objects.filter(
+        recipient=workflow_setup["fin_user_new"],
+        target_url=f"/requisitions/{pr.id}/",
+    ).exists()
 
-    # Finance user attempting to approve budget overrun is rejected
-    with pytest.raises(ValidationError, match="Only Procurement Manager can approve a budget overrun exception"):
+    # Department Approver cannot approve budget overrun exception
+    with pytest.raises(ValidationError, match="Only Finance AP or Procurement Manager"):
         approve_purchase_requisition_service(
-            requisition=pr, approver=workflow_setup["fin_user_new"], comments="Finance attempting overrun"
+            requisition=pr, approver=workflow_setup["dept_approver_new"], comments="Dept attempting overrun"
         )
 
-    # Procurement Manager approves budget overrun -> forced reservation -> status APPROVED
-    pr = approve_purchase_requisition_service(
-        requisition=pr, approver=workflow_setup["proc_mgr_new"], comments="Procurement Manager approved budget overrun."
+    # Finance AP sees overrun PR in open_budget_exceptions on Finance Dashboard & can_approve=True on detail page
+    client.force_login(workflow_setup["fin_user_new"])
+    fin_resp = client.get(reverse("home"))
+    assert fin_resp.status_code == 200
+    assert pr.id in [p.id for p in fin_resp.context["open_budget_exceptions"]]
+
+    detail_resp = client.get(reverse("requisition_detail", kwargs={"pk": pr.id}))
+    assert detail_resp.status_code == 200
+    assert detail_resp.context["can_approve"] is True
+
+    # Allow overspend on Cost Center budget and approve via Finance AP UI endpoint
+    budget = workflow_setup["budget_new"]
+    budget.allow_overspend = True
+    budget.save(update_fields=["allow_overspend"])
+
+    approve_resp = client.post(
+        reverse("requisition_approve", kwargs={"pk": pr.id}),
+        data={"comments": "Finance AP approved budget exception."},
     )
+    assert approve_resp.status_code == 302
+    pr.refresh_from_db()
     assert pr.status == PurchaseRequisition.STATUS_APPROVED

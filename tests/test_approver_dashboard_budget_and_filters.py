@@ -514,3 +514,133 @@ def test_incoming_pr_renders_approve_reject_and_comment_box_in_detail_and_inbox(
     assert recorded is not None
     assert recorded.comments == "Verified by dept approver"
 
+
+@pytest.mark.django_db
+def test_non_actionable_pr_policy_does_not_hide_dept_approver_controls(client, setup_approver_env):
+    """
+    A stray step-less PR policy or a department-scoped PR policy with Step 1 = PROC_MGR
+    (without specific_approver) must not hijack an actionable DEPT_APPROVER policy and
+    hide Approve / Reject / Comment controls on incoming PRs.
+    """
+    from apps.approvals.services import evaluate_approval_chain
+    from apps.requisitions.services import submit_purchase_requisition_service
+
+    env = setup_approver_env
+    approver_role = env["approver"].role
+    Budget.objects.get_or_create(
+        cost_center=env["cc"],
+        fiscal_period=env["fp"],
+        defaults={"allocated_amount": Decimal("100000.00")},
+    )
+    proc_mgr_role, _ = Role.objects.get_or_create(
+        code=Role.PROC_MGR,
+        defaults={"name": "Procurement Manager"},
+    )
+    fin_role, _ = Role.objects.get_or_create(
+        code=Role.FINANCE_AP,
+        defaults={"name": "Finance AP"},
+    )
+
+    # Replace fixture policy with a Global Standard policy + two competing non-actionable policies
+    ApprovalPolicy.objects.all().delete()
+    std_global = ApprovalPolicy.objects.create(
+        name="Standard PR Approval — Global",
+        module=ApprovalPolicy.MODULE_PR,
+        min_amount=Decimal("0.00"),
+        is_active=True,
+        status=ApprovalPolicy.STATUS_ACTIVE,
+    )
+    ApprovalStep.objects.create(policy=std_global, step_number=1, approver_role=approver_role)
+    ApprovalStep.objects.create(policy=std_global, step_number=2, approver_role=fin_role)
+
+    # Stray global empty policy
+    ApprovalPolicy.objects.create(
+        name="QA Empty Global PR Policy",
+        module=ApprovalPolicy.MODULE_PR,
+        min_amount=Decimal("0.00"),
+        is_active=True,
+        status=ApprovalPolicy.STATUS_ACTIVE,
+    )
+    # Stray department-scoped Step 1 = PROC_MGR policy
+    dept_proc_mgr = ApprovalPolicy.objects.create(
+        name="QA Dept PROC_MGR PR Policy",
+        organization=env["org"],
+        department=env["dept"],
+        module=ApprovalPolicy.MODULE_PR,
+        min_amount=Decimal("0.00"),
+        max_amount=Decimal("100000.00"),
+        is_active=True,
+        status=ApprovalPolicy.STATUS_ACTIVE,
+    )
+    ApprovalStep.objects.create(policy=dept_proc_mgr, step_number=1, approver_role=proc_mgr_role)
+
+    chain = evaluate_approval_chain(
+        module=ApprovalPolicy.MODULE_PR,
+        amount=Decimal("1000.00"),
+        department=env["dept"],
+        cost_center=env["cc"],
+        organization=env["org"],
+    )
+    assert len(chain) == 2
+    assert chain[0]["approver_role"] == approver_role
+    assert chain[1]["approver_role"] == fin_role
+
+    pr = PurchaseRequisition.objects.create(
+        pr_number="PR-POLICY-TEST-01",
+        title="Incoming PR Under Stray Policy",
+        justification="Workstation monitor replacement",
+        requester=env["requester"],
+        department=env["dept"],
+        cost_center=env["cc"],
+        status=PurchaseRequisition.STATUS_DRAFT,
+        total_amount=Decimal("1000.00"),
+        requested_delivery_date=timezone.now().date(),
+    )
+    PRLine.objects.create(
+        requisition=pr,
+        item_description="Monitor",
+        quantity=Decimal("1.00"),
+        unit_of_measure="EA",
+        estimated_unit_price=Decimal("1000.00"),
+    )
+    pr = submit_purchase_requisition_service(requisition=pr, user=env["requester"])
+    assert pr.status == PurchaseRequisition.STATUS_MANAGER_REVIEW
+
+    client.force_login(env["approver"])
+    detail_html = client.get(f"/requisitions/{pr.id}/").content.decode("utf-8")
+    assert 'id="decisionCommentsSidebar"' in detail_html
+    assert "Approve PR" in detail_html
+    assert "Reject PR" in detail_html
+
+    inbox_html = client.get("/approvals/inbox/?status=PENDING").content.decode("utf-8")
+    assert pr.pr_number in inbox_html
+    assert 'name="comments"' in inbox_html
+    assert 'name="action" value="APPROVED"' in inbox_html
+    assert 'name="action" value="REJECTED"' in inbox_html
+
+    # Verify #approvalActionDecision card does NOT contain duplicate Approve/Reject form buttons below Decision Comments
+    card_segment = detail_html.split('id="approvalActionDecision"', 1)[1].split("Approval History", 1)[0]
+    assert 'id="decisionCommentsSidebar"' in card_segment
+    assert "<button" not in card_segment
+    assert "/approve/" not in card_segment
+    assert "/reject/" not in card_segment
+
+
+@pytest.mark.django_db
+def test_department_prs_uses_approver_prefixed_url(client, setup_approver_env):
+    """Department PRs links in Approver workspace point under /approver/department-prs/ and resolve cleanly."""
+    env = setup_approver_env
+    client.force_login(env["approver"])
+
+    dash_resp = client.get("/approver/")
+    assert dash_resp.status_code == 200
+    dash_html = dash_resp.content.decode("utf-8")
+    assert 'href="/approver/department-prs/"' in dash_html
+
+    dept_prs_resp = client.get("/approver/department-prs/")
+    assert dept_prs_resp.status_code == 200
+    assert "Department Purchase Requisitions" in dept_prs_resp.content.decode("utf-8")
+    assert client.get("/approver/requisitions/").status_code == 200
+
+
+

@@ -165,12 +165,6 @@ def _handle_approval_post(request, role_code):
             "Permission Denied: Compliance Auditors hold strictly read-only permissions and cannot approve or reject requisitions.",
         )
         return redirect("approvals_inbox")
-    if role_code in [Role.PROC_MGR, "PROC_MGR"] and not request.user.is_superuser:
-        messages.error(
-            request,
-            "Permission Denied: Procurement Managers maintain view and inspection permissions only and cannot approve or reject purchase requisitions.",
-        )
-        return redirect("manager_approvals")
     if not request.user.is_superuser and role_code in [
         Role.LEGAL_MGR,
         Role.STORES_RECEIVER,
@@ -389,8 +383,6 @@ def approvals_inbox_view(request):
 
             is_restricted_role = not user.is_superuser and role_code in [
                 Role.AUDITOR,
-                Role.PROC_MGR,
-                "PROC_MGR",
                 Role.LEGAL_MGR,
                 Role.STORES_RECEIVER,
                 Role.REQUESTER,
@@ -402,7 +394,10 @@ def approvals_inbox_view(request):
                     or (b is not None and (b.available_amount <= 0 or pr.total_amount > b.available_amount))
                 )
                 can_decide = False
-                if not is_restricted_role and pr.status in [
+                if not is_restricted_role and pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW:
+                    if user.is_superuser or role_code in [Role.FINANCE_AP, Role.PROC_MGR, Role.SUPER_ADMIN]:
+                        can_decide = True
+                elif not is_restricted_role and pr.status in [
                     PurchaseRequisition.STATUS_SUBMITTED,
                     PurchaseRequisition.STATUS_MANAGER_REVIEW,
                 ] and not (pr.is_over_budget and role_code == Role.DEPT_APPROVER):

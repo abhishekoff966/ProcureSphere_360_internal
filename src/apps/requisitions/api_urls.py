@@ -488,6 +488,7 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
             )
         if not user.is_superuser and role_code not in [
             Role.DEPT_APPROVER,
+            Role.PROC_MGR,
             Role.FINANCE_AP,
             Role.SUPER_ADMIN,
         ]:

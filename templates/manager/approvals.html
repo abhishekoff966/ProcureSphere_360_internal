@@ -392,11 +392,25 @@
                 ? `<div class="fw-semibold text-dark">${it.department}</div><div class="text-muted small" style="font-size: 0.75rem;"><i class="fa-regular fa-user me-1"></i>${it.requester_name}</div>`
                 : `<div class="fw-semibold text-dark">${it.vendor_name}</div><div class="text-muted small" style="font-size: 0.75rem;">Dept: ${it.department}</div>`;
 
-            const actionButtons = `
-                <a href="${it.detail_url}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-2xs fw-semibold" title="Inspect Full Requisition & Approval Audit">
-                    Inspect <i class="fa-solid fa-arrow-right ms-1"></i>
-                </a>
-            `;
+            const actionButtons = (isPR && it.can_approve && currentTab === 'pending')
+                ? `
+                    <div class="d-inline-flex gap-1 align-items-center justify-content-end flex-wrap">
+                        <button type="button" onclick="openDecisionModal('PR', '${it.id}', 'APPROVE')" class="btn btn-success btn-sm rounded-pill px-3 fw-semibold shadow-2xs" title="Approve Requisition">
+                            <i class="fa-solid fa-check me-1"></i>Approve
+                        </button>
+                        <button type="button" onclick="openDecisionModal('PR', '${it.id}', 'REJECT')" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold shadow-2xs" title="Reject Requisition">
+                            <i class="fa-solid fa-xmark me-1"></i>Reject
+                        </button>
+                        <a href="${it.detail_url}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-2xs fw-semibold" title="Inspect Full Requisition & Approval Audit">
+                            Inspect <i class="fa-solid fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                `
+                : `
+                    <a href="${it.detail_url}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-2xs fw-semibold" title="Inspect Full Requisition & Approval Audit">
+                        Inspect <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </a>
+                `;
 
             html += `
                 <tr>
