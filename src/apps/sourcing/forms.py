@@ -31,7 +31,7 @@ class SourcingEventForm(forms.Form):
     requisition = forms.ModelChoiceField(
         queryset=PurchaseRequisition.objects.none(),
         required=False,
-        empty_label="Select a requisition (optional)...",
+        empty_label="-- Select Requisition (Optional) --",
         widget=forms.Select(attrs={"class": "form-select"}),
         help_text="Approved requisition this event sources (optional).",
     )

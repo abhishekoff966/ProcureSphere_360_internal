@@ -58,7 +58,7 @@
             </div>
             <div class="col-md-2">
                 <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="">All Statuses</option>
+                    <option value="">-- All Statuses --</option>
                     <option value="ISSUED" {% if status_filter == 'ISSUED' %}selected{% endif %}>ISSUED</option>
                     <option value="ACKNOWLEDGED" {% if status_filter == 'ACKNOWLEDGED' %}selected{% endif %}>ACKNOWLEDGED</option>
                     <option value="PARTIAL_RECEIPT" {% if status_filter == 'PARTIAL_RECEIPT' %}selected{% endif %}>PARTIAL RECEIPT</option>
@@ -70,14 +70,14 @@
             </div>
             <div class="col-md-2">
                 <select name="version" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="">All Versions</option>
+                    <option value="">-- All Versions --</option>
                     <option value="amended" {% if version_filter == 'amended' or version_filter == '>1' %}selected{% endif %}>Amended (v > 1)</option>
                     <option value="1" {% if version_filter == '1' or version_filter == 'original' %}selected{% endif %}>Original (v = 1)</option>
                 </select>
             </div>
             <div class="col-md-2">
                 <select name="compliance" class="form-select form-select-sm" onchange="this.form.submit()">
-                    <option value="">All Compliance</option>
+                    <option value="">-- All Compliance --</option>
                     <option value="AMENDMENT AUDITED" {% if compliance_filter == 'AMENDMENT AUDITED' %}selected{% endif %}>AMENDMENT AUDITED</option>
                 </select>
             </div>

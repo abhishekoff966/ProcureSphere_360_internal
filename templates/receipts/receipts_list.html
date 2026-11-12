@@ -81,7 +81,7 @@
             <div class="col-lg-2 col-md-6">
                 <label for="filter_status" class="form-label small fw-semibold text-dark mb-1">Inspection Status</label>
                 <select class="form-select bg-light" id="filter_status" name="status">
-                    <option value="" {% if not status_filter %}selected{% endif %}>All Statuses</option>
+                    <option value="" {% if not status_filter %}selected{% endif %}>-- All Statuses --</option>
                     <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending Inspection</option>
                     <option value="PASSED" {% if status_filter == 'PASSED' %}selected{% endif %}>Passed</option>
                     <option value="FAILED" {% if status_filter == 'FAILED' or status_filter == 'REJECTED' %}selected{% endif %}>Failed / Rejected</option>
@@ -93,7 +93,7 @@
             <div class="col-lg-2 col-md-6">
                 <label for="filter_po" class="form-label small fw-semibold text-dark mb-1">Purchase Order</label>
                 <select class="form-select bg-light" id="filter_po" name="po">
-                    <option value="" {% if not po_filter %}selected{% endif %}>All POs</option>
+                    <option value="" {% if not po_filter %}selected{% endif %}>-- All POs --</option>
                     {% for po in po_list %}
                     <option value="{{ po.id }}" {% if po_filter == po.id|stringformat:"s" or po_filter == po.po_number %}selected{% endif %}>
                         {{ po.po_number }}

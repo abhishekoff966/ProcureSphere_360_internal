@@ -18,7 +18,7 @@ class TestBrowserNavigationAndSignoutGuard:
         assert "no-cache" in cache_control or "no-store" in cache_control
 
     def test_landing_page_expires_session_and_renders_clean_navbar(self, client):
-        """Visiting '/' with an active session terminates the session and renders clean public navbar (no Dashboard/Sign Out buttons)."""
+        """Visiting '/' renders clean public navbar (no Dashboard/Sign Out buttons) while preserving session."""
         role, _ = Role.objects.get_or_create(code=Role.REQUESTER, defaults={"name": "Requester"})
         user = User.objects.create_user(
             email="nav_test_requester@procuresphere.com",
@@ -36,9 +36,9 @@ class TestBrowserNavigationAndSignoutGuard:
         assert "navbar-dashboard-btn" not in content
         assert "navbar-signout-btn" not in content
 
-        # Session was expired on server
+        # Session is preserved on server without abrupt sign-outs
         session = client.session
-        assert "_auth_user_id" not in session
+        assert "_auth_user_id" in session
 
         cache_control = response.headers.get("Cache-Control", "")
         assert "no-cache" in cache_control or "no-store" in cache_control

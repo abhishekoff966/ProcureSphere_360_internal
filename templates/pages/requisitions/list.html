@@ -28,17 +28,19 @@
             <div class="col-12 col-sm-6 col-md-4 col-lg-4">
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0 rounded-start-pill ps-3"><i class="fa-solid fa-filter text-muted"></i></span>
-                    <select name="status" id="statusFilterSelect" class="form-select border-start-0 rounded-end-pill px-3" onchange="this.form.submit()" style="height: 42px; background-image: url(&quot;data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e&quot;) !important; background-repeat: no-repeat !important; background-position: right 0.85rem center !important; background-size: 16px 12px !important; padding-right: 2.25rem !important;">
-                        <option value="" {% if not status_filter %}selected{% endif %}>All Statuses</option>
+                    <select name="status" id="statusFilterSelect" class="form-select border-start-0 rounded-end-pill px-3" onchange="this.form.submit()" style="height: 42px;">
+                        <option value="" {% if not status_filter %}selected{% endif %}>-- All Statuses --</option>
                         <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending Review</option>
                         <option value="MANAGER_REVIEW" {% if status_filter == 'MANAGER_REVIEW' %}selected{% endif %}>Manager Review</option>
                         <option value="SUBMITTED" {% if status_filter == 'SUBMITTED' %}selected{% endif %}>Submitted</option>
                         <option value="BUDGET_REVIEW" {% if status_filter == 'BUDGET_REVIEW' %}selected{% endif %}>Budget Review</option>
                         <option value="APPROVED" {% if status_filter == 'APPROVED' %}selected{% endif %}>Approved</option>
                         <option value="REJECTED" {% if status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                        {% if role_code != 'DEPT_APPROVER' %}
                         <option value="DRAFT" {% if status_filter == 'DRAFT' %}selected{% endif %}>Draft</option>
                         <option value="SOURCING" {% if status_filter == 'SOURCING' %}selected{% endif %}>In Sourcing</option>
                         <option value="PO_ISSUED" {% if status_filter == 'PO_ISSUED' %}selected{% endif %}>PO Issued</option>
+                        {% endif %}
                     </select>
                 </div>
             </div>
