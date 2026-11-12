@@ -364,6 +364,15 @@ html.direct-to-contact body {
 .mobile-module-hint {
   display: none;
 }
+.mobile-arrow {
+  display: none;
+}
+.desktop-arrow {
+  display: inline;
+}
+.mobile-card-badge {
+  display: none;
+}
 
 @media (max-width: 900px) {
   .desktop-module-hint {
@@ -372,6 +381,45 @@ html.direct-to-contact body {
   .mobile-module-hint {
     display: inline !important;
   }
+  .desktop-arrow {
+    display: none !important;
+  }
+  .mobile-arrow {
+    display: inline !important;
+  }
+  .uiverse-card .mobile-card-badge {
+    display: none;
+  }
+  .uiverse-card.is-active .mobile-card-badge {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 4px;
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 27, 45, 0.78);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    color: #ffffff;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    z-index: 5;
+    pointer-events: none;
+    animation: mobileBadgeBounce 1.8s infinite ease-in-out;
+  }
+}
+
+@keyframes mobileBadgeBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(3px); }
+}
 
   /* Perfectly Center Title on all cards in mobile view (never cut off or shifted right) */
   .uiverse-card .title,
@@ -561,6 +609,11 @@ html.direct-to-contact body {
 .uiverse-card.is-active .card-tap-cue {
   display: none !important;
 }
+
+/* Ensure trust metric bento cards show standard arrow cursor, not hand/pointer */
+.metric-bento-card {
+  cursor: default !important;
+}
 </style>
 {% endblock %}
 
@@ -664,9 +717,9 @@ html.direct-to-contact body {
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font-size:13px;color:#475569;font-weight:650;flex-wrap:wrap;gap:8px;">
               <span class="module-action-hint">
                 <span class="desktop-module-hint">Hover on any module:</span>
-                <span class="mobile-module-hint">Select any module below:</span>
+                <span class="mobile-module-hint">Tap any module to view details below 👇</span>
               </span>
-              <span id="active-module-label" style="color:#0052cc;font-weight:750;">Purchase and Approvals selected →</span>
+              <span id="active-module-label" style="color:#0052cc;font-weight:750;">Purchase and Approvals selected <span class="desktop-arrow">→</span><span class="mobile-arrow">↓</span></span>
             </div>
             <div class="cinematic-cards-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
               {% for mod in platform_modules %}
@@ -678,7 +731,7 @@ html.direct-to-contact body {
                   data-color="{{ mod.theme_color }}"
                   data-accent="{{ mod.accent_light }}"
                   data-summary="{{ mod.summary }}"
-                  onclick="selectPlatformModule({{ mod.id }}, true)"
+                  onclick="selectPlatformModule({{ mod.id }}, true); handleMobileModuleClick({{ mod.id }});"
                   onmouseenter="selectPlatformModule({{ mod.id }}, false)"
                   role="button"
                   tabindex="0"
@@ -688,6 +741,10 @@ html.direct-to-contact body {
                     {% include 'landing/partials/icon.html' with name=mod.icon size=22 %}
                   </div>
                   <div class="title" style="font-size:clamp(1.2rem,1.35vw,1.45rem);top:50%;font-weight:800;">{{ mod.name_html|default:mod.name|safe }}</div>
+                  <div class="mobile-card-badge">
+                    <span>Details below</span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+                  </div>
                   <div class="box box3"></div>
                   <div class="box box2"></div>
                   <div class="box box1">
@@ -762,7 +819,7 @@ html.direct-to-contact body {
           </p>
         </div>
         <div class="trust-animation-container" style="max-width: 460px;">
-          <img src="{% static 'landing/images/enterprise_collaboration.webp' %}?v=3" alt="Enterprise Procurement Collaboration" loading="lazy" />
+          <img src="{% static 'landing/images/enterprise_collaboration.webp' %}?v=4" alt="Enterprise Procurement Collaboration" loading="lazy" />
         </div>
       </div>
 
@@ -787,7 +844,7 @@ html.direct-to-contact body {
                   {% elif card.icon == 'receipt' %}
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18 17H6v-2h12v2zm0-4H6v-2h12v2zm0-4H6V7h12v2zM3 22l1.5-1.5L6 22l1.5-1.5L9 22l1.5-1.5L12 22l1.5-1.5L15 22l1.5-1.5L18 22l1.5-1.5L21 22V2l-1.5 1.5L18 2l-1.5 1.5L15 2l-1.5 1.5L12 2l-1.5 1.5L9 2 7.5 3.5 6 2 4.5 3.5 3 2v20z"/></svg>
                   {% elif card.icon == 'savings' %}
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12M6 8h12M6 13l8.5 8M6 13h3a4.5 4.5 0 0 0 0-9"/></svg>
                   {% else %}
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
                   {% endif %}
@@ -1066,7 +1123,7 @@ html.direct-to-contact body {
       {% csrf_token %}
       <div class="form-grid" style="grid-template-columns: repeat(2, 1fr);">
         <label>
-          <span>Name</span>
+          <span>Name <span style="color: #dc2626; font-weight: bold;" aria-hidden="true">*</span></span>
           <input
             required
             type="text"
@@ -1080,7 +1137,7 @@ html.direct-to-contact body {
           />
         </label>
         <label>
-          <span>Mobile Number</span>
+          <span>Mobile Number <span style="color: #dc2626; font-weight: bold;" aria-hidden="true">*</span></span>
           <div class="phone-input-group" style="display:flex;gap:8px;align-items:stretch;">
             <select
               name="country_code"
@@ -1114,7 +1171,7 @@ html.direct-to-contact body {
         </label>
       </div>
       <label>
-        <span>Email</span>
+        <span>Email <span style="color: #dc2626; font-weight: bold;" aria-hidden="true">*</span></span>
         <input
           required
           type="email"
@@ -1126,7 +1183,7 @@ html.direct-to-contact body {
         />
       </label>
       <label>
-        <span>Message</span>
+        <span>Message <span style="color: #dc2626; font-weight: bold;" aria-hidden="true">*</span></span>
         <textarea
           required
           name="message"
@@ -1153,6 +1210,20 @@ html.direct-to-contact body {
 
 {% block extra_js %}
 <script>
+// Auto-scroll on mobile/tablet to the details section when a module card is tapped
+function handleMobileModuleClick(modId) {
+  if (window.innerWidth <= 900) {
+    var detailPanel = document.getElementById('module-detail-panel');
+    if (detailPanel) {
+      setTimeout(function() {
+        var navHeight = 70;
+        var panelTop = detailPanel.getBoundingClientRect().top + window.pageYOffset - navHeight;
+        window.scrollTo({ top: panelTop, behavior: 'smooth' });
+      }, 140);
+    }
+  }
+}
+
 // Mobile number and country code dynamic validation
 function updatePhoneValidation(selectEl) {
   if (!selectEl) selectEl = document.getElementById('contact-country-code');
