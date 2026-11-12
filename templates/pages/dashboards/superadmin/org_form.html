@@ -1,11 +1,18 @@
 <style>
     /* Force pristine light mode styling for modal form inputs regardless of OS/browser dark mode */
     #modal-content-body,
+    #modal-content-body .org-modal-form,
     #modal-content-body .modal-body,
     #modal-content-body .modal-header,
     #modal-content-body .modal-footer {
         background-color: #ffffff !important;
         color: #1e293b !important;
+    }
+    #modal-content-body .org-error-banner {
+        background-color: #fef2f2 !important;
+        border: 1px solid #fecaca !important;
+        color: #991b1b !important;
+        border-radius: 0.75rem !important;
     }
     #modal-content-body .form-control,
     #modal-content-body .form-select,
@@ -63,42 +70,44 @@
     }
 </style>
 
-<div class="modal-header bg-light border-bottom-0 pb-0">
+<div class="modal-header bg-light border-bottom px-4 py-3 rounded-top-4">
     <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-sitemap text-primary me-2"></i>{% if is_edit %}Edit Organization{% else %}Create Organization{% endif %}</h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
-<form hx-post="{% if is_edit %}{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ form.instance.pk }}/edit/{% else %}{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}create/{% endif %}" hx-target="#modal-content-body" hx-swap="outerHTML" autocomplete="off">
+<form id="orgModalForm" class="org-modal-form bg-white rounded-bottom-4" hx-post="{% if is_edit %}{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ form.instance.pk }}/edit/{% else %}{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}create/{% endif %}" hx-target="#modal-content-body" hx-swap="innerHTML" autocomplete="off">
     <!-- Anti-autofill decoy inputs to capture browser password manager -->
     <div style="position: absolute; left: -9999px; top: -9999px; opacity: 0; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
         <input type="text" name="fake_username_anti_autofill" tabindex="-1" autocomplete="username">
         <input type="password" name="fake_password_anti_autofill" tabindex="-1" autocomplete="current-password">
     </div>
     {% csrf_token %}
-    <div class="modal-body pt-4" style="max-height: calc(85vh - 120px); overflow-y: auto;">
+    <div class="modal-body p-4" id="orgModalBodyScroll" style="max-height: calc(85vh - 130px); overflow-y: auto; background-color: #ffffff !important;">
         {% if form.errors %}
-        <div class="alert alert-danger py-2 px-3 small rounded-3 mb-3 d-flex align-items-center gap-2 shadow-sm">
-            <i class="fa-solid fa-triangle-exclamation text-danger fs-6"></i>
-            <span class="fw-semibold">
-                {% if form.admin_email.errors %}
-                    {{ form.admin_email.errors|striptags }}
-                {% elif form.code.errors %}
-                    {{ form.code.errors|striptags }}
-                {% elif form.name.errors %}
-                    {{ form.name.errors|striptags }}
-                {% elif form.tax_identifier.errors %}
-                    {{ form.tax_identifier.errors|striptags }}
-                {% elif form.address.errors %}
-                    {{ form.address.errors|striptags }}
-                {% elif form.admin_user.errors %}
-                    {{ form.admin_user.errors|striptags }}
-                {% else %}
-                    Please correct the highlighted errors below before saving.
-                {% endif %}
-            </span>
+        <div id="orgFormErrorAlert" class="alert alert-danger org-error-banner py-2 px-3 small mb-3 d-flex align-items-start gap-2 shadow-sm" role="alert">
+            <i class="fa-solid fa-triangle-exclamation text-danger mt-1 flex-shrink-0"></i>
+            <div class="flex-grow-1">
+                <div class="fw-bold text-danger">Unable to save organization</div>
+                <div class="text-danger-emphasis">
+                    {% if form.admin_email.errors %}
+                        {{ form.admin_email.errors|striptags }}
+                    {% elif form.code.errors %}
+                        {{ form.code.errors|striptags }}
+                    {% elif form.name.errors %}
+                        {{ form.name.errors|striptags }}
+                    {% elif form.tax_identifier.errors %}
+                        {{ form.tax_identifier.errors|striptags }}
+                    {% elif form.address.errors %}
+                        {{ form.address.errors|striptags }}
+                    {% elif form.admin_user.errors %}
+                        {{ form.admin_user.errors|striptags }}
+                    {% elif form.non_field_errors %}
+                        {{ form.non_field_errors|striptags }}
+                    {% else %}
+                        Please review the highlighted fields below and try again.
+                    {% endif %}
+                </div>
+            </div>
         </div>
-        {% endif %}
-        {% if form.non_field_errors %}
-        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
         {% endif %}
         <div class="row g-3">
             <div class="col-md-6">
@@ -451,7 +460,12 @@ window.updateOrgStatusLabel = function(el) {
 
 
 (function() {
-    var formEl = document.querySelector("form[hx-post]");
+    var errAlert = document.getElementById("orgFormErrorAlert");
+    var scrollBody = document.getElementById("orgModalBodyScroll");
+    if (errAlert && scrollBody) {
+        scrollBody.scrollTop = 0;
+    }
+    var formEl = document.getElementById("orgModalForm") || document.querySelector("form[hx-post]");
     var emailEl = document.getElementById("id_admin_email");
     var warningIcon = document.getElementById("admin_email_warning_icon");
     var clientErr = document.getElementById("admin_email_client_error");
