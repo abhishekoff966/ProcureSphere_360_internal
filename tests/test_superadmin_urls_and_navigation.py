@@ -30,6 +30,7 @@ class TestSuperadminURLsAndNavigation:
         # /superadmin/
         resp_home = superadmin_client.get(reverse("superadmin:home"))
         assert resp_home.status_code == 200
+        assert "Contact Enquiries" not in resp_home.content.decode("utf-8")
 
         # /superadmin/dashboard/
         resp_dash = superadmin_client.get(reverse("superadmin:dashboard"))
@@ -71,6 +72,10 @@ class TestSuperadminURLsAndNavigation:
         assert 'href="/superadmin/reports/"' in content
         assert 'href="/superadmin/vendors/"' in content
         assert 'href="/superadmin/rules/"' in content
+
+        # Contact Enquiries must NOT appear in Organization Admin dashboard/sidebar
+        assert 'href="/superadmin/contact-enquiries/"' not in content
+        assert "Contact Enquiries" not in content
 
         # Ensure old un-prefixed links are not in the sidebar
         assert 'href="/notifications/"' not in content

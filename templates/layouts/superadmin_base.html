@@ -353,7 +353,7 @@
         <nav class="flex-grow-1 overflow-y-auto px-2 py-3 d-flex flex-column gap-1 sa-nav-scroll" id="menu" style="flex: 1 1 0%; min-height: 0;" aria-label="Admin Navigation">
             <div class="workspace-heading sa-workspace-header">
                 <i class="fa-solid fa-user-shield me-2"></i>
-                <span>Admin Workspace</span>
+                <span>{% if request.user.is_superuser and not request.user.effective_organization %}Super Admin Workspace{% else %}Admin Workspace{% endif %}</span>
             </div>
 
             {% if request.user.is_superuser and not request.user.effective_organization %}
@@ -405,9 +405,6 @@
 
             <div class="sa-nav-separator"></div>
             <div class="sa-nav-label">Oversight &amp; Audit</div>
-            <a href="/superadmin/contact-enquiries/" class="sa-nav-link {% if '/superadmin/contact-enquiries/' in request.path %}active{% endif %}">
-                <span>Contact Enquiries</span>
-            </a>
             <a href="/superadmin/notifications/" class="sa-nav-link {% if 'notifications' in request.path %}active{% endif %}">
                 <span>Notifications &amp; Alerts</span>
             </a>
@@ -419,22 +416,6 @@
             </a>
             {% endif %}
         </nav>
-
-        <!-- Sidebar Profile Container -->
-        <div class="p-3 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between gap-2 mt-auto" style="min-width: 0;">
-            <div class="d-flex align-items-center gap-2 overflow-hidden" style="min-width: 0;">
-                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold flex-shrink-0" style="width: 34px; height: 34px; font-size: 0.85rem;">
-                    {{ request.user.email|slice:":1"|upper }}
-                </div>
-                <div class="overflow-hidden" style="min-width: 0;">
-                    <div class="text-truncate fw-semibold small text-dark" title="{{ request.user.email }}">{{ request.user.email }}</div>
-                    <div class="text-truncate text-muted" style="font-size: 0.72rem;">{{ request.user.role.name|default:"Super Admin" }}</div>
-                </div>
-            </div>
-            <a href="/logout/" class="btn btn-outline-secondary btn-sm rounded-circle flex-shrink-0 d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px; padding: 0;" title="Sign out">
-                <i class="fa-solid fa-arrow-right-from-bracket"></i>
-            </a>
-        </div>
     </aside>
 
     <!-- Main Content Area -->
