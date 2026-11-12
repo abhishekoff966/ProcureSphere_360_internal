@@ -13,6 +13,8 @@ from apps.accounts.views import (
     portal_login_view,
     portal_logout_view,
 )
+from apps.contracts import views as contracts_views
+from apps.core import superadmin_views
 from apps.core.seo_views import robots_txt, sitemap_xml
 from apps.core.views import (
     custom_404_view,
@@ -20,6 +22,17 @@ from apps.core.views import (
     protected_media_view,
     protected_vendor_document_view,
 )
+from apps.invoices import views as invoices_views
+from apps.notifications.views import (
+    notification_list_view,
+    notification_mark_all_read_view,
+    notification_open_view,
+)
+from apps.orders import views as orders_views
+from apps.receipts import views as receipts_views
+from apps.requisitions import views as requisitions_views
+from apps.sourcing import views as sourcing_views
+from apps.vendors import views as vendors_views
 
 from .healthchecks import health, readyz
 
@@ -68,6 +81,50 @@ urlpatterns = [
     re_path(r"^.*prompts\.json$", lambda request: JsonResponse({})),
     path("admin/dashboard/", admin_dashboard_dispatch_view, name="admin_dashboard"),
     path("admin/logout/", portal_logout_view, name="admin_logout_override"),
+    path("admin/notifications/", notification_list_view, name="admin_notifications"),
+    path(
+        "admin/notifications/<uuid:notification_id>/open/",
+        notification_open_view,
+        name="admin_notification_open",
+    ),
+    path(
+        "admin/notifications/mark-all-read/",
+        notification_mark_all_read_view,
+        name="admin_notification_mark_all_read",
+    ),
+    path("admin/orders/", orders_views.list_view, name="admin_orders_list"),
+    path("admin/orders/<uuid:pk>/", orders_views.detail_view, name="admin_order_detail"),
+    path("admin/purchase-orders/", orders_views.list_view, name="admin_purchase_orders_list"),
+    path("admin/purchase-orders/<uuid:pk>/", orders_views.detail_view, name="admin_purchase_order_detail"),
+    path("admin/requisitions/", requisitions_views.list_view, name="admin_requisitions_list"),
+    path("admin/requisitions/<uuid:pk>/", requisitions_views.detail_view, name="admin_requisition_detail"),
+    path("admin/invoices/", invoices_views.list_view, name="admin_invoices_list"),
+    path("admin/invoices/<uuid:invoice_id>/", invoices_views.invoice_detail_view, name="admin_invoice_detail"),
+    path("admin/contracts/", contracts_views.list_view, name="admin_contracts_list"),
+    path("admin/contracts/<uuid:contract_id>/", contracts_views.detail_view, name="admin_contract_detail"),
+    path("admin/vendors/", vendors_views.vendor_list_view, name="admin_vendors_list"),
+    path("admin/vendors/<uuid:vendor_id>/", vendors_views.vendor_overview_view, name="admin_vendor_detail"),
+    path("admin/receipts/<uuid:grn_id>/", receipts_views.receipt_detail_view, name="admin_receipt_detail"),
+    path("admin/receipts/<uuid:grn_id>/inspect/", receipts_views.receipt_inspect_view, name="admin_receipt_inspect"),
+    path("admin/sourcing-events/", sourcing_views.sourcing_list_view, name="admin_sourcing_list"),
+    path("admin/sourcing-events/<uuid:event_id>/", sourcing_views.sourcing_detail_view, name="admin_sourcing_detail"),
+    path("admin/organizations/", superadmin_views.org_list_view, name="admin_organizations"),
+    path("admin/organizations/create/", superadmin_views.org_create_view, name="admin_org_create"),
+    path("admin/organizations/<uuid:org_id>/", superadmin_views.org_dashboard_view, name="admin_org_dashboard"),
+    path("admin/organizations/<uuid:org_id>/view/", superadmin_views.org_detail_view, name="admin_org_detail"),
+    path("admin/organizations/<uuid:org_id>/edit/", superadmin_views.org_edit_view, name="admin_org_edit"),
+    path("admin/organizations/<uuid:org_id>/delete/", superadmin_views.org_delete_view, name="admin_org_delete"),
+    path(
+        "admin/organizations/<uuid:org_id>/resend-credentials/",
+        superadmin_views.org_resend_credentials_view,
+        name="admin_org_resend_credentials",
+    ),
+    path("admin/contact-enquiries/", superadmin_views.contact_enquiry_list_view, name="admin_contact_enquiries"),
+    path(
+        "admin/contact-enquiries/<uuid:enquiry_id>/status/",
+        superadmin_views.contact_enquiry_status_view,
+        name="admin_contact_enquiry_status",
+    ),
     path("admin/", admin.site.urls),
     path("login/", portal_login_view, name="login"),
     path("login", portal_login_view),

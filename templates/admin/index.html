@@ -572,7 +572,11 @@
     <!-- LEFT SIDEBAR (No icons/emojis, light blue gradient) -->
     <aside id="saSidebar" class="offcanvas-lg offcanvas-start sa-sidebar d-flex flex-column flex-shrink-0" tabindex="-1" aria-labelledby="saSidebarLabel">
         <!-- Sidebar Brand Header (Logo + Toggle Button) -->
+        {% if is_global_superadmin and not scoped_org %}
+        {% include 'partials/sidebar_header.html' with sidebar_id='saSidebar' dashboard_url='/admin/' %}
+        {% else %}
         {% include 'partials/sidebar_header.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' %}
+        {% endif %}
         <!-- Sidebar Workspace Header -->
         <div class="px-2 pt-2">
             <div class="workspace-heading sa-workspace-header">
@@ -585,26 +589,27 @@
         <div class="flex-grow-1 overflow-y-auto px-2 py-2">
             <ul class="nav nav-pills flex-column gap-1" id="menu">
                 <li class="nav-item">
+                    {% if is_global_superadmin and not scoped_org %}
+                    <a href="/admin/" class="nav-link sa-nav-link rounded-3 py-2 px-3 {% if request.path == '/admin/' or request.path == '/admin/dashboard/' %}active{% endif %}">
+                        <span>Dashboard</span>
+                    </a>
+                    {% else %}
                     <a href="/superadmin/" class="nav-link sa-nav-link rounded-3 py-2 px-3 {% if request.path == '/superadmin/' or request.path == '/' %}active{% endif %}">
                         <span>Dashboard</span>
                     </a>
+                    {% endif %}
                 </li>
 
                 {% if is_global_superadmin and not scoped_org %}
                 <li class="sa-nav-separator"></li>
                 <li class="sa-nav-label">Organization Management</li>
                 <li class="nav-item">
-                    <a href="/superadmin/organizations/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                    <a href="/admin/organizations/" class="nav-link sa-nav-link rounded-3 py-2 px-3 {% if '/admin/organizations/' in request.path or '/superadmin/organizations/' in request.path %}active{% endif %}">
                         <span>Organizations</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/superadmin/users/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
-                        <span>Manage Users &amp; Roles</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/admin/core/contactenquiry/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                    <a href="/admin/contact-enquiries/" class="nav-link sa-nav-link rounded-3 py-2 px-3 {% if '/admin/contact-enquiries/' in request.path or '/superadmin/contact-enquiries/' in request.path %}active{% endif %}">
                         <span>Contact Enquiries</span>
                     </a>
                 </li>
@@ -653,7 +658,7 @@
                 <li class="sa-nav-separator"></li>
                 <li class="sa-nav-label">Oversight &amp; Audit</li>
                 <li class="nav-item">
-                    <a href="/admin/core/contactenquiry/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
+                    <a href="/superadmin/contact-enquiries/" class="nav-link sa-nav-link rounded-3 py-2 px-3">
                         <span>Contact Enquiries</span>
                     </a>
                 </li>
@@ -694,7 +699,11 @@
     </aside>
 
     <!-- GLOBAL ENTERPRISE STANDARDIZED NAVBAR -->
+    {% if is_global_superadmin and not scoped_org %}
+    {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/admin/' profile_dropdown_id='adminIndexProfileDropdown' notification_url='/admin/notifications/' %}
+    {% else %}
     {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' profile_dropdown_id='adminIndexProfileDropdown' notification_url='/superadmin/notifications/' %}
+    {% endif %}
 
     <!-- MAIN DASHBOARD CONTENT AREA -->
     <div class="d-flex flex-column flex-grow-1 admin-index-layout-container overflow-hidden" style="min-width: 0; min-height: calc(100vh - 70px);">
@@ -740,13 +749,10 @@
                     </div>
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         {% if can_add_organization and not scoped_org %}
-                        <button type="button" hx-get="/superadmin/organizations/create/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn rounded-pill fw-bold px-4 shadow-sm" style="background: #F59E0B; color: #1B2A4A;">
+                        <button type="button" hx-get="/admin/organizations/create/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn rounded-pill fw-bold px-4 shadow-sm" style="background: #F59E0B; color: #1B2A4A;">
                             <i class="fa-solid fa-plus me-1"></i> Create Organization
                         </button>
                         {% endif %}
-                        <a href="/superadmin/audit/" class="btn rounded-pill fw-bold px-4 py-2 shadow-sm d-inline-flex align-items-center" style="background: #F59E0B; color: #1B2A4A; font-size: 0.88rem;">
-                            <i class="fa-solid fa-clock-rotate-left me-2"></i> Audit History
-                        </a>
                     </div>
                 </div>
             </div>
@@ -758,8 +764,8 @@
             {# ========================================================================= #}
             <div class="row g-3 mb-4">
                 <!-- 1. TOTAL ORGANIZATIONS -->
-                <div class="col-md-4">
-                    <a href="/superadmin/organizations/" class="text-decoration-none">
+                <div class="col-md-6">
+                    <a href="/admin/organizations/" class="text-decoration-none">
                         <div class="stat-card h-100 sa-kpi sa-kpi-sky bg-white" style="border-radius: 14px; border: 1px solid #00B0B9; box-shadow: 0 4px 16px rgba(30, 64, 120, 0.06); padding: 1.25rem 1.4rem;">
                             <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                                 <span class="text-muted small fw-semibold text-uppercase">Total Organizations</span>
@@ -775,8 +781,8 @@
                 </div>
 
                 <!-- 2. ACTIVE TENANTS -->
-                <div class="col-md-4">
-                    <a href="/superadmin/organizations/" class="text-decoration-none">
+                <div class="col-md-6">
+                    <a href="/admin/organizations/" class="text-decoration-none">
                         <div class="stat-card h-100 sa-kpi sa-kpi-green bg-white" style="border-radius: 14px; border: 1px solid #10B981; box-shadow: 0 4px 16px rgba(30, 64, 120, 0.06); padding: 1.25rem 1.4rem;">
                             <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                                 <span class="text-muted small fw-semibold text-uppercase">Active Tenants</span>
@@ -790,39 +796,22 @@
                         </div>
                     </a>
                 </div>
-
-                <!-- 3. PROVISIONED ADMINS -->
-                <div class="col-md-4">
-                    <a href="/superadmin/users/" class="text-decoration-none">
-                        <div class="stat-card h-100 sa-kpi sa-kpi-royal bg-white" style="border-radius: 14px; border: 1px solid #2563EB; box-shadow: 0 4px 16px rgba(30, 64, 120, 0.06); padding: 1.25rem 1.4rem;">
-                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                                <span class="text-muted small fw-semibold text-uppercase">Provisioned Admins</span>
-                                <span class="badge rounded-pill text-bg-primary">Admins</span>
-                            </div>
-                            <div class="metric-value" style="color:#2563EB; font-size: 2.2rem; font-weight: 700;">{{ provisioned_admins|default:dashboard_organizations.count }}</div>
-                            <div class="mt-2 pt-2 border-top small text-secondary d-flex justify-content-between">
-                                <span>Dedicated org admins</span>
-                                <span class="fw-semibold" style="color:#2563EB;">Admins <i class="fa-solid fa-arrow-right ms-1"></i></span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
             </div>
 
             <!-- ORGANIZATIONS TABLE FOR GLOBAL SUPER ADMIN -->
-            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
-                <div class="card-header bg-white pt-4 pb-0 px-4 border-bottom-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white" id="adminOrgsCard">
+                <div class="card-header bg-white pt-4 pb-0 px-4 border-bottom-0 d-flex justify-content-between align-items-center flex-wrap gap-2" id="adminOrgsCardHeader">
                     <div>
                         <h5 class="fw-bold mb-1 text-dark">Organizations</h5>
                         <p class="text-muted small mb-0">Tenant legal entities provisioned in ProcureSphere 360.</p>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         {% if can_add_organization %}
-                        <button type="button" hx-get="/superadmin/organizations/create/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm rounded-pill px-3 fw-bold shadow-sm" style="background: #F59E0B; color: #1B2A4A;">
+                        <button type="button" hx-get="/admin/organizations/create/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm rounded-pill px-3 fw-bold shadow-sm" style="background: #F59E0B; color: #1B2A4A;">
                             <i class="fa-solid fa-plus me-1"></i> Add Organization
                         </button>
                         {% endif %}
-                        <a href="/superadmin/organizations/" class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                        <a href="/admin/organizations/" class="btn btn-sm btn-outline-dark rounded-pill px-3">
                             <i class="fa-solid fa-sitemap me-1"></i> Master Organization Portal
                         </a>
                     </div>
@@ -841,14 +830,14 @@
                             </thead>
                             <tbody>
                                 {% for org in dashboard_organizations %}
-                                <tr style="cursor: pointer;" onclick="if (!event.target.closest('a, button')) { window.location.href='/superadmin/organizations/{{ org.pk }}/'; }">
+                                <tr{% if forloop.counter > 5 %} class="admin-org-extra-row d-none"{% endif %} style="cursor: pointer;" onclick="if (!event.target.closest('a, button')) { window.location.href='/admin/organizations/{{ org.pk }}/'; }">
                                     <td class="ps-4 fw-bold text-primary">
-                                        <a href="/superadmin/organizations/{{ org.pk }}/" class="text-decoration-none fw-bold text-primary" title="Open {{ org.code }} Dashboard">
+                                        <a href="/admin/organizations/{{ org.pk }}/" class="text-decoration-none fw-bold text-primary" title="Open {{ org.code }} Dashboard">
                                             {{ org.code }}
                                         </a>
                                     </td>
                                     <td class="fw-semibold">
-                                        <a href="/superadmin/organizations/{{ org.pk }}/" class="text-decoration-none text-dark fw-semibold" title="Open {{ org.name }} Dashboard">
+                                        <a href="/admin/organizations/{{ org.pk }}/" class="text-decoration-none text-dark fw-semibold" title="Open {{ org.name }} Dashboard">
                                             {{ org.name }}
                                         </a>
                                     </td>
@@ -870,13 +859,13 @@
                                     </td>
                                     <td class="text-end pe-4">
                                         <div class="d-inline-flex gap-1" onclick="event.stopPropagation();">
-                                            <a href="/superadmin/organizations/{{ org.pk }}/" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 me-1" title="Open Organization Operational Dashboard">
+                                            <a href="/admin/organizations/{{ org.pk }}/" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 me-1" title="Open Organization Operational Dashboard">
                                                 <i class="fa-solid fa-eye me-1"></i> View
                                             </a>
-                                            <button type="button" hx-get="/superadmin/organizations/{{ org.pk }}/edit/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 me-1" title="Edit Organization">
+                                            <button type="button" hx-get="/admin/organizations/{{ org.pk }}/edit/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 me-1" title="Edit Organization">
                                                 <i class="fa-solid fa-pen me-1"></i> Edit
                                             </button>
-                                            <button type="button" hx-get="/superadmin/organizations/{{ org.pk }}/delete/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1" title="Delete Organization">
+                                            <button type="button" hx-get="/admin/organizations/{{ org.pk }}/delete/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1" title="Delete Organization">
                                                 <i class="fa-solid fa-trash me-1"></i> Delete
                                             </button>
                                         </div>
@@ -893,6 +882,13 @@
                         </table>
                     </div>
                 </div>
+                {% if dashboard_organizations|length > 5 %}
+                <div class="card-footer bg-white border-top py-3 text-center">
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-4 fw-semibold" id="toggleAdminOrgsBtn" onclick="toggleAdminOrgsRows({{ dashboard_organizations|length|add:'-5' }})">
+                        <span id="toggleAdminOrgsText"><i class="fa-solid fa-chevron-down me-1"></i> Show More ({{ dashboard_organizations|length|add:'-5' }} more)</span>
+                    </button>
+                </div>
+                {% endif %}
             </div>
 
             {% else %}
@@ -1131,13 +1127,58 @@
 
             <!-- COLLAPSIBLE COMPLETE DJANGO ADMIN DATABASE MODELS -->
             <div class="card border-0 shadow-sm rounded-4 bg-white mb-4">
-                <div class="card-body p-3">
+                <div class="card-body p-3 p-md-4">
                     <details>
-                        <summary class="fw-bold text-secondary" style="cursor: pointer;">
-                            <i class="fa-solid fa-database me-2"></i> Complete Database Models &amp; Django Admin Index (Click to Expand)
+                        <summary class="fw-bold d-flex align-items-center justify-content-between text-dark" style="cursor: pointer; list-style: none;">
+                            <span>
+                                <i class="fa-solid fa-database me-2 text-primary"></i> Complete Database Models &amp; Django Admin Index
+                            </span>
+                            <span class="badge bg-light text-secondary border rounded-pill px-3 py-1 fw-normal">Click to Expand / Collapse</span>
                         </summary>
                         <div class="mt-3 pt-3 border-top">
-                            {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
+                            {% if app_list %}
+                            <div class="row g-3">
+                                {% for app in app_list %}
+                                <div class="col-12 col-md-6 col-xl-4">
+                                    <div class="card h-100 border rounded-3 shadow-2xs overflow-hidden" style="border-color: #E2E8F0 !important;">
+                                        <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between" style="background: #F1F5F9; border-bottom: 1px solid #E2E8F0;">
+                                            <span class="fw-bold text-uppercase small" style="color: #1B2A4A; letter-spacing: 0.04em;">{{ app.name }}</span>
+                                            <span class="badge bg-white text-secondary border rounded-pill">{{ app.models|length }}</span>
+                                        </div>
+                                        <div class="list-group list-group-flush">
+                                            {% for model in app.models %}
+                                            <div class="list-group-item px-3 py-2 d-flex align-items-center justify-content-between gap-2 bg-white">
+                                                <div class="min-width-0">
+                                                    {% if model.admin_url %}
+                                                    <a href="{{ model.admin_url }}" class="text-decoration-none fw-semibold text-dark small d-block text-truncate" title="{{ model.name }}">
+                                                        {{ model.name }}
+                                                    </a>
+                                                    {% else %}
+                                                    <span class="fw-semibold text-secondary small d-block text-truncate">{{ model.name }}</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="d-inline-flex align-items-center gap-1 flex-shrink-0">
+                                                    {% if model.add_url %}
+                                                    <a href="{{ model.add_url }}" class="btn btn-outline-success rounded-pill px-2 py-0" style="font-size: 0.72rem;" title="Add {{ model.name }}">
+                                                        <i class="fa-solid fa-plus"></i> Add
+                                                    </a>
+                                                    {% endif %}
+                                                    {% if model.admin_url %}
+                                                    <a href="{{ model.admin_url }}" class="btn btn-outline-primary rounded-pill px-2 py-0" style="font-size: 0.72rem;" title="Manage {{ model.name }}">
+                                                        <i class="fa-solid fa-pen"></i> Manage
+                                                    </a>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-muted small mb-0">No database models available for your permissions.</p>
+                            {% endif %}
                         </div>
                     </details>
                 </div>
@@ -1270,6 +1311,24 @@
                     }
                 });
             });
+        }
+    }
+
+    function toggleAdminOrgsRows(remainingCount) {
+        const extraRows = document.querySelectorAll('.admin-org-extra-row');
+        const btnText = document.getElementById('toggleAdminOrgsText');
+        if (!extraRows.length || !btnText) return;
+        const isHidden = extraRows[0].classList.contains('d-none');
+        extraRows.forEach(row => {
+            if (isHidden) row.classList.remove('d-none');
+            else row.classList.add('d-none');
+        });
+        if (isHidden) {
+            btnText.innerHTML = '<i class="fa-solid fa-chevron-up me-1"></i> Show Less';
+        } else {
+            btnText.innerHTML = `<i class="fa-solid fa-chevron-down me-1"></i> Show More (${remainingCount} more)`;
+            const hdr = document.getElementById('adminOrgsCardHeader');
+            if (hdr) hdr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     }
 

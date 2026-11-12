@@ -5,7 +5,7 @@
 
 {% block navbar %}
 {% if request.user.is_superuser and not request.user.effective_organization %}
-{% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/admin/' profile_dropdown_id='saProfileDropdown' notification_url='/superadmin/notifications/' %}
+{% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/admin/' profile_dropdown_id='saProfileDropdown' notification_url='/admin/notifications/' %}
 {% else %}
 {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' profile_dropdown_id='saProfileDropdown' notification_url='/superadmin/notifications/' %}
 {% endif %}
@@ -369,11 +369,11 @@
             {% if request.user.is_superuser and not request.user.effective_organization %}
             <div class="sa-nav-separator"></div>
             <div class="sa-nav-label">Organization Management</div>
-            <a href="/superadmin/organizations/" class="sa-nav-link {% if '/superadmin/organizations/' in request.path %}active{% endif %}">
+            <a href="/admin/organizations/" class="sa-nav-link {% if '/admin/organizations/' in request.path or '/superadmin/organizations/' in request.path %}active{% endif %}">
                 <span>Organizations</span>
             </a>
-            <a href="/superadmin/users/" class="sa-nav-link {% if '/superadmin/users/' in request.path %}active{% endif %}">
-                <span>Manage Users &amp; Roles</span>
+            <a href="/admin/contact-enquiries/" class="sa-nav-link {% if '/admin/contact-enquiries/' in request.path or '/superadmin/contact-enquiries/' in request.path %}active{% endif %}">
+                <span>Contact Enquiries</span>
             </a>
             {% else %}
             <div class="sa-nav-separator"></div>
@@ -405,6 +405,9 @@
 
             <div class="sa-nav-separator"></div>
             <div class="sa-nav-label">Oversight &amp; Audit</div>
+            <a href="/superadmin/contact-enquiries/" class="sa-nav-link {% if '/superadmin/contact-enquiries/' in request.path %}active{% endif %}">
+                <span>Contact Enquiries</span>
+            </a>
             <a href="/superadmin/notifications/" class="sa-nav-link {% if 'notifications' in request.path %}active{% endif %}">
                 <span>Notifications &amp; Alerts</span>
             </a>

@@ -11,7 +11,7 @@
     <div class="d-flex gap-2 align-items-center">
         <a href="?{% if not only_unread %}filter=unread{% endif %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-1.5 fw-medium">{% if only_unread %}Show all{% else %}Unread only{% endif %}</a>
         {% if unread_count %}
-        <form method="post" action="{% url 'notification_mark_all_read' %}">{% csrf_token %}
+        <form method="post" action="{% if '/admin/' in request.path %}{% url 'admin_notification_mark_all_read' %}{% else %}{% url 'notification_mark_all_read' %}{% endif %}">{% csrf_token %}
             <button class="btn btn-primary btn-sm rounded-pill px-3 py-1.5 fw-semibold shadow-sm" style="background-color: #0D6EFD; border-color: #0D6EFD;">Mark all read</button>
         </form>
         {% endif %}
@@ -48,7 +48,7 @@
                     </span>
                     {% endif %}
                 {% else %}
-                <form method="post" action="{% url 'notification_open' n.id %}" class="align-self-center flex-shrink-0">{% csrf_token %}
+                <form method="post" action="{% if '/admin/' in request.path %}{% url 'admin_notification_open' n.id %}{% else %}{% url 'notification_open' n.id %}{% endif %}" class="align-self-center flex-shrink-0">{% csrf_token %}
                     <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold">
                         {% if n.target_url %}<i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Open{% else %}<i class="fa-solid fa-check me-1"></i> Mark read{% endif %}
                     </button>

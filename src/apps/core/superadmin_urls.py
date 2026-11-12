@@ -75,4 +75,8 @@ urlpatterns = [
     # Audit management
     path("audit/", superadmin_views.audit_list_view, name="audit"),
     path("audit/export/", superadmin_views.audit_export_view, name="audit_export"),
+
+    # Contact Enquiries
+    path("contact-enquiries/", superadmin_views.contact_enquiry_list_view, name="contact_enquiries"),
+    path("contact-enquiries/<uuid:enquiry_id>/status/", superadmin_views.contact_enquiry_status_view, name="contact_enquiry_status"),
 ]

@@ -67,7 +67,7 @@
     <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-sitemap text-primary me-2"></i>{% if is_edit %}Edit Organization{% else %}Create Organization{% endif %}</h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
-<form hx-post="{% if is_edit %}/superadmin/organizations/{{ form.instance.pk }}/edit/{% else %}/superadmin/organizations/create/{% endif %}" hx-target="#modal-content-body" hx-swap="outerHTML" autocomplete="off">
+<form hx-post="{% if is_edit %}{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ form.instance.pk }}/edit/{% else %}{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}create/{% endif %}" hx-target="#modal-content-body" hx-swap="outerHTML" autocomplete="off">
     <!-- Anti-autofill decoy inputs to capture browser password manager -->
     <div style="position: absolute; left: -9999px; top: -9999px; opacity: 0; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
         <input type="text" name="fake_username_anti_autofill" tabindex="-1" autocomplete="username">

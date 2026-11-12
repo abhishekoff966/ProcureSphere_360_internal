@@ -40,7 +40,10 @@ def notification_list_view(request):
         "AUDITOR": "audit/base_auditor.html",
         "SUPER_ADMIN": "layouts/superadmin_base.html",
     }
-    base_layout = layout_map.get(role_code, "base.html")
+    base_layout = layout_map.get(
+        role_code,
+        "layouts/superadmin_base.html" if getattr(request.user, "is_superuser", False) else "base.html",
+    )
     return render(
         request,
         "notifications/notification_list.html",
@@ -68,10 +71,36 @@ def notification_open_view(request, notification_id):
     )
     if str(role_code).upper() == "PROC_EXEC":
         return redirect("notification_list")
-    target = notification.target_url
+    target = (notification.target_url or "").strip()
+    is_global_superadmin = bool(
+        getattr(request.user, "is_superuser", False)
+        and not getattr(request.user, "effective_organization", None)
+    )
+    if target.startswith("/admin/core/contactenquiry"):
+        target = "/admin/contact-enquiries/" if is_global_superadmin else "/superadmin/contact-enquiries/"
+    elif target.startswith("/superadmin/contact-enquiries") and is_global_superadmin:
+        target = "/admin/contact-enquiries/"
+    elif target.startswith("/admin/organization/organization"):
+        target = "/admin/organizations/" if is_global_superadmin else "/superadmin/organizations/"
+    elif target == "/admin/" or target.startswith("/admin/core/") or target.startswith("/admin/accounts/"):
+        target = "/admin/notifications/" if is_global_superadmin else "/superadmin/notifications/"
+    elif is_global_superadmin and target.startswith(
+        (
+            "/orders/",
+            "/purchase-orders/",
+            "/requisitions/",
+            "/invoices/",
+            "/contracts/",
+            "/vendors/",
+            "/receipts/",
+            "/sourcing-events/",
+            "/notifications/",
+        )
+    ):
+        target = f"/admin{target}"
     if target and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
         return redirect(target)
-    return redirect("notification_list")
+    return redirect("admin_notifications" if is_global_superadmin else "notification_list")
 
 
 @login_required(login_url="/login/")
@@ -81,6 +110,8 @@ def notification_mark_all_read_view(request):
         Notification.objects.filter(recipient=request.user, is_read=False),
         request.user,
     ).update(is_read=True)
+    if request.path.startswith("/admin/"):
+        return redirect("admin_notifications")
     return redirect("notification_list")
 
 
