@@ -5,8 +5,8 @@
 {% block content %}
 <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-4">
     <div>
-        <h2 class="fw-bold text-dark mb-1" style="font-size: 1.65rem;"><i class="fa-solid fa-bell text-cyan me-2"></i>Notifications</h2>
-        <p class="text-secondary small mb-0">{{ unread_count }} unread &bull; approvals, status updates, clarifications, and escalations.</p>
+        <h2 class="fw-bold text-dark mb-1" style="font-size: 1.65rem;"><i class="fa-solid fa-bell text-cyan me-2"></i>Notifications{% if is_proc_exec %} <span class="badge bg-secondary bg-opacity-10 text-secondary border rounded-pill align-middle ms-2" style="font-size: 0.72rem;"><i class="fa-solid fa-eye me-1"></i>Read-only</span>{% endif %}</h2>
+        <p class="text-secondary small mb-0">{{ unread_count }} unread &bull; {% if is_proc_exec %}Procurement Executive updates (vendors, sourcing, bids, and purchase orders).{% else %}approvals, status updates, clarifications, and escalations.{% endif %}</p>
     </div>
     <div class="d-flex gap-2 align-items-center">
         <a href="?{% if not only_unread %}filter=unread{% endif %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-1.5 fw-medium">{% if only_unread %}Show all{% else %}Unread only{% endif %}</a>
@@ -35,11 +35,25 @@
                     </div>
                     <div class="small text-secondary">{{ n.message|truncatechars:300 }}</div>
                 </div>
+                {% if is_proc_exec %}
+                    {% if not n.is_read %}
+                    <form method="post" action="{% url 'notification_open' n.id %}" class="align-self-center flex-shrink-0">{% csrf_token %}
+                        <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold">
+                            <i class="fa-solid fa-check me-1"></i> Mark read
+                        </button>
+                    </form>
+                    {% else %}
+                    <span class="badge bg-light text-secondary border rounded-pill px-3 py-1.5 fw-medium align-self-center flex-shrink-0">
+                        <i class="fa-solid fa-check me-1 text-success"></i> Read
+                    </span>
+                    {% endif %}
+                {% else %}
                 <form method="post" action="{% url 'notification_open' n.id %}" class="align-self-center flex-shrink-0">{% csrf_token %}
                     <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold">
                         {% if n.target_url %}<i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Open{% else %}<i class="fa-solid fa-check me-1"></i> Mark read{% endif %}
                     </button>
                 </form>
+                {% endif %}
             </li>
         {% empty %}
             <li class="list-group-item text-center text-muted py-5 border-0">

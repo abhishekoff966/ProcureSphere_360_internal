@@ -19,7 +19,7 @@
             </div>
             <div class="fw-semibold small mt-1 text-truncate" title="{{ n.title }}">{{ n.title }}</div>
             <div class="text-muted small text-truncate" title="{{ n.message }}">{{ n.message|truncatechars:120 }}</div>
-            {% if n.target_url %}
+            {% if n.target_url and request.user.role_code != 'PROC_EXEC' %}
             <a href="{{ n.target_url }}" class="small link-primary text-decoration-none">Open linked record →</a>
             {% endif %}
         </div>
