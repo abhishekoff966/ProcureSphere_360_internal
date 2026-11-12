@@ -244,7 +244,18 @@ def get_invitation_rows(event: SourcingEvent):
     return rows
 
 
-def get_eligible_vendors_for_event(event: SourcingEvent, category_id=None, q=""):
+def _scope_vendor_queryset_to_org(qs, organization):
+    if organization is None:
+        return qs
+    return qs.filter(
+        Q(organization=organization)
+        | Q(organization__isnull=True)
+        | Q(created_by__organization=organization)
+        | Q(created_by__department__organization=organization)
+    )
+
+
+def get_eligible_vendors_for_event(event: SourcingEvent, category_id=None, q="", organization=None):
     from apps.vendors.models import Vendor
 
     from .services import ELIGIBLE_VENDOR_STATUSES
@@ -256,6 +267,7 @@ def get_eligible_vendors_for_event(event: SourcingEvent, category_id=None, q="")
         .select_related("category")
         .order_by("legal_name")
     )
+    qs = _scope_vendor_queryset_to_org(qs, organization)
     if category_id:
         qs = qs.filter(category_id=category_id)
     if q:
@@ -268,7 +280,7 @@ def get_eligible_vendors_for_event(event: SourcingEvent, category_id=None, q="")
 PENDING_ONBOARDING_STATUSES = ["DRAFT", "SUBMITTED", "KYC_REVIEW"]
 
 
-def get_pending_onboarding_vendors(event: SourcingEvent, category_id=None, q=""):
+def get_pending_onboarding_vendors(event: SourcingEvent, category_id=None, q="", organization=None):
     """Newly registered vendors that cannot be invited yet (KYC not approved). Display only."""
     from apps.vendors.models import Vendor
 
@@ -279,6 +291,7 @@ def get_pending_onboarding_vendors(event: SourcingEvent, category_id=None, q="")
         .select_related("category")
         .order_by("legal_name")
     )
+    qs = _scope_vendor_queryset_to_org(qs, organization)
     if category_id:
         qs = qs.filter(category_id=category_id)
     if q:

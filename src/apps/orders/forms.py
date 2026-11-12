@@ -12,8 +12,8 @@ class POAmendForm(forms.Form):
     """
 
     reason = forms.CharField(
-        widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
-        help_text="Amendment justification (stored immutably in POAmendment + AuditLog).",
+        widget=forms.Textarea(attrs={"rows": 3, "class": "form-control", "placeholder": "Enter reason for amending purchase order..."}),
+        help_text="Provide a clear business justification for this purchase order amendment (recorded in the audit log).",
     )
 
     def __init__(self, *args, po=None, **kwargs):

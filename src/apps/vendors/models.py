@@ -8,6 +8,7 @@ from apps.core.validators import (
     normalize_tax_identifier,
     validate_file_upload,
     validate_gstin,
+    validate_no_html_or_script,
     validate_pan_gstin_consistency,
     validate_pan_number,
 )
@@ -117,6 +118,11 @@ class Vendor(TimeStampedModel):
 
     def clean(self):
         super().clean()
+        validate_no_html_or_script(self.legal_name, "Legal name")
+        validate_no_html_or_script(self.trade_name, "Trade name")
+        validate_no_html_or_script(self.registration_number, "Registration number")
+        validate_no_html_or_script(self.address, "Address")
+        validate_no_html_or_script(self.bank_name, "Bank name")
         if self.pan_number:
             self.pan_number = normalize_tax_identifier(self.pan_number)
             validate_pan_number(self.pan_number)

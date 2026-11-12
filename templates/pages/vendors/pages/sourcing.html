@@ -1,6 +1,7 @@
 {% extends base_layout|default:'base.html' %}
+{% load core_tags %}
 
-{% block title %}{{ vendor.legal_name }} — Sourcing &amp; POs — {{ vendor.vendor_number }}{% endblock %}
+{% block title %}{{ vendor.legal_name|safe_display }} — Sourcing &amp; POs — {{ vendor.vendor_number }}{% endblock %}
 
 {% block manager_breadcrumbs %}
 {% include 'partials/vendor_pages/breadcrumbs.html' with page_label='Sourcing &amp; POs' %}

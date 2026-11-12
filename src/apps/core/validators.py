@@ -547,3 +547,56 @@ def validate_pr_attachment(file):
         raise ValidationError(_("Invalid file format."))
 
     return file
+
+
+_SCRIPT_STYLE_BLOCK_RE = re.compile(
+    r"<\s*(script|style)\b[^>]*>.*?<\s*/\s*\1\s*>",
+    re.IGNORECASE | re.DOTALL,
+)
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+_UNSAFE_XSS_PATTERN_RE = re.compile(
+    r"(<\s*/?\s*(?:script|iframe|object|embed|svg|img|style|link|meta|form)\b"
+    r"|<|>"
+    r"|javascript\s*:"
+    r"|vbscript\s*:"
+    r"|data\s*:\s*text/html"
+    r"|\bon[a-z]+\s*=)",
+    re.IGNORECASE,
+)
+
+
+def validate_no_html_or_script(value: str, field_label: str = "Input") -> str:
+    """Reject raw HTML tags, <script> payloads, and active script attributes/URIs."""
+    val = (value or "").strip()
+    if not val:
+        return ""
+    if _UNSAFE_XSS_PATTERN_RE.search(val):
+        raise ValidationError(
+            _(f"{field_label} cannot contain HTML tags, script payloads, or active markup.")
+        )
+    return val
+
+
+def sanitize_plain_display_text(value: str, fallback: str = "[Sanitized invalid text]") -> str:
+    """
+    Strip legacy <script>/<style>/HTML tags before autoescaped template rendering.
+    Never returns mark_safe HTML; strips residual angle brackets safely.
+    """
+    if value is None:
+        return ""
+    text = str(value)
+    if not text.strip():
+        return ""
+    had_tags = bool(
+        _SCRIPT_STYLE_BLOCK_RE.search(text)
+        or _HTML_TAG_RE.search(text)
+        or "<" in text
+        or ">" in text
+    )
+    cleaned = _SCRIPT_STYLE_BLOCK_RE.sub("", text)
+    cleaned = _HTML_TAG_RE.sub("", cleaned)
+    cleaned = cleaned.replace("<", "").replace(">", "")
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    if not cleaned and had_tags:
+        return fallback
+    return cleaned

@@ -32,6 +32,7 @@ from apps.core.validators import (
     validate_file_upload,
     validate_gstin,
     validate_legal_name,
+    validate_no_html_or_script,
     validate_optional_phone_number,
     validate_pan_gstin_consistency,
     validate_pan_number,
@@ -112,6 +113,13 @@ def register_vendor_service(
 
 
     legal_name = validate_legal_name(legal_name)
+    trade_name = validate_no_html_or_script(trade_name, "Trade name")
+    address = validate_no_html_or_script(address, "Address")
+    bank_name = validate_no_html_or_script(bank_name, "Bank name")
+    trade_name = validate_no_html_or_script(trade_name, "Trade name")
+    registration_number = validate_no_html_or_script(registration_number, "Registration number")
+    address = validate_no_html_or_script(address, "Address")
+    bank_name = validate_no_html_or_script(bank_name, "Bank name")
     tax_identification_number = validate_tax_id_number(tax_identification_number)
     if phone:
         phone = validate_optional_phone_number(phone)
@@ -4143,6 +4151,18 @@ def bulk_import_vendors_from_csv_service(*, csv_file, target_org, actor=None) ->
         if not legal_name:
 
             errors.append(f"Row {row_idx}: 'Legal Name' is required.")
+
+            continue
+
+        try:
+
+            legal_name = validate_no_html_or_script(legal_name, "Legal Name")
+
+            trade_name = validate_no_html_or_script(trade_name, "Trade Name")
+
+        except ValidationError as exc:
+
+            errors.append(f"Row {row_idx}: {exc.messages[0]}")
 
             continue
 
