@@ -23,7 +23,6 @@ from apps.vendors.models import Vendor
 
 from .selectors import scope_invoices_queryset
 
-
 INTERNAL_INVOICE_ROLES = [
     Role.FINANCE_AP,
     Role.SUPER_ADMIN,
@@ -169,12 +168,12 @@ def invoice_detail_view(request, invoice_id):
         Role.PROC_MGR: "manager/base_manager.html",
         Role.SUPER_ADMIN: "layouts/superadmin_base.html",
         Role.AUDITOR: "audit/base_auditor.html",
-        Role.PROC_EXEC: "layouts/proc_exec_base.html",
+        Role.PROC_EXEC: "base.html",
         Role.FINANCE_AP: "layouts/finance_base.html",
         "PROC_MGR": "manager/base_manager.html",
         "SUPER_ADMIN": "layouts/superadmin_base.html",
         "AUDITOR": "audit/base_auditor.html",
-        "PROC_EXEC": "layouts/proc_exec_base.html",
+        "PROC_EXEC": "base.html",
         "FINANCE_AP": "layouts/finance_base.html",
     }
     base_layout = layout_map.get(user_role, "layouts/finance_base.html")

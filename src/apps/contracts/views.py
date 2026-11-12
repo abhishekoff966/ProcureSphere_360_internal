@@ -143,7 +143,7 @@ def _resolve_contract_layout(user, role_code):
     if role_code in [Role.AUDITOR, "AUDITOR"]:
         return "audit/base_auditor.html"
     if role_code in [Role.PROC_EXEC, "PROC_EXEC"]:
-        return "layouts/proc_exec_base.html"
+        return "base.html"
     if role_code in [Role.FINANCE_AP, "FINANCE_AP"]:
         return "layouts/finance_base.html"
     if role_code in [Role.DEPT_APPROVER, "DEPT_APPROVER"]:
