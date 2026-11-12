@@ -25,9 +25,9 @@
         }
     }
 
-    /* Preserve sticky sidebar when Bootstrap modal opens */
+    /* Lock background scroll when Bootstrap modal opens to prevent dual overlapping scrollbars (BUG-006) */
     body.modal-open {
-        overflow: visible !important;
+        overflow: hidden !important;
     }
 
     @media (min-width: 992px) {
@@ -202,7 +202,7 @@
             <div class="nav-section-label">Settings</div>
 
             <a href="/invoices/settings/tolerances/" class="finance-navlink {% if request.path == '/invoices/settings/tolerances/' %}active-nav-item{% endif %}">
-                System Settings
+                3-Way Match Tolerances
             </a>
         </nav>
     </aside>

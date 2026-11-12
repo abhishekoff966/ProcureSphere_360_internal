@@ -187,7 +187,6 @@ def validate_tax_id_number(value: str) -> str:
     return val
 
 
-
 def validate_optional_phone_number(value: str) -> str:
     r"""
     Validates optional vendor phone number:
@@ -577,6 +576,44 @@ def validate_no_html_or_script(value: str, field_label: str = "Input") -> str:
     return val
 
 
+def validate_invoice_number(value: str) -> str:
+    """
+    Validates supplier invoice number format.
+    Rules:
+    - Required, 3–50 characters
+    - Must start with a letter or digit, not a special character
+    - Alphanumeric with hyphens (-), underscores (_), and slashes (/) allowed
+      e.g. INV-2026-991, CISCO/INV/0012, INVTEST001
+    - Rejects HTML/script content and special characters like !@#$%^&*()
+    """
+    val = (value or "").strip()
+    if not val:
+        raise ValidationError(_("Invoice Number is required."))
+
+    validate_no_html_or_script(val, field_label="Invoice Number")
+
+    if len(val) < 3 or len(val) > 50:
+        raise ValidationError(
+            _("Invoice Number must be between 3 and 50 characters.")
+        )
+
+    # Allow: start/end with alphanumeric, middle may include hyphens, underscores, slashes
+    # Also allow pure alphanumeric (no special chars) of length 3-50
+    if not re.match(
+        r"^[A-Za-z0-9]([A-Za-z0-9\-_/]{0,48}[A-Za-z0-9])?$",
+        val,
+    ):
+        raise ValidationError(
+            _(
+                "Invoice Number must be alphanumeric and may include hyphens (-), "
+                "underscores (_), or slashes (/). Special characters like !@#$%^&*() "
+                "are not permitted. Example: INV-2026-991 or CISCO/INV/0012."
+            )
+        )
+
+    return val
+
+
 def sanitize_plain_display_text(value: str, fallback: str = "[Sanitized invalid text]") -> str:
     """
     Strip legacy <script>/<style>/HTML tags before autoescaped template rendering.
@@ -600,3 +637,77 @@ def sanitize_plain_display_text(value: str, fallback: str = "[Sanitized invalid 
     if not cleaned and had_tags:
         return fallback
     return cleaned
+
+
+def validate_resolution_notes(value: str) -> str:
+    """
+    Validates that match exception resolution notes contain meaningful audit justification.
+    Rejects:
+    - Empty or whitespace-only input
+    - Text shorter than 10 characters
+    - Numeric-only or special-character-only strings (e.g. 111111111111111111 or !@#$%^&*)
+    - Repetitive character sequences (e.g. aaaaaaa, 111111)
+    - Raw HTML or script tags
+    """
+    val = (value or "").strip()
+    if not val:
+        raise ValidationError(_("Resolution notes are required and cannot be empty."))
+
+    validate_no_html_or_script(val, field_label="Resolution notes")
+
+    if len(val) < 10:
+        raise ValidationError(
+            _("Resolution notes must be at least 10 characters long to provide an adequate audit justification.")
+        )
+
+    if len(val) > 2000:
+        raise ValidationError(_("Resolution notes cannot exceed 2000 characters."))
+
+    # Check for meaningful alphabetic words
+    letters = re.findall(r"[a-zA-Z]", val)
+    if len(letters) < 5:
+        raise ValidationError(
+            _("Resolution notes must contain meaningful explanatory text with at least 5 letters, not solely numbers or symbols.")
+        )
+
+    # Check against repetitive characters (e.g. 1111111111, aaaaaaaa)
+    cleaned_no_spaces = re.sub(r"\s+", "", val)
+    if len(set(cleaned_no_spaces)) < 4:
+        raise ValidationError(
+            _("Resolution notes cannot consist of repeated characters or gibberish. Please provide a descriptive justification.")
+        )
+
+    if re.search(r"(.)\1{5,}", val):
+        raise ValidationError(
+            _("Resolution notes contain repetitive character sequences. Please provide a descriptive justification.")
+        )
+
+    return val
+
+
+def validate_payment_reference(value: str) -> str:
+    """
+    Validates financial transaction reference / UTR #.
+    Standard banking formats (NEFT/RTGS/ACH/SWIFT/Wire):
+    - Alphanumeric, hyphens, and slashes permitted (e.g. UTR-2026-981023, CMS123456789)
+    - Length between 6 and 50 characters
+    - Rejects disallowed special characters like !@#$%^&*()
+    - Rejects raw HTML or script tags
+    """
+    val = (value or "").strip()
+    if not val:
+        raise ValidationError(_("Transaction / Payment Reference ID (UTR / Check #) is required."))
+
+    validate_no_html_or_script(val, field_label="Payment reference")
+
+    if len(val) < 6 or len(val) > 50:
+        raise ValidationError(
+            _("Payment Reference / UTR must be between 6 and 50 characters in length.")
+        )
+
+    if not re.match(r"^[A-Za-z0-9][A-Za-z0-9\-_/]{4,48}[A-Za-z0-9]$", val):
+        raise ValidationError(
+            _("Invalid Transaction Reference / UTR format. Only alphanumeric characters, hyphens (-), and slashes (/) are permitted (e.g., UTR-2026-981023, CMS1234567890). Special characters like !@#$%^&*() are prohibited.")
+        )
+
+    return val
