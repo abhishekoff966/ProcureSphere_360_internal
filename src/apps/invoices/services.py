@@ -146,11 +146,11 @@ def create_supplier_invoice_service(
                 or Decimal("0.00")
             )
             if accepted_qty_agg is not None and accepted_qty_agg > Decimal("0.00"):
-                if prior_invoiced_qty + qty > accepted_qty_agg:
+                if enforce_billable_limits and (prior_invoiced_qty + qty > accepted_qty_agg):
                     raise ValidationError(
                         f"Cumulative invoiced quantity ({prior_invoiced_qty + qty}) for '{item_desc}' would exceed accepted receipt quantity ({accepted_qty_agg})."
                     )
-            elif po_line.quantity and (prior_invoiced_qty + qty > po_line.quantity):
+            elif po_line.quantity and enforce_billable_limits and (prior_invoiced_qty + qty > po_line.quantity):
                 raise ValidationError(
                     f"Cumulative invoiced quantity ({prior_invoiced_qty + qty}) for '{item_desc}' would exceed Purchase Order line quantity ({po_line.quantity})."
                 )

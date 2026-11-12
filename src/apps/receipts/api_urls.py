@@ -88,13 +88,26 @@ class GoodsReceiptSerializer(serializers.ModelSerializer):
                     }
                 )
 
-        grn_num = attrs.get("grn_number")
-        if grn_num:
-            qs_grn = GoodsReceipt.objects.filter(grn_number=grn_num)
+        grn_num = attrs.get("grn_number") or self.initial_data.get("grn_number")
+        if grn_num and str(grn_num).strip():
+            clean_grn = str(grn_num).strip()
+            qs_grn = GoodsReceipt.objects.filter(grn_number__iexact=clean_grn)
             if self.instance:
                 qs_grn = qs_grn.exclude(pk=self.instance.pk)
             if qs_grn.exists():
                 raise serializers.ValidationError({"grn_number": ["Goods receipt with this GRN number already exists."]})
+
+        deliv_note = attrs.get("delivery_note_number") or self.initial_data.get("delivery_note_number")
+        po = attrs.get("po") or getattr(self.instance, "po", None)
+        if deliv_note and str(deliv_note).strip() and po:
+            clean_dn = str(deliv_note).strip()
+            qs_dn = GoodsReceipt.objects.filter(po=po, delivery_note_number__iexact=clean_dn)
+            if self.instance:
+                qs_dn = qs_dn.exclude(pk=self.instance.pk)
+            if qs_dn.exists():
+                raise serializers.ValidationError(
+                    {"delivery_note_number": [f"A goods receipt with delivery note '{clean_dn}' already exists for Purchase Order {po.po_number}."]}
+                )
 
         if self.instance is None:
             lines = self.initial_data.get("lines")
@@ -266,6 +279,26 @@ class GoodsReceiptViewSet(viewsets.ModelViewSet):
     )
     serializer_class = GoodsReceiptSerializer
     permission_classes = [GoodsReceiptPermission]
+
+    def create(self, request, *args, **kwargs):
+        from django.db import IntegrityError, transaction
+        try:
+            with transaction.atomic():
+                return super().create(request, *args, **kwargs)
+        except IntegrityError as exc:
+            err_msg = str(exc).lower()
+            if "grn_number" in err_msg or "receipts_goodsreceipt" in err_msg or "unique" in err_msg or "delivery_note_number" in err_msg:
+                return Response(
+                    {
+                        "error": {
+                            "code": "DUPLICATE_RESOURCE",
+                            "message": "A Goods Receipt with this GRN or Delivery Note already exists. Concurrent duplicate submission was blocked.",
+                            "details": {"grn_number": ["Goods receipt with this GRN number already exists."]},
+                        }
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+            raise
 
 
 

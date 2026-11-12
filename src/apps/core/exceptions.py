@@ -83,6 +83,29 @@ def custom_exception_handler(exc, context):
 
     from django.db import IntegrityError
     if isinstance(exc, IntegrityError):
+        err_str = str(exc).lower()
+        if "po_number" in err_str:
+            return Response(
+                {
+                    "error": {
+                        "code": "DUPLICATE_RESOURCE",
+                        "message": "A Purchase Order with this PO number already exists.",
+                        "details": {"po_number": ["Purchase Order with this PO number already exists."]},
+                    }
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        if "grn_number" in err_str or "delivery_note_number" in err_str:
+            return Response(
+                {
+                    "error": {
+                        "code": "DUPLICATE_RESOURCE",
+                        "message": "A Goods Receipt with this GRN or Delivery Note already exists.",
+                        "details": {"grn_number": ["Goods receipt with this identifier already exists."]},
+                    }
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
         return Response(
             {
                 "error": {

@@ -148,7 +148,7 @@ def _validate_event_fields(
     from datetime import timedelta
 
     from django.utils import timezone
-    now_buffer = timezone.now() - timedelta(minutes=5)
+    now_buffer = timezone.now() - timedelta(minutes=15)
     if enforce_future_start and bid_start_date:
         start_cmp = (
             bid_start_date

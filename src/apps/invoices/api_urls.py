@@ -29,7 +29,9 @@ class CanManageSupplierInvoice(BasePermission):
     - Auditors: Strictly read-only (SAFE_METHODS).
     - Vendors: Cannot pay invoices or resolve exceptions.
     - Payment: Restricted to FINANCE_AP and SUPER_ADMIN.
-    - Write/Create: FINANCE_AP, PROC_MGR, PROC_EXEC, SUPER_ADMIN.
+    - Write/Create: FINANCE_AP, SUPER_ADMIN (internal), VENDOR_USER (vendor-scoped PO).
+    - Requester, Dept Approver, Legal Mgr: Strictly blocked (HTTP 403).
+    - Default deny for all other roles.
     """
 
     def has_permission(self, request, view):
@@ -41,7 +43,7 @@ class CanManageSupplierInvoice(BasePermission):
         )
         is_vendor = (
             getattr(request.user, "is_vendor", False)
-            or role_code == Role.VENDOR_USER
+            or role_code in [Role.VENDOR_USER, "VENDOR_USER"]
         )
 
         # Vendors cannot pay, run match, create line-item invoices via internal endpoint, or access match exceptions
@@ -50,49 +52,104 @@ class CanManageSupplierInvoice(BasePermission):
             action = getattr(view, "action", "")
             if "exception" in basename or "exception" in action:
                 return False
+            if action == "create_invoice":
+                return False
             if action in ["pay_invoice", "pay", "run_match", "run_3_way_match"]:
                 return False
             if request.method in SAFE_METHODS:
                 return True
+            if request.method == "POST" and basename == "invoice" and action in ["create", None]:
+                return True
             return False
 
+        # Superuser has full access
+        if request.user.is_superuser:
+            return True
+
         # Roles with no invoice access in the RBAC matrix (Requester, Dept Approver, Legal Mgr)
-        if not request.user.is_superuser and role_code in [
+        if role_code in [
             Role.REQUESTER,
             Role.DEPT_APPROVER,
             Role.LEGAL_MGR,
+            "REQUESTER",
+            "DEPT_APPROVER",
+            "LEGAL_MGR",
         ]:
             return False
 
+        # Specific restricted actions
+        if getattr(view, "action", None) in ["pay_invoice", "pay", "resolve_exception", "resolve"]:
+            return role_code in [Role.SUPER_ADMIN, Role.FINANCE_AP, "SUPER_ADMIN", "FINANCE_AP"]
+
+        if getattr(view, "action", None) in ["run_match", "run_3_way_match"]:
+            return role_code in [Role.SUPER_ADMIN, Role.FINANCE_AP, "SUPER_ADMIN", "FINANCE_AP"]
+
         # Internal read-only roles on invoices per RBAC matrix (Proc Exec, Proc Mgr, Stores Receiver, Auditor)
-        if not request.user.is_superuser and role_code in [
+        if role_code in [
             Role.PROC_EXEC,
             Role.PROC_MGR,
             Role.STORES_RECEIVER,
             Role.AUDITOR,
+            "PROC_EXEC",
+            "PROC_MGR",
+            "STORES_RECEIVER",
+            "AUDITOR",
         ]:
             return request.method in SAFE_METHODS
 
-        if view.action in ["pay_invoice", "pay", "resolve_exception", "resolve"]:
-            if is_vendor or role_code == Role.AUDITOR:
-                return False
-            return request.user.is_superuser or role_code in [Role.SUPER_ADMIN, Role.FINANCE_AP]
-
-        if view.action in ["run_match", "run_3_way_match"]:
-            return request.user.is_superuser or role_code in [Role.SUPER_ADMIN, Role.FINANCE_AP]
-
-        if request.method in SAFE_METHODS:
+        # Finance AP and Super Admin roles have full access
+        if role_code in [Role.FINANCE_AP, Role.SUPER_ADMIN, "FINANCE_AP", "SUPER_ADMIN"]:
             return True
 
-        if request.method == "POST":
-            return request.user.is_superuser or role_code in [Role.FINANCE_AP, Role.SUPER_ADMIN, Role.PROC_MGR, Role.PROC_EXEC]
+        # Default deny for any unassigned or unrecognized roles
+        return False
 
-        return request.user.is_superuser or role_code in [
-            Role.SUPER_ADMIN,
-            Role.FINANCE_AP,
-            Role.PROC_MGR,
+    def has_object_permission(self, request, view, obj):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        if request.user.is_superuser:
+            return True
+
+        role_code = getattr(request.user, "role_code", None) or (
+            request.user.role.code if getattr(request.user, "role", None) else None
+        )
+        is_vendor = (
+            getattr(request.user, "is_vendor", False)
+            or role_code in [Role.VENDOR_USER, "VENDOR_USER"]
+        )
+
+        if is_vendor:
+            # Vendor can only view their own vendor invoices
+            if getattr(obj, "vendor_id", None) != getattr(request.user, "vendor_id", None):
+                return False
+            return request.method in SAFE_METHODS
+
+        if role_code in [
+            Role.REQUESTER,
+            Role.DEPT_APPROVER,
+            Role.LEGAL_MGR,
+            "REQUESTER",
+            "DEPT_APPROVER",
+            "LEGAL_MGR",
+        ]:
+            return False
+
+        if role_code in [
             Role.PROC_EXEC,
-        ]
+            Role.PROC_MGR,
+            Role.STORES_RECEIVER,
+            Role.AUDITOR,
+            "PROC_EXEC",
+            "PROC_MGR",
+            "STORES_RECEIVER",
+            "AUDITOR",
+        ]:
+            return request.method in SAFE_METHODS
+
+        if role_code in [Role.FINANCE_AP, Role.SUPER_ADMIN, "FINANCE_AP", "SUPER_ADMIN"]:
+            return True
+
+        return False
 
 
 class InvoiceLineSerializer(serializers.ModelSerializer):

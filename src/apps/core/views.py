@@ -947,11 +947,7 @@ def protected_media_view(request, file_path):
     if normalized_path.startswith("..") or ".." in normalized_path.split(os.path.sep):
         return HttpResponseForbidden("Access denied: Invalid file path.")
 
-    full_path = os.path.join(settings.MEDIA_ROOT, normalized_path)
-    if not os.path.exists(full_path) or not os.path.isfile(full_path):
-        raise Http404("Document not found.")
-
-    # 2. RBAC and Ownership Enforcement
+    # 2. RBAC and Ownership Enforcement (evaluated before file existence to prevent enumeration & redirects)
     if user.is_superuser or role_code == Role.SUPER_ADMIN:
         pass  # Super Admin has full administrative access
     elif role_code == Role.VENDOR_USER:
@@ -975,10 +971,14 @@ def protected_media_view(request, file_path):
         norm_lower = normalized_path.lower()
         if "contracts" in norm_lower:
             return HttpResponseForbidden("Access denied: Legal contracts are restricted to Legal and Procurement.")
-        if "vendor_docs" in norm_lower or "kyc" in norm_lower:
+        if "vendor_docs" in norm_lower or "vendor_documents" in norm_lower or "kyc" in norm_lower:
             return HttpResponseForbidden("Access denied: Vendor KYC records are restricted to Procurement and Legal.")
     elif role_code in [Role.PROC_EXEC, Role.PROC_MGR, Role.LEGAL_MGR, Role.FINANCE_AP, Role.AUDITOR]:
         pass
+
+    full_path = os.path.join(settings.MEDIA_ROOT, normalized_path)
+    if not os.path.exists(full_path) or not os.path.isfile(full_path):
+        raise Http404("Document not found.")
 
     content_type, _ = mimetypes.guess_type(full_path)
     filename = os.path.basename(full_path)
@@ -988,9 +988,25 @@ def protected_media_view(request, file_path):
 
 
 def protected_vendor_document_view(request, file_path):
-    """Alias for backwards compatibility with vendor_documents specific route."""
+    """Alias for backwards compatibility with vendor_docs and vendor_documents specific routes."""
     import os
-    if not file_path.startswith("vendor_documents"):
-        file_path = os.path.join("vendor_documents", file_path)
-    return protected_media_view(request, file_path)
+    from django.conf import settings
+
+    norm_path = os.path.normpath(file_path).lstrip("/\\")
+    if norm_path.startswith("vendor_docs") or norm_path.startswith("vendor_documents"):
+        return protected_media_view(request, norm_path)
+
+    req_path = getattr(request, "path", "") or ""
+    preferred_dir = "vendor_docs" if "vendor_docs" in req_path else "vendor_documents"
+    alternate_dir = "vendor_documents" if preferred_dir == "vendor_docs" else "vendor_docs"
+
+    path_preferred = os.path.join(preferred_dir, norm_path)
+    path_alternate = os.path.join(alternate_dir, norm_path)
+
+    if os.path.exists(os.path.join(settings.MEDIA_ROOT, path_preferred)):
+        return protected_media_view(request, path_preferred)
+    if os.path.exists(os.path.join(settings.MEDIA_ROOT, path_alternate)):
+        return protected_media_view(request, path_alternate)
+
+    return protected_media_view(request, path_preferred)
 

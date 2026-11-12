@@ -154,6 +154,17 @@ class PurchaseRequisitionSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         department = attrs.get("department") or getattr(self.instance, "department", None)
         cost_center = attrs.get("cost_center") or getattr(self.instance, "cost_center", None)
+
+        if not cost_center:
+            raise serializers.ValidationError({"cost_center": ["Cost center is required."]})
+        if not department:
+            raise serializers.ValidationError({"department": ["Department is required."]})
+
+        if cost_center.department_id != department.id:
+            raise serializers.ValidationError(
+                {"cost_center": ["Cost center must belong to the selected department."]}
+            )
+
         request = self.context.get("request")
         user = getattr(request, "user", None)
         if user and not user.is_superuser and getattr(user, "role_code", None) == Role.REQUESTER:
@@ -164,15 +175,69 @@ class PurchaseRequisitionSerializer(serializers.ModelSerializer):
                         {"code": "forbidden", "fields": {"cost_center": ["Cost center not authorized for this requester."]}}
                     )
 
-        if department and cost_center:
-            if cost_center.department_id != department.id:
-                raise serializers.ValidationError(
-                    {"cost_center": ["Cost center must belong to the selected department."]}
-                )
+        # Organization / Tenant isolation check
+        if request and request.user and request.user.is_authenticated and not request.user.is_superuser:
+            user_org = getattr(request.user, "organization", None) or getattr(request.user, "effective_organization", None)
+            if user_org:
+                if getattr(department, "organization_id", None) and department.organization_id != user_org.id:
+                    raise serializers.ValidationError(
+                        {"department": ["Department does not belong to your organization."]}
+                    )
+                if cost_center.department and getattr(cost_center.department, "organization_id", None) and cost_center.department.organization_id != user_org.id:
+                    raise serializers.ValidationError(
+                        {"cost_center": ["Cost center does not belong to your organization."]}
+                    )
+
+        lines_data = self.initial_data.get("line_items", self.initial_data.get("lines"))
         if self.instance is None:
-            lines_data = self.initial_data.get("line_items", self.initial_data.get("lines"))
-            if lines_data is None or len(lines_data) == 0:
-                raise serializers.ValidationError({"lines": ["At least one line item is required."]})
+            if lines_data is None or not isinstance(lines_data, list) or len(lines_data) == 0:
+                raise serializers.ValidationError({"lines": ["A requisition must contain at least one line item."]})
+        else:
+            if lines_data is not None and (not isinstance(lines_data, list) or len(lines_data) == 0):
+                raise serializers.ValidationError({"lines": ["A requisition must contain at least one line item."]})
+
+        if lines_data and isinstance(lines_data, list):
+            for idx, item in enumerate(lines_data):
+                if not isinstance(item, dict):
+                    raise serializers.ValidationError(
+                        {"lines": [f"Line item {idx + 1} must be an object."]}
+                    )
+                desc = str(item.get("item_description", "")).strip()
+                if not desc:
+                    raise serializers.ValidationError(
+                        {"lines": [f"Item description is required for line item {idx + 1}."]}
+                    )
+                qty = item.get("quantity")
+                if qty is not None:
+                    try:
+                        d_qty = Decimal(str(qty))
+                        if d_qty <= Decimal("0.00"):
+                            raise serializers.ValidationError(
+                                {"lines": [f"Quantity must be greater than zero for line item {idx + 1}."]}
+                            )
+                        if d_qty % 1 != 0:
+                            raise serializers.ValidationError(
+                                {"lines": [f"Quantity must be a whole number (no decimal points allowed) for line item {idx + 1}."]}
+                            )
+                    except (TypeError, ValueError, ArithmeticError) as e:
+                        if isinstance(e, serializers.ValidationError):
+                            raise
+                        raise serializers.ValidationError(
+                            {"lines": [f"Invalid quantity for line item {idx + 1}."]}
+                        )
+                price = item.get("estimated_unit_price") if item.get("estimated_unit_price") is not None else item.get("unit_price")
+                if price is not None:
+                    try:
+                        d_price = Decimal(str(price))
+                        if d_price < Decimal("0.00"):
+                            raise serializers.ValidationError(
+                                {"lines": [f"Estimated unit price cannot be negative for line item {idx + 1}."]}
+                            )
+                    except (TypeError, ValueError, ArithmeticError):
+                        raise serializers.ValidationError(
+                            {"lines": [f"Invalid estimated unit price for line item {idx + 1}."]}
+                        )
+
         return attrs
 
     def create(self, validated_data):

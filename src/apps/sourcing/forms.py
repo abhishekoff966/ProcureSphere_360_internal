@@ -86,7 +86,7 @@ class SourcingEventForm(forms.Form):
 
         from django.utils import timezone
         now = timezone.now()
-        buffer_time = now - timedelta(minutes=5)
+        buffer_time = now - timedelta(minutes=15)
         if start:
             start_aware = start if timezone.is_aware(start) else timezone.make_aware(start)
             if start_aware < buffer_time:

@@ -9,6 +9,7 @@ from apps.accounts.models import User
 from apps.approvals.models import ApprovalAction, ApprovalPolicy
 from apps.approvals.services import evaluate_approval_chain, record_approval_action_service
 from apps.audit.models import AuditLog
+from apps.audit.services import create_audit_log_service
 from apps.budgets.services import (
     BudgetOverrunException,
     check_and_reserve_budget_service,
@@ -130,7 +131,7 @@ def create_purchase_requisition_service(
                 file=uploaded_file,
             )
 
-    AuditLog.objects.create(
+    create_audit_log_service(
         actor=requester,
         action=AuditLog.ACTION_CREATE,
         target_model="PurchaseRequisition",
@@ -160,6 +161,9 @@ def submit_purchase_requisition_service(
         raise ValidationError(
             f"Cannot submit requisition in status '{requisition.status}'. Must be DRAFT."
         )
+
+    if not requisition.lines.exists():
+        raise ValidationError("Purchase Requisition must contain at least one line item.")
 
     if requisition.total_amount <= Decimal("0.00"):
         raise ValidationError("Requisition total amount must be greater than zero.")
@@ -207,9 +211,10 @@ def submit_purchase_requisition_service(
         previous_state=previous_status,
         new_state=requisition.status,
         comments="PR submitted for approval workflow.",
+        _skip_audit=True,
     )
 
-    AuditLog.objects.create(
+    create_audit_log_service(
         actor=user,
         action=AuditLog.ACTION_SUBMIT,
         target_model="PurchaseRequisition",

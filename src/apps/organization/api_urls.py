@@ -67,14 +67,18 @@ class IsAdminOrReadOnly(BasePermission):
         )
         if (
             getattr(request.user, "is_vendor", False)
-            or role_code in [Role.VENDOR_USER, Role.REQUESTER]
+            or role_code in [Role.VENDOR_USER, "VENDOR_USER"]
         ):
             return False
         if (
             request.user.is_superuser
-            or role_code == Role.SUPER_ADMIN
+            or role_code in [Role.SUPER_ADMIN, "SUPER_ADMIN"]
         ):
             return True
+        if role_code in [Role.REQUESTER, "REQUESTER"]:
+            if isinstance(view, CostCenterViewSet) and request.method in SAFE_METHODS:
+                return True
+            return False
         return request.method in SAFE_METHODS
 
 
@@ -88,25 +92,29 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         instance = serializer.save()
         from apps.audit.models import AuditLog
+        from apps.audit.services import create_audit_log_service
         actor = self.request.user if getattr(self.request, "user", None) and self.request.user.is_authenticated else None
-        AuditLog.objects.create(
+        create_audit_log_service(
             actor=actor,
             action=AuditLog.ACTION_CREATE,
             target_model="Organization",
             target_object_id=str(instance.id),
             new_state={"name": instance.name, "code": instance.code, "is_active": instance.is_active},
+            request=self.request,
         )
 
     def perform_update(self, serializer):
         instance = serializer.save()
         from apps.audit.models import AuditLog
+        from apps.audit.services import create_audit_log_service
         actor = self.request.user if getattr(self.request, "user", None) and self.request.user.is_authenticated else None
-        AuditLog.objects.create(
+        create_audit_log_service(
             actor=actor,
             action=AuditLog.ACTION_UPDATE,
             target_model="Organization",
             target_object_id=str(instance.id),
             new_state={"name": instance.name, "code": instance.code, "is_active": instance.is_active},
+            request=self.request,
         )
 
     def perform_destroy(self, instance):
@@ -119,13 +127,15 @@ class OrganizationViewSet(viewsets.ModelViewSet):
                 {"detail": "Cannot delete organization: active users are assigned to this organization."}
             )
         from apps.audit.models import AuditLog
+        from apps.audit.services import create_audit_log_service
         actor = self.request.user if getattr(self.request, "user", None) and self.request.user.is_authenticated else None
-        AuditLog.objects.create(
+        create_audit_log_service(
             actor=actor,
             action=AuditLog.ACTION_DELETE,
             target_model="Organization",
             target_object_id=str(instance.id),
             previous_state={"name": instance.name, "code": instance.code},
+            request=self.request,
         )
         instance.delete()
 

@@ -82,13 +82,21 @@ class ApprovalActionFilter(django_filters.FilterSet):
     target_model = django_filters.CharFilter(
         field_name="target_model_name", lookup_expr="icontains"
     )
-    target_object_id = django_filters.CharFilter(
-        field_name="target_object_id", lookup_expr="exact"
-    )
+    target_object_id = django_filters.CharFilter(method="filter_target_object_id")
 
     class Meta:
         model = ApprovalAction
         fields = ["status", "action", "target_model_name", "target_object_id"]
+
+    def filter_target_object_id(self, queryset, name, value):
+        if not value:
+            return queryset
+        import uuid
+        try:
+            val_uuid = uuid.UUID(str(value).strip())
+            return queryset.filter(target_object_id=val_uuid)
+        except (ValueError, AttributeError):
+            return queryset.none()
 
 
 class ApprovalPolicyViewSet(viewsets.ModelViewSet):
@@ -126,6 +134,24 @@ class ApprovalActionViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_class = ApprovalActionFilter
     search_fields = ["target_model_name", "comments", "actor__email"]
     ordering_fields = ["created_at", "action"]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = super().get_queryset()
+        if not user or not user.is_authenticated:
+            return qs.none()
+        if user.is_superuser:
+            return qs
+
+        from django.db.models import Q
+        user_org = getattr(user, "effective_organization", None) or getattr(user, "organization", None)
+        if not user_org:
+            return qs.filter(actor=user)
+
+        return qs.filter(
+            Q(actor__organization=user_org)
+            | Q(policy_step__policy__organization=user_org)
+        )
 
     def _check_approver_authorization(self, request):
         user = request.user

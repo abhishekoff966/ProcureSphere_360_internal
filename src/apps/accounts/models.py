@@ -281,12 +281,13 @@ class User(AbstractUser):
             self.is_superuser = False
             self.is_staff = False
 
-        # Only Requesters and Department Approvers are tied to a Department and Cost Center.
-        # All other roles belong to the entire organization and have no department/cost center.
-        if self.role and self.role.code not in [Role.REQUESTER, Role.DEPT_APPROVER]:
+        # Requesters have Department & Cost Center. Department Approvers can be assigned a Department.
+        # Cost centers are restricted to Requesters; non-department roles have department cleared.
+        if self.role and self.role.code != Role.REQUESTER:
             if not self.organization_id and self.department_id and hasattr(self.department, "organization"):
                 self.organization = self.department.organization
-            self.department = None
+            if self.role.code != Role.DEPT_APPROVER:
+                self.department = None
             self.cost_center = None
 
         super().save(*args, **kwargs)

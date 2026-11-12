@@ -314,6 +314,17 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
                 {"sourcing_event": [f"Cannot create Purchase Order from sourcing event '{sourcing_event.event_number}': Sourcing event status is '{sourcing_event.status}' (must be AWARDED)."]}
             )
 
+        po_num = attrs.get("po_number") or self.initial_data.get("po_number")
+        if po_num and str(po_num).strip():
+            clean_po = str(po_num).strip()
+            qs_po = PurchaseOrder.objects.filter(po_number__iexact=clean_po)
+            if self.instance:
+                qs_po = qs_po.exclude(pk=self.instance.pk)
+            if qs_po.exists():
+                raise serializers.ValidationError(
+                    {"po_number": [f"Purchase Order with number '{clean_po}' already exists."]}
+                )
+
         if self.instance is None:
             lines_data = self.initial_data.get("lines")
             if not lines_data or not isinstance(lines_data, list) or len(lines_data) == 0:
@@ -470,6 +481,26 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         "lines__item_description",
     ]
     ordering_fields = ["created_at", "total_amount", "po_number", "version", "status"]
+
+    def create(self, request, *args, **kwargs):
+        from django.db import IntegrityError, transaction
+        try:
+            with transaction.atomic():
+                return super().create(request, *args, **kwargs)
+        except IntegrityError as exc:
+            err_msg = str(exc).lower()
+            if "po_number" in err_msg or "orders_purchaseorder" in err_msg or "unique" in err_msg:
+                return Response(
+                    {
+                        "error": {
+                            "code": "DUPLICATE_RESOURCE",
+                            "message": "A Purchase Order with this PO number already exists or concurrent creation collided. Please retry.",
+                            "details": {"po_number": ["Purchase Order with this PO number already exists."]},
+                        }
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+            raise
 
     def get_queryset(self):
         user = self.request.user

@@ -416,6 +416,22 @@
             </a>
             {% endif %}
         </nav>
+
+        <!-- Sidebar Profile Container -->
+        <div class="p-3 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between gap-2 mt-auto" style="min-width: 0;">
+            <div class="d-flex align-items-center gap-2 overflow-hidden" style="min-width: 0;">
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold flex-shrink-0" style="width: 34px; height: 34px; font-size: 0.85rem;">
+                    {{ request.user.email|slice:":1"|upper }}
+                </div>
+                <div class="overflow-hidden" style="min-width: 0;">
+                    <div class="text-truncate fw-semibold small text-dark" title="{{ request.user.email }}">{{ request.user.email }}</div>
+                    <div class="text-truncate text-muted" style="font-size: 0.72rem;">{{ request.user.role.name|default:"Super Admin" }}</div>
+                </div>
+            </div>
+            <a href="/logout/" class="btn btn-outline-secondary btn-sm rounded-circle flex-shrink-0 d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px; padding: 0;" title="Sign out">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            </a>
+        </div>
     </aside>
 
     <!-- Main Content Area -->

@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from apps.accounts.models import Role, User
 from apps.audit.models import AuditLog
+from apps.audit.services import create_audit_log_service
 
 from .models import ApprovalAction, ApprovalDelegate, ApprovalPolicy, ApprovalStep
 
@@ -524,6 +525,7 @@ def record_approval_action_service(
     new_state: str,
     policy_step: ApprovalStep = None,
     comments: str = "",
+    _skip_audit: bool = False,
 ) -> ApprovalAction:
     """
     Records an append-only ApprovalAction and corresponding AuditLog entry inside a transaction.
@@ -539,23 +541,24 @@ def record_approval_action_service(
         new_state=new_state,
     )
 
-    if action == ApprovalAction.ACTION_APPROVE:
-        audit_action = AuditLog.ACTION_APPROVE
-    elif action == ApprovalAction.ACTION_REJECT:
-        audit_action = AuditLog.ACTION_REJECT
-    elif action == ApprovalAction.ACTION_SUBMIT:
-        audit_action = AuditLog.ACTION_CREATE
-    else:
-        audit_action = AuditLog.ACTION_UPDATE
+    if not _skip_audit:
+        if action == ApprovalAction.ACTION_APPROVE:
+            audit_action = AuditLog.ACTION_APPROVE
+        elif action == ApprovalAction.ACTION_REJECT:
+            audit_action = AuditLog.ACTION_REJECT
+        elif action == ApprovalAction.ACTION_SUBMIT:
+            audit_action = AuditLog.ACTION_SUBMIT
+        else:
+            audit_action = AuditLog.ACTION_UPDATE
 
-    AuditLog.objects.create(
-        actor=actor,
-        action=audit_action,
-        target_model=target_model_name,
-        target_object_id=str(target_object_id),
-        previous_state={"status": previous_state},
-        new_state={"status": new_state, "comments": comments},
-    )
+        create_audit_log_service(
+            actor=actor,
+            action=audit_action,
+            target_model=target_model_name,
+            target_object_id=str(target_object_id),
+            previous_state={"status": previous_state},
+            new_state={"status": new_state, "comments": comments},
+        )
 
     return approval_action
 
