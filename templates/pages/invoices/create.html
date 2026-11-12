@@ -70,8 +70,12 @@
                         Invoice Number <span class="text-danger">*</span>
                     </label>
                     <input type="text" class="form-control bg-light" id="invoiceNumberInput" name="invoice_number" 
-                           value="{{ form_data.invoice_number|default:'' }}" required placeholder="e.g. INV-2026-991">
-                    <div class="invalid-feedback">A unique invoice number is required.</div>
+                           value="{{ form_data.invoice_number|default:'' }}" required placeholder="e.g. INV-2026-991"
+                           pattern="^[A-Za-z0-9]([A-Za-z0-9\-_/]{0,48}[A-Za-z0-9])?$"
+                           minlength="3" maxlength="50"
+                           title="Alphanumeric invoice number (3–50 chars). Hyphens (-), underscores (_), slashes (/) are permitted. Special characters like !@#$%^&*() are not allowed.">
+                    <div class="form-text small text-muted">Format: Alphanumeric with hyphens/slashes (e.g. INV-2026-991, CISCO/INV/0012). 3–50 characters. No special characters like !@#$%^&*().</div>
+                    <div class="invalid-feedback">A unique invoice number is required. Use alphanumeric format (e.g. INV-2026-991).</div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-bold text-muted small text-uppercase" for="invoiceDateInput">
@@ -114,10 +118,10 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-bold text-muted small text-uppercase" for="unitPriceInput">
-                        Unit Price ($) <span class="text-danger">*</span>
+                        Unit Price (₹) <span class="text-danger">*</span>
                     </label>
                     <div class="input-group has-validation">
-                        <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-dollar-sign"></i></span>
+                        <span class="input-group-text bg-light text-muted fw-bold">₹</span>
                         <input type="number" step="0.01" min="0.00" class="form-control bg-light" id="unitPriceInput" 
                                name="unit_price" value="{{ form_data.unit_price|default:'' }}" required 
                                placeholder="e.g. 500.00" 
