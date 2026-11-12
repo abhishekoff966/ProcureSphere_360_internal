@@ -252,3 +252,119 @@ def test_approver_dashboard_my_approvals_navigation(client, setup_approver_env):
     assert "My Approvals" in content
     assert "Evaluated History" in content
 
+
+@pytest.mark.django_db
+def test_approver_dashboard_negative_budget_clamped_for_display_and_preserves_overrun_guard(
+    client, setup_approver_env
+):
+    """Overdrawn budgets clamp card display to ₹0.00 (no negative balance) while preserving overrun guard."""
+    env = setup_approver_env
+    today = timezone.now().date()
+
+    # Department budget is overdrawn (e.g. overrun exception approval / PO commitments)
+    budget = Budget.objects.create(
+        cost_center=env["cc"],
+        fiscal_period=env["fp"],
+        allocated_amount=Decimal("100000.00"),
+        reserved_amount=Decimal("5000000.00"),
+        committed_amount=Decimal("4929757.00"),
+        actual_amount=Decimal("0.00"),
+    )
+    assert budget.available_amount == Decimal("-9829757.00")
+
+    # Separate managed CC in another department must NOT leak into IT/ENG Funds card
+    other_dept = Department.objects.create(organization=env["org"], name="Ops", code="OPS-02")
+    other_cc = CostCenter.objects.create(
+        department=other_dept, name="Ops CC", code="CC-OPS-02", manager=env["approver"]
+    )
+    Budget.objects.create(
+        cost_center=other_cc,
+        fiscal_period=env["fp"],
+        allocated_amount=Decimal("50000.00"),
+        reserved_amount=Decimal("0.00"),
+    )
+
+    pr = PurchaseRequisition.objects.create(
+        requester=env["requester"],
+        department=env["dept"],
+        cost_center=env["cc"],
+        title="Pending Overdrawn PR",
+        status=PurchaseRequisition.STATUS_MANAGER_REVIEW,
+        pr_number="PR-OVERDRAWN-01",
+        total_amount=Decimal("500.00"),
+        requested_delivery_date=today,
+    )
+
+    client.force_login(env["approver"])
+    response = client.get("/approver/")
+    assert response.status_code == 200
+    content = response.content.decode("utf-8")
+
+    # Displayed available budget is clamped to 0.00 (never negative) and marks Exhausted
+    assert response.context["metrics"]["available_budget"] == 0.0
+    assert response.context["metrics"]["is_budget_overdrawn"] is True
+    assert "₹0.00" in content
+    assert "₹-" not in content
+    assert "-9829757" not in content
+    assert "Exhausted" in content
+    assert "Awaiting Finance AP" in content
+    assert pr.pr_number in content
+
+    # Underlying Budget model property remains unclamped for DEF-003 accounting accuracy
+    budget.refresh_from_db()
+    assert budget.available_amount == Decimal("-9829757.00")
+
+
+@pytest.mark.django_db
+def test_approver_dashboard_pending_links_auto_filter_pending_prs_only(client, setup_approver_env):
+    """Clicking Pending badge/card links opens /approvals/inbox/?status=PENDING with Pending Review selected."""
+    env = setup_approver_env
+    today = timezone.now().date()
+
+    pending_pr = PurchaseRequisition.objects.create(
+        requester=env["requester"],
+        department=env["dept"],
+        cost_center=env["cc"],
+        title="Pending Monitor Order",
+        status=PurchaseRequisition.STATUS_MANAGER_REVIEW,
+        pr_number="PR-PENDING-ONLY-01",
+        total_amount=Decimal("250.00"),
+        requested_delivery_date=today,
+    )
+    approved_pr = PurchaseRequisition.objects.create(
+        requester=env["requester"],
+        department=env["dept"],
+        cost_center=env["cc"],
+        title="Already Approved Item",
+        status=PurchaseRequisition.STATUS_APPROVED,
+        pr_number="PR-APPROVED-01",
+        total_amount=Decimal("300.00"),
+        requested_delivery_date=today,
+    )
+    rejected_pr = PurchaseRequisition.objects.create(
+        requester=env["requester"],
+        department=env["dept"],
+        cost_center=env["cc"],
+        title="Rejected Item",
+        status=PurchaseRequisition.STATUS_REJECTED,
+        pr_number="PR-REJECTED-01",
+        total_amount=Decimal("400.00"),
+        requested_delivery_date=today,
+    )
+
+    client.force_login(env["approver"])
+    dash_resp = client.get("/approver/")
+    assert dash_resp.status_code == 200
+    dash_html = dash_resp.content.decode("utf-8")
+    assert 'href="/approvals/inbox/?status=PENDING"' in dash_html
+
+    inbox_resp = client.get("/approvals/inbox/?status=PENDING")
+    assert inbox_resp.status_code == 200
+    inbox_html = inbox_resp.content.decode("utf-8")
+
+    assert inbox_resp.context["status_filter"] == "PENDING"
+    assert '<option value="PENDING" selected>Pending Review</option>' in inbox_html
+    assert pending_pr.pr_number in inbox_html
+    assert approved_pr.pr_number not in inbox_html
+    assert rejected_pr.pr_number not in inbox_html
+

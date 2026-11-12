@@ -136,11 +136,11 @@ def generate_purchase_order_service(
                 description=f"PO Commitment for {vendor.legal_name}",
             )
 
-        if requisition:
+        if target_requisition:
             from apps.budgets.services import release_budget_reservation_service
             try:
                 release_budget_reservation_service(
-                    requisition=requisition,
+                    requisition=target_requisition,
                     user=created_by_user,
                     reason=f"Converted to Purchase Order {po.po_number}",
                 )

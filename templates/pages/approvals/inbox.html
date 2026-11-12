@@ -31,7 +31,7 @@
 
     <!-- Navigation Pills for Tabs -->
     <div class="nav nav-pills bg-white p-1 rounded-pill shadow-sm border flex-nowrap w-100 w-md-auto justify-content-center">
-        <a href="/approvals/inbox/" class="nav-link rounded-pill px-2 px-sm-4 py-2 fw-semibold text-nowrap flex-grow-1 flex-md-grow-0 text-center small d-inline-flex align-items-center justify-content-center {% if active_tab != 'history' %}active bg-primary text-white shadow-sm{% else %}text-secondary{% endif %}" style="height: 38px;">
+        <a href="/approvals/inbox/?status=PENDING" class="nav-link rounded-pill px-2 px-sm-4 py-2 fw-semibold text-nowrap flex-grow-1 flex-md-grow-0 text-center small d-inline-flex align-items-center justify-content-center {% if active_tab != 'history' %}active bg-primary text-white shadow-sm{% else %}text-secondary{% endif %}" style="height: 38px;">
             <i class="fa-solid fa-square-check me-2"></i> Pending ({{ pending_count|default:pending_prs.count }})
         </a>
         <a href="/approvals/inbox/?tab=history" class="nav-link rounded-pill px-2 px-sm-4 py-2 fw-semibold text-nowrap flex-grow-1 flex-md-grow-0 text-center small d-inline-flex align-items-center justify-content-center {% if active_tab == 'history' %}active bg-primary text-white shadow-sm{% else %}text-secondary{% endif %}" style="height: 38px;">

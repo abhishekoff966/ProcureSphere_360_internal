@@ -213,7 +213,7 @@
             <!-- 3. Approver & Workflow Section -->
             <div class="nav-section-label">Approver &amp; Workflow</div>
 
-            <a href="/approvals/inbox/"
+            <a href="/approvals/inbox/?status=PENDING"
                class="vendor-navlink approver-navlink d-flex align-items-center justify-content-between {% if active_nav == 'pending_approvals' or '/approvals/' in request.path and request.GET.tab != 'history' and active_nav != 'my_approvals' %}active-nav-item{% endif %}">
                 <div class="d-flex align-items-center min-width-0">
                     <span class="text-truncate">Pending Approvals</span>

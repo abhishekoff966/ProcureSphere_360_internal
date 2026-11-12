@@ -31,7 +31,7 @@
             </p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="/approvals/inbox/" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm text-nowrap">
+            <a href="/approvals/inbox/?status=PENDING" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm text-nowrap">
                 <i class="fa-solid fa-inbox me-1"></i> Open Inbox ({{ metrics.pending_count|default:"0" }})
             </a>
             <a href="/approvals/inbox/?tab=history" class="btn btn-outline-primary btn-sm rounded-pill px-3 text-nowrap">
@@ -103,7 +103,7 @@
                     </div>
                 </div>
                 <div class="col-12 col-xl-4 text-start text-xl-end">
-                    <a href="/approvals/inbox/" class="btn btn-warning text-dark rounded-pill px-4 py-2 fw-bold shadow-sm text-nowrap w-100 w-xl-auto d-inline-flex align-items-center justify-content-center" style="background-color: #FFC107; border-color: #FFC107;">
+                    <a href="/approvals/inbox/?status=PENDING" class="btn btn-warning text-dark rounded-pill px-4 py-2 fw-bold shadow-sm text-nowrap w-100 w-xl-auto d-inline-flex align-items-center justify-content-center" style="background-color: #FFC107; border-color: #FFC107;">
                         <i class="fa-solid fa-square-check me-2"></i> Review &amp; Approve
                     </a>
                 </div>
@@ -150,7 +150,7 @@
 
         <!-- Card 3: Pending Approvals (Red Accent) -->
         <div class="col-12 col-sm-6 col-xl-3">
-            <a href="/approvals/inbox/" class="metric-card-link">
+            <a href="/approvals/inbox/?status=PENDING" class="metric-card-link">
                 <div class="card metric-card h-100 shadow-sm border-0 rounded-4 p-3 p-md-4 transition-all" style="border: 2px solid #DC3545 !important; background-color: #FFFFFF;">
                     <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                         <span class="text-secondary small fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.05em;">PENDING APPROVALS</span>
@@ -173,11 +173,13 @@
                 <div class="card metric-card h-100 shadow-sm border-0 rounded-4 p-3 p-md-4 transition-all" style="border: 2px solid #0D6EFD !important; background-color: #FFFFFF;">
                     <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
                         <span class="text-secondary small fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.05em;">AVAILABLE BUDGET</span>
-                        <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary fw-semibold px-2.5 py-1" style="font-size: 0.7rem;">Cost Center</span>
+                        <span class="badge rounded-pill {% if metrics.is_budget_overdrawn %}bg-danger bg-opacity-10 text-danger{% else %}bg-primary bg-opacity-10 text-primary{% endif %} fw-semibold px-2.5 py-1" style="font-size: 0.7rem;">
+                            {% if metrics.is_budget_overdrawn %}Exhausted{% else %}Cost Center{% endif %}
+                        </span>
                     </div>
-                    <div class="fw-bold mb-2" style="font-size: 2.1rem; color: #0D6EFD; line-height: 1.1;" title="₹{{ metrics.available_budget|floatformat:2 }}">₹{{ metrics.available_budget|floatformat:2 }}</div>
+                    <div class="fw-bold mb-2" style="font-size: 2.1rem; color: #0D6EFD; line-height: 1.1;" title="{% if metrics.is_budget_overdrawn %}Available: ₹0.00 (Overrun: ₹{{ metrics.budget_overrun_amount|floatformat:2 }}){% else %}₹{{ metrics.available_budget|floatformat:2 }}{% endif %}">₹{{ metrics.available_budget|floatformat:2 }}</div>
                     <div class="mt-auto pt-2 border-top small text-secondary d-flex justify-content-between align-items-center" style="font-size: 0.8rem; border-color: #DEE2E6 !important;">
-                        <span>Funds: <strong class="text-dark">{{ user_department.code|default:"Allocated" }}</strong></span>
+                        <span>Funds: <strong class="{% if metrics.is_budget_overdrawn %}text-danger{% else %}text-dark{% endif %}">{{ user_department.code|default:"Allocated" }}{% if metrics.is_budget_overdrawn %} (Overrun){% endif %}</strong></span>
                         <span class="fw-semibold text-primary">Details <i class="fa-solid fa-arrow-right ms-1"></i></span>
                     </div>
                 </div>
@@ -192,7 +194,7 @@
                 <i class="fa-solid fa-file-signature text-cyan fs-5"></i>
                 <h5 class="fw-bold mb-0 text-dark" style="font-size: 1.05rem;">Pending Approval Queue</h5>
             </div>
-            <a href="/approvals/inbox/" class="badge bg-warning bg-opacity-25 text-dark border border-warning border-opacity-50 text-decoration-none rounded-pill px-3 py-1.5 fw-bold" style="font-size: 0.75rem;">
+            <a href="/approvals/inbox/?status=PENDING" class="badge bg-warning bg-opacity-25 text-dark border border-warning border-opacity-50 text-decoration-none rounded-pill px-3 py-1.5 fw-bold" style="font-size: 0.75rem;">
                 {{ metrics.pending_count|default:0 }} Pending &rarr;
             </a>
         </div>

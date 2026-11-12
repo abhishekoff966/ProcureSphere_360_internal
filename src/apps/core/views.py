@@ -538,7 +538,7 @@ def approver_dashboard_view(request):
     user_approved_pr_ids = ApprovalAction.objects.filter(
         actor=user,
         target_model_name="PurchaseRequisition",
-        action=ApprovalAction.ACTION_APPROVE,
+        action__in=[ApprovalAction.ACTION_APPROVE, ApprovalAction.ACTION_REJECT],
     ).values_list("target_object_id", flat=True)
 
     pending_prs_qs = (
@@ -563,9 +563,12 @@ def approver_dashboard_view(request):
     else:
         current_period = FiscalPeriod.objects.filter(period_filter).first()
 
-    available_budget = 0
+    raw_available_budget = Decimal("0.00")
+    available_budget = Decimal("0.00")
     if current_period:
-        if user_department:
+        if getattr(user, "department_id", None):
+            dept_ccs = CostCenter.objects.filter(department_id=user.department_id)
+        elif user_department:
             dept_ccs = CostCenter.objects.filter(
                 Q(department=user_department) | Q(manager=user)
             ).distinct()
@@ -576,7 +579,13 @@ def approver_dashboard_view(request):
         budgets = Budget.objects.filter(
             cost_center__in=dept_ccs, fiscal_period=current_period
         )
-        available_budget = sum([b.available_amount for b in budgets])
+        raw_available_budget = sum((b.available_amount for b in budgets), Decimal("0.00"))
+        available_budget = max(Decimal("0.00"), raw_available_budget)
+
+    is_budget_overdrawn = raw_available_budget < Decimal("0.00")
+    budget_overrun_amount = (
+        abs(raw_available_budget) if is_budget_overdrawn else Decimal("0.00")
+    )
 
     # Budget validation for pending PR queue to prevent unauthorized approval of over-budget or unfunded PRs
     today_date = now.date()
@@ -599,7 +608,12 @@ def approver_dashboard_view(request):
             pr.is_over_budget = True
         elif b and (b.available_amount <= 0 or pr.total_amount > b.available_amount):
             pr.is_over_budget = True
-        elif available_budget <= 0 and current_period and (user_department or getattr(user, "organization", None)):
+        elif (
+            b is None
+            and raw_available_budget <= 0
+            and current_period
+            and (user_department or getattr(user, "organization", None))
+        ):
             pr.is_over_budget = True
         else:
             pr.is_over_budget = False
@@ -619,6 +633,8 @@ def approver_dashboard_view(request):
             "pending_count": pending_prs_qs.count(),
             "approved_count": dept_prs.filter(status="APPROVED").count(),
             "available_budget": float(available_budget),
+            "is_budget_overdrawn": is_budget_overdrawn,
+            "budget_overrun_amount": float(budget_overrun_amount),
             "budget_overrun_count": budget_overrun_count,
         },
         "pending_prs": pending_list,
