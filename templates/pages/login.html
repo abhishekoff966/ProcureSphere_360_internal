@@ -643,6 +643,18 @@
                 {% endfor %}
                 {% endif %}
 
+                {% if session_expired_notice and not messages %}
+                <div class="login-alert-banner alert-info" data-session-expired-banner="true">
+                    <div style="display: flex; align-items: center; gap: 9px;">
+                        <i class="fa-solid fa-clock"></i>
+                        <span>{{ session_expired_notice }}</span>
+                    </div>
+                    <button type="button" onclick="this.closest('.login-alert-banner').remove()"
+                        style="background: none; border: none; font-size: 16px; cursor: pointer; color: inherit; padding: 0 4px; line-height: 1; opacity: 0.7;"
+                        aria-label="Close alert">&times;</button>
+                </div>
+                {% endif %}
+
                 <!-- Form -->
                 <form id="loginForm" class="lm-form" method="POST"
                     action="/login/{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}">

@@ -1,3 +1,5 @@
+import time
+
 from django.contrib.auth import authenticate, login, logout
 from django.middleware.csrf import get_token
 from django.utils.decorators import method_decorator
@@ -189,6 +191,7 @@ class SessionLoginView(views.APIView):
             )
 
         login(request, user)
+        request.session["_last_activity_ts"] = time.time()
         csrf_token = get_token(request)
         serializer = UserSerializer(user)
 
@@ -286,6 +289,7 @@ class SessionRefreshView(views.APIView):
             user = authenticate(request, username=auth_username, password=password)
             if user and user.is_active:
                 login(request, user)
+                request.session["_last_activity_ts"] = time.time()
                 return Response(
                     {"status": "ok", "message": "Session refreshed.", "user": UserSerializer(user).data},
                     status=status.HTTP_200_OK,
@@ -294,6 +298,46 @@ class SessionRefreshView(views.APIView):
         return Response(
             {"error": {"code": "NOT_AUTHENTICATED", "message": "Authentication required to refresh session."}},
             status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+
+class SessionKeepAliveView(views.APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        summary="Session Activity Keepalive",
+        description="Extends an active authenticated session when real user activity occurs in the UI.",
+        responses={
+            200: OpenApiResponse(description="Session activity timestamp refreshed."),
+            401: OpenApiResponse(description="Session expired or unauthenticated."),
+        },
+        tags=["Authentication"],
+    )
+    def post(self, request, *args, **kwargs):
+        if not request.user or not request.user.is_authenticated:
+            return Response(
+                {
+                    "error": {
+                        "code": "SESSION_EXPIRED",
+                        "message": "Your session has expired. Please sign in again.",
+                    },
+                    "redirect_url": "/login/?session_expired=1",
+                },
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        from django.conf import settings as django_settings
+
+        timeout_seconds = int(getattr(django_settings, "SESSION_IDLE_TIMEOUT_SECONDS", 300))
+        now = time.time()
+        request.session["_last_activity_ts"] = now
+        return Response(
+            {
+                "status": "ok",
+                "timeout_seconds": timeout_seconds,
+                "expires_at": int(now + timeout_seconds),
+            },
+            status=status.HTTP_200_OK,
         )
 
 
