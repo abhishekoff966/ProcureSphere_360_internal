@@ -707,11 +707,8 @@ def detail_view(request, pk):
         elif not chain and role_code in [Role.DEPT_APPROVER, Role.SUPER_ADMIN]:
             can_approve = not user_has_approved
     elif pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW:
-        if role_code in [Role.SUPER_ADMIN] or user.is_superuser:
+        if role_code in [Role.FINANCE_AP, Role.PROC_MGR, Role.SUPER_ADMIN] or user.is_superuser:
             can_approve = True
-
-    if role_code in [Role.PROC_MGR, "PROC_MGR"] and not user.is_superuser:
-        can_approve = False
 
     latest_po = pr.purchase_orders.order_by("-created_at").first()
     latest_sourcing = pr.sourcing_events.order_by("-created_at").first()
@@ -790,16 +787,9 @@ def approve_view(request, pk):
             messages.error(request, "Permission Denied: You cannot approve requisitions from another organization.")
             return redirect("requisition_detail", pk=pr.pk)
 
-        if role_code in [Role.PROC_MGR, "PROC_MGR"] and not user.is_superuser:
-            messages.error(
-                request,
-                "Permission Denied: Procurement Managers maintain view and inspection permissions only and cannot approve purchase requisitions.",
-            )
-            return redirect("requisition_detail", pk=pr.pk)
-
-        if pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW and role_code not in [
-            Role.SUPER_ADMIN,
-        ]:
+        if pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW and not (
+            user.is_superuser or role_code in [Role.FINANCE_AP, Role.PROC_MGR, Role.SUPER_ADMIN]
+        ):
             messages.error(
                 request,
                 "Permission Denied: You do not have permission to approve a budget overrun exception.",
@@ -808,7 +798,10 @@ def approve_view(request, pk):
         elif pr.status in [
             PurchaseRequisition.STATUS_MANAGER_REVIEW,
             PurchaseRequisition.STATUS_SUBMITTED,
-        ] and role_code not in [Role.DEPT_APPROVER, Role.FINANCE_AP, Role.SUPER_ADMIN]:
+        ] and not (
+            user.is_superuser
+            or role_code in [Role.DEPT_APPROVER, Role.PROC_MGR, Role.FINANCE_AP, Role.SUPER_ADMIN]
+        ):
             messages.error(
                 request,
                 "Permission Denied: You do not have permission to approve this requisition.",
@@ -848,16 +841,9 @@ def reject_view(request, pk):
             messages.error(request, "Permission Denied: You cannot reject requisitions from another organization.")
             return redirect("requisition_detail", pk=pr.pk)
 
-        if role_code in [Role.PROC_MGR, "PROC_MGR"] and not user.is_superuser:
-            messages.error(
-                request,
-                "Permission Denied: Procurement Managers maintain view and inspection permissions only and cannot reject purchase requisitions.",
-            )
-            return redirect("requisition_detail", pk=pr.pk)
-
-        if pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW and role_code not in [
-            Role.SUPER_ADMIN,
-        ]:
+        if pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW and not (
+            user.is_superuser or role_code in [Role.FINANCE_AP, Role.PROC_MGR, Role.SUPER_ADMIN]
+        ):
             messages.error(
                 request, "Permission Denied: You do not have permission to reject a budget overrun exception."
             )
@@ -865,7 +851,10 @@ def reject_view(request, pk):
         elif pr.status in [
             PurchaseRequisition.STATUS_MANAGER_REVIEW,
             PurchaseRequisition.STATUS_SUBMITTED,
-        ] and role_code not in [Role.DEPT_APPROVER, Role.FINANCE_AP, Role.SUPER_ADMIN]:
+        ] and not (
+            user.is_superuser
+            or role_code in [Role.DEPT_APPROVER, Role.PROC_MGR, Role.FINANCE_AP, Role.SUPER_ADMIN]
+        ):
             messages.error(
                 request, "Permission Denied: You do not have permission to reject this requisition."
             )

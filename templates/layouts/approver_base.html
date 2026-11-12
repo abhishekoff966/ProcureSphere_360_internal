@@ -225,8 +225,8 @@
                 {% endif %}
             </a>
 
-            <a href="/requisitions/"
-               class="vendor-navlink approver-navlink {% if active_nav == 'dept_prs' or '/requisitions/' in request.path and active_nav != 'my_approvals' %}active-nav-item{% endif %}">
+            <a href="/approver/department-prs/"
+               class="vendor-navlink approver-navlink {% if active_nav == 'dept_prs' or '/approver/department-prs' in request.path or '/approver/requisitions' in request.path or '/requisitions/' in request.path and active_nav != 'my_approvals' %}active-nav-item{% endif %}">
                 <span>Department PRs</span>
             </a>
 

@@ -261,9 +261,47 @@ def finance_dashboard_view(request):
             ]
         )
         .exclude(id__in=user_approved_pr_ids)
-        .select_related("department", "cost_center", "requester")
+        .select_related("department", "department__organization", "cost_center", "cost_center__department__organization", "requester")
         .order_by("-updated_at")
     )
+
+    from django.db.models import Count
+
+    from apps.approvals.models import ApprovalPolicy
+    from apps.approvals.services import evaluate_approval_chain
+
+    candidate_pr_ids = list(pending_finance_prs.values_list("id", flat=True))
+    finance_pr_ids = []
+    if candidate_pr_ids:
+        step_counts = {
+            str(k): v
+            for k, v in ApprovalAction.objects.filter(
+                target_object_id__in=[str(pid) for pid in candidate_pr_ids],
+                target_model_name="PurchaseRequisition",
+                action=ApprovalAction.ACTION_APPROVE,
+            )
+            .values("target_object_id")
+            .annotate(cnt=Count("id"))
+            .values_list("target_object_id", "cnt")
+        }
+        for cand in pending_finance_prs:
+            cand_org = (
+                getattr(getattr(cand, "department", None), "organization", None)
+                or getattr(getattr(getattr(cand, "cost_center", None), "department", None), "organization", None)
+                or getattr(cand.requester, "effective_organization", None)
+            )
+            chain = evaluate_approval_chain(
+                module=ApprovalPolicy.MODULE_PR,
+                amount=cand.total_amount,
+                department=cand.department,
+                cost_center=cand.cost_center,
+                organization=cand_org,
+            )
+            idx = step_counts.get(str(cand.id), 0)
+            if chain and idx < len(chain):
+                if chain[idx]["approver_role"].code == Role.FINANCE_AP:
+                    finance_pr_ids.append(cand.id)
+    pending_finance_prs = pending_finance_prs.filter(id__in=finance_pr_ids)
 
     ready_for_payment_qs = SupplierInvoice.objects.filter(
         status=SupplierInvoice.STATUS_READY_FOR_PAYMENT

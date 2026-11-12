@@ -49,7 +49,7 @@
                     <i class="fa-solid fa-magnifying-glass me-1.5"></i> Search &amp; Filter
                 </button>
                 {% if search_q or status_filter %}
-                <a href="{% url 'requisitions_list' %}" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm d-inline-flex align-items-center justify-content-center text-nowrap" style="height: 42px;" title="Clear Filter">
+                <a href="{{ request.path }}" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm d-inline-flex align-items-center justify-content-center text-nowrap" style="height: 42px;" title="Clear Filter">
                     <i class="fa-solid fa-xmark me-1.5"></i> Reset
                 </a>
                 {% endif %}
