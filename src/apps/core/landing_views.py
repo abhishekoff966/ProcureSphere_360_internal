@@ -834,7 +834,7 @@ def contact_submit(request):
             notification_type="SYSTEM",
             title=f"New Landing Contact Enquiry: {name}",
             message=f"Received a new enquiry from {name} ({email}, {country_code} {phone_clean}): {message[:120]}...",
-            target_url="/admin/core/contactenquiry/",
+            target_url="/admin/contact-enquiries/",
         )
     except Exception:
         pass

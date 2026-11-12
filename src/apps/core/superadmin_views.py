@@ -761,7 +761,7 @@ def org_list_view(request):
 
     else:
 
-        orgs = Organization.objects.select_related("admin_user").all().order_by("name")
+        orgs = Organization.objects.select_related("admin_user").all().order_by("-created_at", "name")
 
         departments = Department.objects.select_related("organization").all().order_by("name")
 
@@ -1901,6 +1901,7 @@ def org_resend_credentials_view(request, org_id):
     response = HttpResponse("<script>window.location.reload();</script>")
     response["HX-Refresh"] = "true"
     return response
+
 
 
 
@@ -3714,3 +3715,120 @@ def user_toggle_status_view(request, user_id):
     response = HttpResponse("<script>window.location.reload();</script>")
     response["HX-Refresh"] = "true"
     return response
+
+
+@login_required
+@super_admin_required
+def contact_enquiry_list_view(request):
+    """Stylish Super Admin workspace view for triaging and managing Contact Enquiries."""
+    from django.db.models import Count
+
+    from apps.core.models import ContactEnquiry
+
+    qs = ContactEnquiry.objects.all().order_by("-created_at")
+
+    search_q = request.GET.get("q", "").strip()
+    status_filter = request.GET.get("status", "").strip().upper()
+
+    valid_statuses = {code for code, _ in ContactEnquiry.STATUS_CHOICES}
+    if status_filter and status_filter in valid_statuses:
+        qs_filtered = qs.filter(status=status_filter)
+    else:
+        status_filter = ""
+        qs_filtered = qs
+
+    if search_q:
+        qs_filtered = qs_filtered.filter(
+            Q(name__icontains=search_q)
+            | Q(email__icontains=search_q)
+            | Q(phone__icontains=search_q)
+            | Q(message__icontains=search_q)
+            | Q(notes__icontains=search_q)
+        )
+
+    raw_counts = dict(
+        ContactEnquiry.objects.values("status").annotate(cnt=Count("id")).values_list("status", "cnt")
+    )
+    status_counts = {
+        "ALL": ContactEnquiry.objects.count(),
+        "NEW": raw_counts.get(ContactEnquiry.STATUS_NEW, 0),
+        "IN_REVIEW": raw_counts.get(ContactEnquiry.STATUS_IN_REVIEW, 0),
+        "CONTACTED": raw_counts.get(ContactEnquiry.STATUS_CONTACTED, 0),
+        "RESOLVED": raw_counts.get(ContactEnquiry.STATUS_RESOLVED, 0),
+        "SPAM": raw_counts.get(ContactEnquiry.STATUS_SPAM, 0),
+    }
+
+    paginator = Paginator(qs_filtered, 12)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    query_params = request.GET.copy()
+    if "page" in query_params:
+        query_params.pop("page")
+
+    return render(
+        request,
+        "pages/dashboards/superadmin/contact_enquiries.html",
+        {
+            "page_obj": page_obj,
+            "enquiries": page_obj.object_list,
+            "status_counts": status_counts,
+            "status_choices": ContactEnquiry.STATUS_CHOICES,
+            "search_q": search_q,
+            "status_filter": status_filter,
+            "querystring": query_params.urlencode(),
+        },
+    )
+
+
+@login_required
+@super_admin_required
+def contact_enquiry_status_view(request, enquiry_id):
+    """Persist Contact Enquiry triage status and staff notes with audit logging."""
+    from apps.core.models import ContactEnquiry
+
+    if request.method != "POST":
+        return redirect("superadmin:contact_enquiries")
+
+    enquiry = get_object_or_404(ContactEnquiry, pk=enquiry_id)
+    new_status = request.POST.get("status", "").strip().upper()
+    notes = request.POST.get("notes", None)
+
+    valid_statuses = {code for code, _ in ContactEnquiry.STATUS_CHOICES}
+    if new_status not in valid_statuses:
+        messages.error(request, "Invalid enquiry status selected.")
+        return redirect("superadmin:contact_enquiries")
+
+    prev_status = enquiry.status
+    with transaction.atomic():
+        enquiry.status = new_status
+        update_fields = ["status", "updated_at"]
+        if notes is not None:
+            enquiry.notes = notes.strip()
+            update_fields.append("notes")
+        enquiry.save(update_fields=update_fields)
+
+        AuditLog.objects.create(
+            actor=request.user,
+            action="CONTACT_ENQUIRY_UPDATED",
+            target_model="ContactEnquiry",
+            target_object_id=str(enquiry.id),
+            previous_state={"status": prev_status},
+            new_state={"status": new_status},
+            ip_address=request.META.get("REMOTE_ADDR"),
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+        )
+
+    messages.success(
+        request,
+        f"Enquiry from {enquiry.name} updated to '{enquiry.get_status_display()}'.",
+    )
+    next_url = request.POST.get("next", "").strip()
+    if next_url and (
+        next_url.startswith("/admin/contact-enquiries")
+        or next_url.startswith("/superadmin/contact-enquiries")
+    ):
+        return redirect(next_url)
+    if request.path.startswith("/admin/"):
+        return redirect("admin_contact_enquiries")
+    return redirect("superadmin:contact_enquiries")
+

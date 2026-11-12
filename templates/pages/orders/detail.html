@@ -25,7 +25,7 @@
             <i class="fa-solid fa-arrow-left me-1"></i> Back to Finance Dashboard
         </a>
         {% else %}
-        <a href="{% url 'orders_list' %}" class="text-decoration-none text-muted mb-2 d-inline-block">
+        <a href="{% if '/admin/' in request.path %}{% url 'admin_orders_list' %}{% else %}{% url 'orders_list' %}{% endif %}" class="text-decoration-none text-muted mb-2 d-inline-block">
             <i class="fa-solid fa-arrow-left me-1"></i> Back to Purchase Orders
         </a>
         {% endif %}
