@@ -64,8 +64,8 @@ class AuditLogPagination(LimitOffsetPagination):
 
 
 def _get_auditor_org(request):
-    user = request.user
-    if user.is_superuser:
+    user = getattr(request, "user", None) if request else None
+    if not user or getattr(user, "is_superuser", False):
         return None
     return getattr(user, "effective_organization", None) or getattr(user, "organization", None)
 
@@ -80,12 +80,13 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AuditLogListSerializer
     pagination_class = AuditLogPagination
     permission_classes = [IsAuthenticated, IsAuditorOrSuperAdmin, AuditorReadOnlyPermission]
+    ordering = ["-timestamp", "-id"]
 
     def get_queryset(self):
         org = _get_auditor_org(self.request)
         return get_scoped_audit_logs_queryset(
             AuditLog.objects.select_related("actor").all(), organization=org
-        )
+        ).order_by("-timestamp", "-id")
 
     def get_serializer_class(self):
         if self.action == "retrieve":
@@ -188,6 +189,8 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
                 | Q(action__icontains=s)
                 | Q(target_model__icontains=s)
                 | Q(target_object_id__icontains=s)
+                | Q(new_state__pr_number__icontains=s)
+                | Q(previous_state__pr_number__icontains=s)
             )
             if matched_ids:
                 search_filter |= Q(target_object_id__in=matched_ids)
@@ -261,14 +264,10 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
 
         identifier = query_serializer.validated_data.get("identifier")
         if not identifier:
-            from apps.orders.models import PurchaseOrder
-            from apps.requisitions.models import PurchaseRequisition
-            first_pr = PurchaseRequisition.objects.order_by("-created_at").first()
-            if first_pr:
-                identifier = first_pr.pr_number
-            else:
-                first_po = PurchaseOrder.objects.order_by("-created_at").first()
-                identifier = first_po.po_number if first_po else "PR-2026-00001"
+            return Response(
+                {"error": {"code": "VALIDATION_ERROR", "message": "Query parameter 'identifier' is required."}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         entity_type = query_serializer.validated_data.get("entity_type", "AUTO")
         org = _get_auditor_org(request)
 
@@ -328,15 +327,10 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         model_name = query_serializer.validated_data.get("target_model")
         obj_id = query_serializer.validated_data.get("target_object_id")
         if not model_name or not obj_id:
-            first_log = AuditLog.objects.order_by("-timestamp").first()
-            if first_log:
-                model_name = model_name or first_log.target_model
-                obj_id = obj_id or first_log.target_object_id
-            else:
-                return Response(
-                    {"error": {"code": "VALIDATION_ERROR", "message": "Query parameters 'target_model' and 'target_object_id' are required."}},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            return Response(
+                {"error": {"code": "VALIDATION_ERROR", "message": "Query parameters 'target_model' and 'target_object_id' are required."}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         org = _get_auditor_org(request)
 
         trail_data = get_entity_audit_trail(
@@ -787,14 +781,10 @@ def auditor_lifecycle_api_view(request):
     data = serializer.validated_data
     identifier = data.get("identifier")
     if not identifier:
-        from apps.orders.models import PurchaseOrder
-        from apps.requisitions.models import PurchaseRequisition
-        first_pr = PurchaseRequisition.objects.order_by("-created_at").first()
-        if first_pr:
-            identifier = first_pr.pr_number
-        else:
-            first_po = PurchaseOrder.objects.order_by("-created_at").first()
-            identifier = first_po.po_number if first_po else "PR-2026-00001"
+        return Response(
+            {"error": {"code": "VALIDATION_ERROR", "message": "Query parameter 'identifier' is required."}},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     org = _get_auditor_org(request)
     lifecycle_data = get_transaction_lifecycle_service(
         entity_type=data.get("entity_type", "AUTO"),

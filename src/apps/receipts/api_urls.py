@@ -73,7 +73,8 @@ class GoodsReceiptSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, attrs):
-        if not self.instance:
+        is_new_po = not self.instance or ("po" in attrs and attrs["po"] != self.instance.po)
+        if is_new_po:
             po = attrs.get("po")
             if po and po.status not in [
                 PurchaseOrder.STATUS_ISSUED,
@@ -211,6 +212,13 @@ class GoodsReceiptSerializer(serializers.ModelSerializer):
         except ValidationError as e:
             msg = e.messages if hasattr(e, "messages") else [str(e)]
             raise serializers.ValidationError({"lines": msg})
+
+    def update(self, instance, validated_data):
+        if not validated_data.get("grn_number"):
+            validated_data["grn_number"] = instance.grn_number
+        if not validated_data.get("po"):
+            validated_data["po"] = instance.po
+        return super().update(instance, validated_data)
 
 
 class GoodsReceiptPermission(IsAuthenticated):

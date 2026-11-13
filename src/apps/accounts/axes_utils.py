@@ -60,9 +60,33 @@ def get_axes_lockout_response(request, original_response=None, credentials=None)
     - Returns JSON 429 with ACCOUNT_LOCKED for API and AJAX requests.
     - Returns rendered 429 HTML lockout page for standard browser navigation.
     """
+    from django.conf import settings
     from django.http import JsonResponse
     from django.shortcuts import render
-    from django.conf import settings
+
+    try:
+        from apps.accounts.models import User
+        from apps.audit.models import AuditLog
+        from apps.audit.services import create_audit_log_service
+
+        username = (credentials.get("username") if isinstance(credentials, dict) else "") or ""
+        if not username and request is not None:
+            username = getattr(request, "_axes_failed_username", "") or ""
+        matched_user = User.objects.filter(email__iexact=str(username).strip()).first() if username else None
+        create_audit_log_service(
+            actor=matched_user,
+            action=AuditLog.ACTION_LOGIN_FAILED,
+            target_model="User",
+            target_object_id=str(matched_user.id if matched_user else username),
+            new_state={
+                "event": "LOGIN_FAILED",
+                "email": str(username).strip().lower(),
+                "reason": "Account locked",
+            },
+            request=request,
+        )
+    except Exception:
+        pass
 
     is_api = (
         (getattr(request, "path_info", "") and request.path_info.startswith("/api/"))

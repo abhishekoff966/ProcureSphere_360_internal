@@ -16,12 +16,21 @@ def generate_document_number(model_class, field_name: str, prefix: str, padding:
 
     # Acquire an exclusive advisory transaction lock for this prefix and year
     if connection.vendor == "postgresql":
+        import logging
+        logger = logging.getLogger(__name__)
+
+        if not connection.in_atomic_block:
+            logger.warning(
+                "generate_document_number called outside transaction.atomic() on PostgreSQL. "
+                "pg_advisory_xact_lock will be released immediately after cursor execution."
+            )
+
         lock_id = zlib.crc32(f"ps360_doc_{prefix}_{year}".encode("utf-8")) & 0x7FFFFFFF
         try:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT pg_advisory_xact_lock(%s)", [lock_id])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Failed to acquire pg_advisory_xact_lock for %s: %s", prefix, e)
 
     existing_vals = list(
         model_class.objects.filter(**{f"{field_name}__startswith": base_prefix})

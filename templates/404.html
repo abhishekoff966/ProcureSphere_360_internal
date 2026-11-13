@@ -195,6 +195,12 @@
       />
     </div>
 
+    <!-- Readable Text Heading and Message -->
+    <div class="error-text-wrap" style="text-align: center; margin-top: 16px; margin-bottom: 8px;">
+      <h1 class="error-title" style="font-size: clamp(24px, 4vw, 32px); font-weight: 700; color: #1e293b; margin-bottom: 8px;">Page Not Found</h1>
+      <p class="error-subtitle" style="font-size: 15px; color: #64748b; max-width: 480px; margin: 0 auto;">We could not find the page you were looking for. Please check the URL or return to the dashboard.</p>
+    </div>
+
     <!-- Bottom "Back to Home / Dashboard" Button -->
     <div class="error-action-wrap">
       {% if request.user.is_authenticated %}

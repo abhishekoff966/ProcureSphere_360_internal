@@ -64,3 +64,9 @@ def scan_overdue_approvals_and_escalate():
     logger.info("Scan overdue approvals completed: %s", result)
     return result
 
+
+@shared_task(name="apps.notifications.tasks.scan_overdue_approvals_and_escalate")
+def scan_overdue_approvals_and_escalate_alias():
+    """Alias for Celery Beat schedule compatibility."""
+    return scan_overdue_approvals_and_escalate()
+

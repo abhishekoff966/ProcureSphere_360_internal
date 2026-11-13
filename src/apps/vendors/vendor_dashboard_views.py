@@ -13,19 +13,8 @@ from django.db.models import Count, Q, Sum
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_POST
 from django.utils.http import url_has_allowed_host_and_scheme
-
-
-def _safe_next_url(request, default="vendor_profile"):
-    next_url = request.POST.get("next")
-    if next_url and url_has_allowed_host_and_scheme(
-        url=next_url,
-        allowed_hosts={request.get_host()},
-        require_https=request.is_secure(),
-    ):
-        return next_url
-    return default
+from django.views.decorators.http import require_POST
 
 from apps.accounts.models import Role
 from apps.audit.models import AuditLog
@@ -75,6 +64,17 @@ from apps.vendors.services import (
 )
 
 
+def _safe_next_url(request, default="vendor_profile"):
+    next_url = request.POST.get("next")
+    if next_url and url_has_allowed_host_and_scheme(
+        url=next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return next_url
+    return default
+
+
 def vendor_required(view_func):
     """
     Decorator enforcing that:
@@ -89,20 +89,23 @@ def vendor_required(view_func):
         if not request.user or not request.user.is_authenticated:
             return redirect(f"/login/?next={request.path}")
 
-        role_code = getattr(request.user, "role_code", None)
-        if not (request.user.is_superuser or role_code == Role.VENDOR_USER):
+        role_code = getattr(request.user, "role_code", None) or (
+            request.user.role.code if getattr(request.user, "role", None) else None
+        )
+        is_admin = request.user.is_superuser or role_code in [Role.SUPER_ADMIN, "SUPER_ADMIN"]
+        if not (is_admin or role_code == Role.VENDOR_USER):
             raise PermissionDenied(
                 "Access restricted: Only registered Vendor Portal users are permitted."
             )
 
         vendor = getattr(request.user, "vendor", None)
-        if not vendor and not request.user.is_superuser:
+        if not vendor and not is_admin:
             raise PermissionDenied(
                 "Vendor user account is not linked to an active Vendor company entity."
             )
 
         # For superuser testing without vendor, retrieve or attach first active vendor if exists
-        if not vendor and request.user.is_superuser:
+        if not vendor and is_admin:
             vendor = Vendor.objects.first()
 
         request.vendor = vendor

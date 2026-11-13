@@ -33,12 +33,15 @@ class CanManageApprovalPolicy(BasePermission):
         role_code = getattr(request.user, "role_code", None) or (
             request.user.role.code if getattr(request.user, "role", None) else None
         )
-        if not request.user.is_superuser and role_code in [Role.STORES_RECEIVER, Role.LEGAL_MGR, Role.REQUESTER]:
-            return False
-
         if request.method in SAFE_METHODS:
+            if not request.user.is_superuser and role_code in [Role.STORES_RECEIVER, Role.LEGAL_MGR]:
+                return False
             return True
-        return request.user.is_superuser or request.user.role_code == Role.SUPER_ADMIN
+
+        return (
+            request.user.is_superuser
+            or role_code in [Role.SUPER_ADMIN, Role.PROC_MGR]
+        )
 
 
 class ApprovalPolicySerializer(serializers.ModelSerializer):
@@ -104,7 +107,7 @@ class ApprovalPolicyViewSet(viewsets.ModelViewSet):
     serializer_class = ApprovalPolicySerializer
     permission_classes = [IsAuthenticated, CanManageApprovalPolicy]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ["name", "module"]
+    search_fields = ["name", "module", "description"]
     ordering_fields = ["name", "min_amount", "created_at"]
 
 
@@ -115,6 +118,23 @@ class ApprovalStepSerializer(serializers.ModelSerializer):
     class Meta:
         model = ApprovalStep
         fields = "__all__"
+
+    def validate(self, attrs):
+        policy = attrs.get("policy") or (self.instance.policy if self.instance else None)
+        step_number = (
+            attrs.get("step_number")
+            if "step_number" in attrs
+            else (self.instance.step_number if self.instance else None)
+        )
+        if policy and step_number is not None:
+            qs = ApprovalStep.objects.filter(policy=policy, step_number=step_number)
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    {"step_number": [f"Step number {step_number} already exists for this policy."]}
+                )
+        return attrs
 
 
 class ApprovalStepViewSet(viewsets.ModelViewSet):
