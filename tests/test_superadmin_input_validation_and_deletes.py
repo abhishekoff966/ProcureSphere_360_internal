@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+
 import pytest
 from django.test import RequestFactory
 from django.utils import timezone
@@ -422,4 +423,112 @@ class TestDashboardAPIs:
         assert "/api/v1/approver/dashboard/" in content
         assert "/api/v1/approver/queue/" in content
         assert "/api/v1/approver/decision/" in content
+
+
+@pytest.mark.django_db
+class TestOrganizationValidationAndStatus:
+    """Test validation of Organization forms, is_active status propagation, and Admin KPI cards."""
+
+    def test_organization_form_rejects_numbers_only_code_and_name(self):
+        from apps.core.superadmin_forms import OrganizationAdminForm
+
+        # Numbers-only code
+        form_num = OrganizationAdminForm(
+            data={
+                "code": "11111111111111111111111111111111111111111111111111",
+                "name": "TechNova Corp",
+                "admin_email": "admin@technova.example.com",
+            }
+        )
+        assert not form_num.is_valid()
+        assert "code" in form_num.errors
+        assert "Organization Code must contain at least one letter" in str(form_num.errors["code"])
+
+        # Numbers-only name
+        form_name_num = OrganizationAdminForm(
+            data={
+                "code": "TECHNOVA-01",
+                "name": "11111111111111111111",
+                "admin_email": "admin@technova.example.com",
+            }
+        )
+        assert not form_name_num.is_valid()
+        assert "name" in form_name_num.errors
+        assert "must contain at least one letter" in str(form_name_num.errors["name"])
+
+        # Valid organization
+        form_valid = OrganizationAdminForm(
+            data={
+                "code": "TECHNOVA-ORG-002",
+                "name": "TechNova Solutions Pvt Ltd",
+                "admin_email": "admin@technova.example.com",
+            }
+        )
+        assert form_valid.is_valid(), form_valid.errors
+
+    def test_organization_creation_propagates_is_active_status(self, rf, superadmin_user):
+        from apps.organization.services import create_organization_with_admin_service
+
+        # 1. Create deactivated organization
+        req = rf.post("/superadmin/organizations/create/")
+        req.user = superadmin_user
+
+        org_deact, admin_deact, _ = create_organization_with_admin_service(
+            name="Deactivated Org Test",
+            code="DEACT-ORG-01",
+            is_active=False,
+            admin_email="admin_deact@deact.example.com",
+            proc_mgr_email="procmgr_deact@deact.example.com",
+            auditor_email="auditor_deact@deact.example.com",
+            send_welcome_email_flag=False,
+            request=req,
+            actor=superadmin_user,
+        )
+        assert org_deact.is_active is False
+        assert admin_deact.is_active is False
+        assert org_deact.procurement_manager.is_active is False
+        assert org_deact.compliance_auditor.is_active is False
+
+        # 2. Create active organization
+        org_act, admin_act, _ = create_organization_with_admin_service(
+            name="Active Org Test",
+            code="ACTIVE-ORG-01",
+            is_active=True,
+            admin_email="admin_act@act.example.com",
+            proc_mgr_email="procmgr_act@act.example.com",
+            auditor_email="auditor_act@act.example.com",
+            send_welcome_email_flag=False,
+            request=req,
+            actor=superadmin_user,
+        )
+        assert org_act.is_active is True
+        assert admin_act.is_active is True
+        assert org_act.procurement_manager.is_active is True
+        assert org_act.compliance_auditor.is_active is True
+
+    def test_admin_index_kpi_cards_and_deactivated_accounts(self, client, superadmin_user, test_org):
+        # Create an inactive org to test the count
+        Organization.objects.get_or_create(
+            code="INACTIVE-TENANT-99",
+            defaults={
+                "name": "Inactive Tenant Co",
+                "is_active": False,
+            },
+        )
+
+        client.force_login(superadmin_user)
+        resp = client.get("/admin/")
+        assert resp.status_code == 200
+
+        # Context contains active and inactive counts
+        assert "total_organizations" in resp.context
+        assert "active_organizations" in resp.context
+        assert "inactive_organizations" in resp.context
+        assert resp.context["inactive_organizations"] >= 1
+
+        # Template contains all 3 KPI cards
+        html = resp.content.decode("utf-8")
+        assert "Total Organizations" in html
+        assert "Active Tenants" in html
+        assert "Deactivated Accounts" in html
 

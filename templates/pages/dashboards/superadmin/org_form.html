@@ -143,7 +143,13 @@
                             {% endif %}
                         {% endif %}
                     </div>
+                    {% if is_edit and not form.instance.is_active and not form.is_bound %}
+                    <span id="orgStatusBadge" class="badge bg-danger bg-opacity-10 text-danger border border-danger fw-semibold">Inactive / Deactivated</span>
+                    {% elif form.is_bound and not form.is_active.value %}
+                    <span id="orgStatusBadge" class="badge bg-danger bg-opacity-10 text-danger border border-danger fw-semibold">Inactive / Deactivated</span>
+                    {% else %}
                     <span id="orgStatusBadge" class="badge bg-success bg-opacity-10 text-success border border-success fw-semibold">Active Organization</span>
+                    {% endif %}
                 </div>
             </div>
             <div class="col-12">
@@ -466,72 +472,193 @@ window.updateOrgStatusLabel = function(el) {
         scrollBody.scrollTop = 0;
     }
     var formEl = document.getElementById("orgModalForm") || document.querySelector("form[hx-post]");
+    var codeEl = document.getElementById("id_code");
+    var nameEl = document.getElementById("id_name");
+    var taxEl = document.getElementById("id_tax_identifier");
     var emailEl = document.getElementById("id_admin_email");
+    var procMgrEmailEl = document.getElementById("id_proc_mgr_email");
+    var auditorEmailEl = document.getElementById("id_auditor_email");
     var warningIcon = document.getElementById("admin_email_warning_icon");
     var clientErr = document.getElementById("admin_email_client_error");
     var serverErr = document.getElementById("admin_email_server_error");
     var isEdit = {% if is_edit %}true{% else %}false{% endif %};
     var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    var orgCodeRegex = /^[A-Z0-9_\-]+$/;
+    var hasLettersRegex = /[A-Z]/i;
 
-    function showAdminEmailWarning(msg) {
-        if (emailEl) {
-            emailEl.classList.add("is-invalid");
-            emailEl.style.setProperty("border", "2px solid #dc3545", "important");
-            emailEl.style.setProperty("background-color", "#fff8f8", "important");
-            emailEl.focus();
+    function setFieldError(inputEl, errorId, msg) {
+        if (!inputEl) return;
+        inputEl.classList.add("is-invalid");
+        inputEl.setAttribute("aria-invalid", "true");
+        inputEl.setAttribute("aria-describedby", errorId);
+        inputEl.style.setProperty("border", "2px solid #dc3545", "important");
+        inputEl.style.setProperty("background-color", "#fff8f8", "important");
+
+        var errContainer = document.getElementById(errorId);
+        if (!errContainer) {
+            errContainer = document.createElement("div");
+            errContainer.id = errorId;
+            errContainer.className = "invalid-feedback d-block mt-1 small fw-semibold";
+            errContainer.setAttribute("role", "alert");
+            inputEl.parentNode.appendChild(errContainer);
         }
-        if (warningIcon) warningIcon.classList.remove("d-none");
-        if (serverErr) serverErr.style.display = "none";
-        if (clientErr) {
-            clientErr.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i>' + msg;
-            clientErr.classList.remove("d-none");
-            clientErr.classList.add("d-block");
+        errContainer.innerHTML = '<i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">' + msg + '</span>';
+        errContainer.style.display = "block";
+    }
+
+    function clearFieldError(inputEl, errorId) {
+        if (!inputEl) return;
+        inputEl.classList.remove("is-invalid");
+        inputEl.removeAttribute("aria-invalid");
+        inputEl.removeAttribute("aria-describedby");
+        inputEl.style.removeProperty("border");
+        inputEl.style.removeProperty("background-color");
+
+        var errContainer = document.getElementById(errorId);
+        if (errContainer) {
+            errContainer.innerHTML = "";
+            errContainer.style.display = "none";
         }
     }
 
-    function clearAdminEmailWarning() {
-        if (emailEl) {
-            emailEl.classList.remove("is-invalid");
-            emailEl.style.removeProperty("border");
-            emailEl.style.removeProperty("background-color");
+    function validateCode() {
+        if (!codeEl) return true;
+        var val = (codeEl.value || "").trim().toUpperCase();
+        if (!val) {
+            setFieldError(codeEl, "id_code-error", "Organization Code is required.");
+            return false;
         }
+        if (val.length < 2) {
+            setFieldError(codeEl, "id_code-error", "Organization Code must be at least 2 characters in length.");
+            return false;
+        }
+        if (val.length > 50) {
+            setFieldError(codeEl, "id_code-error", "Organization Code cannot exceed 50 characters in length.");
+            return false;
+        }
+        if (/^\d+$/.test(val) || !hasLettersRegex.test(val)) {
+            setFieldError(codeEl, "id_code-error", "Organization Code must contain at least one letter and cannot be numbers-only.");
+            return false;
+        }
+        if (!orgCodeRegex.test(val)) {
+            setFieldError(codeEl, "id_code-error", "Organization Code contains invalid characters. Only uppercase letters, numbers, hyphens (-), and underscores (_) are allowed.");
+            return false;
+        }
+        clearFieldError(codeEl, "id_code-error");
+        return true;
+    }
+
+    function validateName() {
+        if (!nameEl) return true;
+        var val = (nameEl.value || "").trim();
+        if (!val) {
+            setFieldError(nameEl, "id_name-error", "Organization Name is required.");
+            return false;
+        }
+        if (val.length < 2) {
+            setFieldError(nameEl, "id_name-error", "Organization Name must be at least 2 characters in length.");
+            return false;
+        }
+        if (val.length > 255) {
+            setFieldError(nameEl, "id_name-error", "Organization Name cannot exceed 255 characters in length.");
+            return false;
+        }
+        if (/^\d+$/.test(val) || !hasLettersRegex.test(val)) {
+            setFieldError(nameEl, "id_name-error", "Organization Name cannot contain only numbers or special characters. It must contain at least one letter.");
+            return false;
+        }
+        clearFieldError(nameEl, "id_name-error");
+        return true;
+    }
+
+    function validateAdminEmail() {
+        if (!emailEl) return true;
+        var val = (emailEl.value || "").trim();
+        if (!isEdit && !val) {
+            setFieldError(emailEl, "admin_email_client_error", "Admin Email is mandatory (*). Please enter an administrator email address.");
+            if (warningIcon) warningIcon.classList.remove("d-none");
+            if (serverErr) serverErr.style.display = "none";
+            return false;
+        }
+        if (val && !emailRegex.test(val)) {
+            setFieldError(emailEl, "admin_email_client_error", "Please enter a valid email address (e.g. admin@organization.com).");
+            if (warningIcon) warningIcon.classList.remove("d-none");
+            if (serverErr) serverErr.style.display = "none";
+            return false;
+        }
+        clearFieldError(emailEl, "admin_email_client_error");
         if (warningIcon) warningIcon.classList.add("d-none");
-        if (clientErr) {
-            clientErr.classList.remove("d-block");
-            clientErr.classList.add("d-none");
-        }
+        return true;
     }
 
-    if (emailEl) {
-        {% if form.admin_email.errors %}
-        showAdminEmailWarning("{{ form.admin_email.errors|striptags|escapejs }}");
-        {% endif %}
+    function validateProcMgrEmail() {
+        if (!procMgrEmailEl) return true;
+        var val = (procMgrEmailEl.value || "").trim();
+        if (val && !emailRegex.test(val)) {
+            setFieldError(procMgrEmailEl, "id_proc_mgr_email-error", "Please enter a valid email address for Procurement Manager.");
+            return false;
+        }
+        clearFieldError(procMgrEmailEl, "id_proc_mgr_email-error");
+        return true;
+    }
 
-        emailEl.addEventListener("input", function() {
-            if (this.value.trim().length > 0) {
-                clearAdminEmailWarning();
-            }
-        });
+    function validateAuditorEmail() {
+        if (!auditorEmailEl) return true;
+        var val = (auditorEmailEl.value || "").trim();
+        if (val && !emailRegex.test(val)) {
+            setFieldError(auditorEmailEl, "id_auditor_email-error", "Please enter a valid email address for Compliance Auditor.");
+            return false;
+        }
+        clearFieldError(auditorEmailEl, "id_auditor_email-error");
+        return true;
+    }
+
+    // Attach real-time validation listeners
+    if (codeEl) {
+        codeEl.addEventListener("input", function() { if (this.value.trim().length > 0) validateCode(); });
+        codeEl.addEventListener("blur", validateCode);
+    }
+    if (nameEl) {
+        nameEl.addEventListener("input", function() { if (this.value.trim().length > 0) validateName(); });
+        nameEl.addEventListener("blur", validateName);
+    }
+    if (emailEl) {
+        emailEl.addEventListener("input", function() { if (this.value.trim().length > 0) validateAdminEmail(); });
+        emailEl.addEventListener("blur", validateAdminEmail);
+    }
+    if (procMgrEmailEl) {
+        procMgrEmailEl.addEventListener("input", function() { if (this.value.trim().length > 0) validateProcMgrEmail(); });
+        procMgrEmailEl.addEventListener("blur", validateProcMgrEmail);
+    }
+    if (auditorEmailEl) {
+        auditorEmailEl.addEventListener("input", function() { if (this.value.trim().length > 0) validateAuditorEmail(); });
+        auditorEmailEl.addEventListener("blur", validateAuditorEmail);
     }
 
     if (formEl) {
         formEl.addEventListener("submit", function(e) {
-            var val = (emailEl ? emailEl.value : "").trim();
-            var hasErr = false;
-            var msg = "";
+            var isCodeValid = validateCode();
+            var isNameValid = validateName();
+            var isAdminEmailValid = validateAdminEmail();
+            var isProcMgrValid = validateProcMgrEmail();
+            var isAuditorValid = validateAuditorEmail();
 
-            if (!isEdit && !val) {
-                hasErr = true;
-                msg = "Admin Email is mandatory (*). Please enter an administrator email address.";
-            } else if (val && !emailRegex.test(val)) {
-                hasErr = true;
-                msg = "Please enter a valid email address (e.g. admin@organization.com).";
-            }
-
-            if (hasErr) {
+            if (!isCodeValid || !isNameValid || !isAdminEmailValid || !isProcMgrValid || !isAuditorValid) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
-                showAdminEmailWarning(msg);
+
+                // Focus the first invalid field
+                if (!isCodeValid && codeEl) {
+                    codeEl.focus();
+                } else if (!isNameValid && nameEl) {
+                    nameEl.focus();
+                } else if (!isAdminEmailValid && emailEl) {
+                    emailEl.focus();
+                } else if (!isProcMgrValid && procMgrEmailEl) {
+                    procMgrEmailEl.focus();
+                } else if (!isAuditorValid && auditorEmailEl) {
+                    auditorEmailEl.focus();
+                }
                 return false;
             }
         }, true);

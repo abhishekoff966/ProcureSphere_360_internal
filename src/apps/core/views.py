@@ -783,6 +783,16 @@ def superadmin_dashboard_view(request):
             if is_global_superadmin
             else (1 if (scoped_org and scoped_org.is_active) else 0)
         ),
+        "inactive_organizations": (
+            Organization.objects.filter(is_active=False).count()
+            if is_global_superadmin
+            else (1 if (scoped_org and not scoped_org.is_active) else 0)
+        ),
+        "deactivated_organizations": (
+            Organization.objects.filter(is_active=False).count()
+            if is_global_superadmin
+            else (1 if (scoped_org and not scoped_org.is_active) else 0)
+        ),
         "provisioned_admins": (
             Organization.objects.filter(admin_user__isnull=False).count()
             if is_global_superadmin

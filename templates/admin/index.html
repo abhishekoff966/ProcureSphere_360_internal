@@ -792,7 +792,7 @@
             {# ========================================================================= #}
             <div class="row g-3 mb-4">
                 <!-- 1. TOTAL ORGANIZATIONS -->
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <a href="/admin/organizations/" class="text-decoration-none">
                         <div class="stat-card h-100 sa-kpi sa-kpi-sky bg-white"
                             style="border-radius: 14px; border: 1px solid #00B0B9; box-shadow: 0 4px 16px rgba(30, 64, 120, 0.06); padding: 1.25rem 1.4rem;">
@@ -811,7 +811,7 @@
                 </div>
 
                 <!-- 2. ACTIVE TENANTS -->
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <a href="/admin/organizations/" class="text-decoration-none">
                         <div class="stat-card h-100 sa-kpi sa-kpi-green bg-white"
                             style="border-radius: 14px; border: 1px solid #10B981; box-shadow: 0 4px 16px rgba(30, 64, 120, 0.06); padding: 1.25rem 1.4rem;">
@@ -823,6 +823,25 @@
                             <div class="mt-2 pt-2 border-top small text-secondary d-flex justify-content-between">
                                 <span>Active organizations</span>
                                 <span class="fw-semibold" style="color:#10B981;">Active <i
+                                        class="fa-solid fa-arrow-right ms-1"></i></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- 3. DEACTIVATED ACCOUNTS -->
+                <div class="col-md-4">
+                    <a href="/admin/organizations/?status=inactive" class="text-decoration-none">
+                        <div class="stat-card h-100 sa-kpi sa-kpi-red bg-white"
+                            style="border-radius: 14px; border: 1px solid #F43F5E; box-shadow: 0 4px 16px rgba(30, 64, 120, 0.06); padding: 1.25rem 1.4rem;">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                <span class="text-muted small fw-semibold text-uppercase">Deactivated Accounts</span>
+                                <span class="badge rounded-pill text-bg-danger">Deactivated</span>
+                            </div>
+                            <div class="metric-value" style="color:#F43F5E; font-size: 2.2rem; font-weight: 700;">{{ inactive_organizations|default:0 }}</div>
+                            <div class="mt-2 pt-2 border-top small text-secondary d-flex justify-content-between">
+                                <span>Inactive organizations</span>
+                                <span class="fw-semibold" style="color:#F43F5E;">Deactivated <i
                                         class="fa-solid fa-arrow-right ms-1"></i></span>
                             </div>
                         </div>
@@ -854,7 +873,7 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 mt-3">
+                        <table class="table table-hover align-middle mb-0 mt-3" id="adminOrgsTable">
                             <thead class="table-light">
                                 <tr>
                                     <th class="ps-4">Code</th>
@@ -941,12 +960,53 @@
                     </div>
                 </div>
                 {% if dashboard_organizations|length > 5 %}
-                <div class="card-footer bg-white border-top py-3 text-center">
-                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-4 fw-semibold"
-                        id="toggleAdminOrgsBtn"
-                        onclick="toggleAdminOrgsRows({{ dashboard_organizations|length|add:'-5' }})">
-                        <span id="toggleAdminOrgsText"><i class="fa-solid fa-chevron-down me-1"></i> Show More ({{ dashboard_organizations|length|add:'-5' }} more)</span>
-                    </button>
+                <div class="card-footer bg-white border-top py-3 px-4" id="adminOrgsPaginationFooter">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-4 fw-semibold"
+                                id="toggleAdminOrgsBtn"
+                                onclick="toggleAdminOrgsRows({{ dashboard_organizations|length|add:'-5' }})">
+                                <span id="toggleAdminOrgsText"><i class="fa-solid fa-chevron-down me-1"></i> Show More ({{ dashboard_organizations|length|add:'-5' }} more)</span>
+                            </button>
+                            <span class="text-muted small" id="adminOrgsCountLabel">
+                                Showing <strong id="adminOrgsShowingRange">1-5</strong> of <strong>{{ dashboard_organizations|length }}</strong> organizations
+                            </span>
+                        </div>
+
+                        <!-- Client-Side Pagination & Page Bounds Validation -->
+                        <div class="d-flex align-items-center flex-wrap gap-2" id="adminOrgsPaginationNav">
+                            <nav aria-label="Organizations table pagination">
+                                <ul class="pagination pagination-sm mb-0">
+                                    <li class="page-item" id="adminOrgPrevLi">
+                                        <button type="button" class="page-link" id="adminOrgPrevBtn" onclick="adminOrgChangePage(-1)" aria-label="Previous Page" disabled>
+                                            &laquo; Prev
+                                        </button>
+                                    </li>
+                                    <li class="page-item active" aria-current="page">
+                                        <span class="page-link" id="adminOrgPageInfo">Page 1 of <span id="adminOrgTotalPages">1</span></span>
+                                    </li>
+                                    <li class="page-item" id="adminOrgNextLi">
+                                        <button type="button" class="page-link" id="adminOrgNextBtn" onclick="adminOrgChangePage(1)" aria-label="Next Page">
+                                            Next &raquo;
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                            <div class="d-flex align-items-center gap-1 ms-2">
+                                <label for="adminOrgPageInput" class="small text-muted mb-0">Go to:</label>
+                                <input type="number" id="adminOrgPageInput" min="1" max="1" value="1"
+                                    class="form-control form-control-sm text-center" style="width: 65px;"
+                                    aria-label="Go to page" aria-describedby="adminOrgPageError"
+                                    onkeydown="if(event.key==='Enter'){event.preventDefault();adminOrgJumpToPage();}">
+                                <button type="button" class="btn btn-sm btn-primary px-3 rounded-pill" onclick="adminOrgJumpToPage()">
+                                    Go
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="adminOrgPageError" class="text-danger small fw-semibold mt-2 d-none" role="alert">
+                        <i class="fa-solid fa-circle-exclamation me-1"></i><span id="adminOrgPageErrorText"></span>
+                    </div>
                 </div>
                 {% endif %}
             </div>
@@ -1467,25 +1527,157 @@
         }
     }
 
-    function toggleAdminOrgsRows(remainingCount) {
-        const extraRows = document.querySelectorAll('.admin-org-extra-row');
-        const btnText = document.getElementById('toggleAdminOrgsText');
-        if (!extraRows.length || !btnText) return;
-        const isHidden = extraRows[0].classList.contains('d-none');
-        extraRows.forEach(row => {
-            if (isHidden) row.classList.remove('d-none');
-            else row.classList.add('d-none');
+    let adminOrgCurrentPage = 1;
+    let adminOrgPageSize = 5;
+    let adminOrgIsExpanded = false;
+
+    function getAdminOrgRows() {
+        return Array.from(document.querySelectorAll('#adminOrgsTable tbody tr:not(.empty-row)'));
+    }
+
+    function initAdminOrgPagination() {
+        const rows = getAdminOrgRows();
+        if (!rows.length) return;
+        const total = rows.length;
+        const totalPages = Math.max(1, Math.ceil(total / adminOrgPageSize));
+        const totalPagesEl = document.getElementById('adminOrgTotalPages');
+        const pageInput = document.getElementById('adminOrgPageInput');
+        if (totalPagesEl) totalPagesEl.textContent = totalPages;
+        if (pageInput) {
+            pageInput.max = totalPages;
+            pageInput.value = adminOrgCurrentPage;
+        }
+        updateAdminOrgPageUI(adminOrgCurrentPage);
+    }
+
+    function updateAdminOrgPageUI(page) {
+        const rows = getAdminOrgRows();
+        const total = rows.length;
+        if (!total) return;
+        const totalPages = Math.max(1, Math.ceil(total / adminOrgPageSize));
+        adminOrgCurrentPage = Math.min(Math.max(1, page), totalPages);
+
+        const start = (adminOrgCurrentPage - 1) * adminOrgPageSize;
+        const end = start + adminOrgPageSize;
+
+        rows.forEach((row, idx) => {
+            if (idx >= start && idx < end) {
+                row.classList.remove('d-none');
+            } else {
+                row.classList.add('d-none');
+            }
         });
-        if (isHidden) {
-            btnText.innerHTML = '<i class="fa-solid fa-chevron-up me-1"></i> Show Less';
-        } else {
-            btnText.innerHTML = `<i class="fa-solid fa-chevron-down me-1"></i> Show More (${remainingCount} more)`;
+
+        const rangeEl = document.getElementById('adminOrgsShowingRange');
+        if (rangeEl) rangeEl.textContent = `${start + 1}-${Math.min(end, total)}`;
+
+        const prevBtn = document.getElementById('adminOrgPrevBtn');
+        const nextBtn = document.getElementById('adminOrgNextBtn');
+        const pageInfo = document.getElementById('adminOrgPageInfo');
+        const pageInput = document.getElementById('adminOrgPageInput');
+        const totalPagesEl = document.getElementById('adminOrgTotalPages');
+
+        if (prevBtn) prevBtn.disabled = (adminOrgCurrentPage <= 1);
+        if (nextBtn) nextBtn.disabled = (adminOrgCurrentPage >= totalPages);
+        if (pageInfo) pageInfo.innerHTML = `Page ${adminOrgCurrentPage} of <span id="adminOrgTotalPages">${totalPages}</span>`;
+        if (pageInput) {
+            pageInput.value = adminOrgCurrentPage;
+            pageInput.max = totalPages;
+        }
+        if (totalPagesEl) totalPagesEl.textContent = totalPages;
+    }
+
+    function adminOrgChangePage(delta) {
+        const rows = getAdminOrgRows();
+        const total = rows.length;
+        const totalPages = Math.max(1, Math.ceil(total / adminOrgPageSize));
+        const newPage = adminOrgCurrentPage + delta;
+        if (newPage >= 1 && newPage <= totalPages) {
+            clearAdminOrgPageError();
+            updateAdminOrgPageUI(newPage);
             const hdr = document.getElementById('adminOrgsCardHeader');
             if (hdr) hdr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     }
 
-    document.addEventListener('DOMContentLoaded', initSidebarToggle);
+    function adminOrgJumpToPage() {
+        const input = document.getElementById('adminOrgPageInput');
+        if (!input) return;
+        const val = input.value.trim();
+        const rows = getAdminOrgRows();
+        const total = rows.length;
+        const totalPages = Math.max(1, Math.ceil(total / adminOrgPageSize));
+
+        if (!val || isNaN(val) || parseInt(val, 10) < 1 || parseInt(val, 10) > totalPages) {
+            showAdminOrgPageError(`Please enter a valid page number between 1 and ${totalPages}.`);
+            input.focus();
+            return false;
+        }
+
+        clearAdminOrgPageError();
+        updateAdminOrgPageUI(parseInt(val, 10));
+        const hdr = document.getElementById('adminOrgsCardHeader');
+        if (hdr) hdr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return true;
+    }
+
+    function showAdminOrgPageError(msg) {
+        const errBox = document.getElementById('adminOrgPageError');
+        const errText = document.getElementById('adminOrgPageErrorText');
+        const input = document.getElementById('adminOrgPageInput');
+        if (errBox && errText) {
+            errText.textContent = msg;
+            errBox.classList.remove('d-none');
+        }
+        if (input) {
+            input.classList.add('is-invalid');
+            input.setAttribute('aria-invalid', 'true');
+        }
+    }
+
+    function clearAdminOrgPageError() {
+        const errBox = document.getElementById('adminOrgPageError');
+        const input = document.getElementById('adminOrgPageInput');
+        if (errBox) errBox.classList.add('d-none');
+        if (input) {
+            input.classList.remove('is-invalid');
+            input.removeAttribute('aria-invalid');
+        }
+    }
+
+    function toggleAdminOrgsRows(remainingCount) {
+        const btnText = document.getElementById('toggleAdminOrgsText');
+        const rows = getAdminOrgRows();
+        const total = rows.length;
+
+        adminOrgIsExpanded = !adminOrgIsExpanded;
+        if (adminOrgIsExpanded) {
+            adminOrgPageSize = 10;
+            if (btnText) btnText.innerHTML = '<i class="fa-solid fa-chevron-up me-1"></i> Show Less (5 per page)';
+        } else {
+            adminOrgPageSize = 5;
+            adminOrgCurrentPage = 1;
+            if (btnText) btnText.innerHTML = `<i class="fa-solid fa-chevron-down me-1"></i> Show More (${remainingCount} more)`;
+        }
+        clearAdminOrgPageError();
+        initAdminOrgPagination();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initSidebarToggle();
+        initAdminOrgPagination();
+        const pageInput = document.getElementById('adminOrgPageInput');
+        if (pageInput) {
+            pageInput.addEventListener('input', function() {
+                const total = getAdminOrgRows().length;
+                const totalPages = Math.max(1, Math.ceil(total / adminOrgPageSize));
+                const v = parseInt(this.value.trim(), 10);
+                if (v >= 1 && v <= totalPages) {
+                    clearAdminOrgPageError();
+                }
+            });
+        }
+    });
 </script>
 {% endblock %}
 

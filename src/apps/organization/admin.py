@@ -792,7 +792,15 @@ def _admin_index(request, extra_context=None):
 
         org_qs = org_qs.filter(id=scoped_org.id)
 
+    total_orgs_count = org_qs.count()
+    active_orgs_count = org_qs.filter(is_active=True).count()
+    inactive_orgs_count = org_qs.filter(is_active=False).count()
+
     extra_context["dashboard_organizations"] = org_qs
+    extra_context["total_organizations"] = total_orgs_count
+    extra_context["active_organizations"] = active_orgs_count
+    extra_context["inactive_organizations"] = inactive_orgs_count
+    extra_context["deactivated_organizations"] = inactive_orgs_count
 
     extra_context["scoped_org"] = scoped_org
 
