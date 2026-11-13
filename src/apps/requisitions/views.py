@@ -128,6 +128,8 @@ def list_view(request):
             )
         else:
             items = PurchaseRequisition.objects.none().order_by("-created_at")
+    elif role_code in [Role.PROC_EXEC, Role.PROC_MGR, Role.SUPER_ADMIN, Role.AUDITOR]:
+        items = PurchaseRequisition.objects.all().order_by("-created_at")
     else:
         items = PurchaseRequisition.objects.none().order_by("-created_at")
 
@@ -591,12 +593,20 @@ def detail_view(request, pk):
         user.role.code if hasattr(user, "role") and user.role else Role.SUPER_ADMIN
     )
     if role_code == Role.REQUESTER and not user.is_superuser:
-        pr = get_object_or_404(
-            PurchaseRequisition.objects.filter(requester=user).select_related(
-                "requester", "department", "cost_center"
-            ).prefetch_related("lines", "attachments", "purchase_orders", "sourcing_events"),
-            pk=pk,
-        )
+        pr = PurchaseRequisition.objects.filter(pk=pk).select_related(
+            "requester", "department", "cost_center"
+        ).prefetch_related("lines", "attachments", "purchase_orders", "sourcing_events").first()
+        if not pr:
+            from django.http import Http404
+            raise Http404("Purchase requisition not found.")
+        # Requesters can view their own PRs or PRs belonging to their department/cost-center
+        if (
+            pr.requester_id != user.id
+            and (not user.department_id or pr.department_id != user.department_id)
+            and (not user.cost_center_id or pr.cost_center_id != user.cost_center_id)
+        ):
+            from django.http import Http404
+            raise Http404("Purchase requisition not found.")
     else:
         pr = get_object_or_404(
             PurchaseRequisition.objects.select_related(
@@ -610,21 +620,41 @@ def detail_view(request, pk):
 
         raise PermissionDenied("Access to Purchase Requisitions is restricted for your role.")
 
-    if role_code == Role.REQUESTER and pr.requester != user and not user.is_superuser:
-        from django.http import Http404
+    # Multi-tenant boundary validation
+    pr_org_ids = set()
+    for candidate_org in [
+        getattr(getattr(pr, "department", None), "organization", None),
+        getattr(getattr(getattr(pr, "cost_center", None), "department", None), "organization", None),
+        getattr(pr.requester, "effective_organization", None),
+        getattr(pr.requester, "organization", None),
+    ]:
+        if candidate_org and candidate_org.id:
+            pr_org_ids.add(candidate_org.id)
 
-        raise Http404("Purchase requisition not found.")
-
-    # Enforce strict multi-tenant boundary for detail view
     user_org = getattr(user, "effective_organization", None) or getattr(user, "organization", None)
+    is_authorized_actor = (
+        pr.requester_id == user.id
+        or (user.department_id and pr.department_id and user.department_id == pr.department_id)
+        or (pr.cost_center and getattr(pr.cost_center, "manager_id", None) == user.id)
+        or (user.cost_center_id and pr.cost_center_id and user.cost_center_id == pr.cost_center_id)
+    )
+
+    if (
+        user_org
+        and pr_org_ids
+        and user_org.id not in pr_org_ids
+        and not is_authorized_actor
+        and not (user.is_superuser and not user.organization_id)
+    ):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("You do not have permission to view requisitions from another organization.")
+
     pr_org = (
         getattr(getattr(pr, "department", None), "organization", None)
         or getattr(getattr(getattr(pr, "cost_center", None), "department", None), "organization", None)
         or getattr(pr.requester, "effective_organization", None)
+        or getattr(pr.requester, "organization", None)
     )
-    if user_org and pr_org and user_org.id != pr_org.id and not (user.is_superuser and not user.organization_id):
-        from django.core.exceptions import PermissionDenied
-        raise PermissionDenied("You do not have permission to view requisitions from another organization.")
 
     approval_history = (
         ApprovalAction.objects.filter(
@@ -804,13 +834,29 @@ def approve_view(request, pk):
             user.role.code if hasattr(user, "role") and user.role else Role.SUPER_ADMIN
         )
 
+        pr_org_ids = set()
+        for candidate_org in [
+            getattr(getattr(pr, "department", None), "organization", None),
+            getattr(getattr(getattr(pr, "cost_center", None), "department", None), "organization", None),
+            getattr(pr.requester, "effective_organization", None),
+            getattr(pr.requester, "organization", None),
+        ]:
+            if candidate_org and candidate_org.id:
+                pr_org_ids.add(candidate_org.id)
+
         user_org = getattr(user, "effective_organization", None) or getattr(user, "organization", None)
-        pr_org = (
-            getattr(getattr(pr, "department", None), "organization", None)
-            or getattr(getattr(getattr(pr, "cost_center", None), "department", None), "organization", None)
-            or getattr(pr.requester, "effective_organization", None)
+        is_authorized_actor = (
+            (user.department_id and pr.department_id and user.department_id == pr.department_id)
+            or (pr.cost_center and getattr(pr.cost_center, "manager_id", None) == user.id)
+            or (user.cost_center_id and pr.cost_center_id and user.cost_center_id == pr.cost_center_id)
         )
-        if user_org and pr_org and user_org.id != pr_org.id and not (user.is_superuser and not user.organization_id):
+        if (
+            user_org
+            and pr_org_ids
+            and user_org.id not in pr_org_ids
+            and not is_authorized_actor
+            and not (user.is_superuser and not user.organization_id)
+        ):
             messages.error(request, "Permission Denied: You cannot approve requisitions from another organization.")
             return redirect("requisition_detail", pk=pr.pk)
 
@@ -858,13 +904,29 @@ def reject_view(request, pk):
             user.role.code if hasattr(user, "role") and user.role else Role.SUPER_ADMIN
         )
 
+        pr_org_ids = set()
+        for candidate_org in [
+            getattr(getattr(pr, "department", None), "organization", None),
+            getattr(getattr(getattr(pr, "cost_center", None), "department", None), "organization", None),
+            getattr(pr.requester, "effective_organization", None),
+            getattr(pr.requester, "organization", None),
+        ]:
+            if candidate_org and candidate_org.id:
+                pr_org_ids.add(candidate_org.id)
+
         user_org = getattr(user, "effective_organization", None) or getattr(user, "organization", None)
-        pr_org = (
-            getattr(getattr(pr, "department", None), "organization", None)
-            or getattr(getattr(getattr(pr, "cost_center", None), "department", None), "organization", None)
-            or getattr(pr.requester, "effective_organization", None)
+        is_authorized_actor = (
+            (user.department_id and pr.department_id and user.department_id == pr.department_id)
+            or (pr.cost_center and getattr(pr.cost_center, "manager_id", None) == user.id)
+            or (user.cost_center_id and pr.cost_center_id and user.cost_center_id == pr.cost_center_id)
         )
-        if user_org and pr_org and user_org.id != pr_org.id and not (user.is_superuser and not user.organization_id):
+        if (
+            user_org
+            and pr_org_ids
+            and user_org.id not in pr_org_ids
+            and not is_authorized_actor
+            and not (user.is_superuser and not user.organization_id)
+        ):
             messages.error(request, "Permission Denied: You cannot reject requisitions from another organization.")
             return redirect("requisition_detail", pk=pr.pk)
 

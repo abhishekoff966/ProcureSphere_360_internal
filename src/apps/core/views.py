@@ -236,6 +236,7 @@ def finance_dashboard_view(request):
         MatchException.objects.filter(status=MatchException.STATUS_OPEN)
         .select_related(
             "invoice__vendor",
+            "invoice__po__cost_center__department",
             "invoice__po__requisition__department",
             "invoice__po__requisition__cost_center",
         )
@@ -347,11 +348,13 @@ def finance_dashboard_view(request):
         open_budget_exceptions = open_budget_exceptions.filter(department_id=selected_dept_id)
         pending_finance_prs = pending_finance_prs.filter(department_id=selected_dept_id)
         open_match_exceptions = open_match_exceptions.filter(
-            invoice__po__requisition__department_id=selected_dept_id
-        )
+            Q(invoice__po__cost_center__department_id=selected_dept_id)
+            | Q(invoice__po__requisition__department_id=selected_dept_id)
+        ).distinct()
         ready_for_payment_qs = ready_for_payment_qs.filter(
-            po__requisition__department_id=selected_dept_id
-        )
+            Q(po__cost_center__department_id=selected_dept_id)
+            | Q(po__requisition__department_id=selected_dept_id)
+        ).distinct()
         committed_spend_qs = committed_spend_qs.filter(
             budget__cost_center__department_id=selected_dept_id
         )
@@ -363,11 +366,13 @@ def finance_dashboard_view(request):
         open_budget_exceptions = open_budget_exceptions.filter(cost_center_id=selected_cc_id)
         pending_finance_prs = pending_finance_prs.filter(cost_center_id=selected_cc_id)
         open_match_exceptions = open_match_exceptions.filter(
-            invoice__po__requisition__cost_center_id=selected_cc_id
-        )
+            Q(invoice__po__cost_center_id=selected_cc_id)
+            | Q(invoice__po__requisition__cost_center_id=selected_cc_id)
+        ).distinct()
         ready_for_payment_qs = ready_for_payment_qs.filter(
-            po__requisition__cost_center_id=selected_cc_id
-        )
+            Q(po__cost_center_id=selected_cc_id)
+            | Q(po__requisition__cost_center_id=selected_cc_id)
+        ).distinct()
         committed_spend_qs = committed_spend_qs.filter(
             budget__cost_center_id=selected_cc_id
         )
