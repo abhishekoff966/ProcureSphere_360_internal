@@ -18,7 +18,7 @@
                     {% for value, label in field.field.choices %}{% if value %}<option value="{{ value }}" {% if field.value|stringformat:'s' == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>{% endif %}{% endfor %}
                 </select>
                 {% elif field.name == 'address' %}
-                <textarea name="address" id="{{ field.id_for_label }}" rows="2" class="form-control {% if field.errors %}is-invalid{% endif %}" required>{{ field.value|default:'' }}</textarea>
+                <textarea name="address" id="{{ field.id_for_label }}" rows="2" class="form-control {% if field.errors %}is-invalid{% endif %}" placeholder="e.g. 123 Business Park, Suite 400, Bengaluru 560001" required>{{ field.value|default:'' }}</textarea>
                 {% else %}
                 <input type="{% if field.name == 'email' %}email{% else %}text{% endif %}" 
                        name="{{ field.html_name }}" 
@@ -32,8 +32,7 @@
                        {% if field.name == 'legal_name' %}placeholder="e.g. Acme Corporation Ltd"{% endif %}
                        {% if field.name == 'trade_name' %}placeholder="e.g. Acme Solutions (trading name)"{% endif %}
                        {% if field.name == 'email' %}placeholder="e.g. contact@vendor.com"{% endif %}
-                       {% if field.name == 'phone' %}placeholder="e.g. +91 9876543210 (optional)"{% endif %}
-                       {% if field.name == 'address' %}placeholder="Registered business address..."{% endif %}>
+                       {% if field.name == 'phone' %}placeholder="e.g. +91 9876543210 (optional)"{% endif %}>
                 {% endif %}
                 {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
             </div>

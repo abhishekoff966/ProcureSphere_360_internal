@@ -25,7 +25,7 @@
                 </div>
                 <div class="col-12 col-sm-6 col-md-3">
                     <label for="deptSelect" class="visually-hidden">Department</label>
-                    <select name="dept" id="deptSelect" class="form-select form-select-sm rounded-pill shadow-none" onchange="this.form.submit()">
+                    <select name="dept" id="deptSelect" class="form-select form-select-sm rounded-pill shadow-none">
                         <option value="">-- All Departments (Enterprise) --</option>
                         {% for d in departments %}
                         <option value="{{ d.id }}" {% if selected_dept_id == d.id|stringformat:"s" %}selected{% endif %}>
@@ -36,7 +36,7 @@
                 </div>
                 <div class="col-12 col-sm-6 col-md-3">
                     <label for="ccSelect" class="visually-hidden">Cost Center</label>
-                    <select name="cost_center" id="ccSelect" class="form-select form-select-sm rounded-pill shadow-none" onchange="this.form.submit()">
+                    <select name="cost_center" id="ccSelect" class="form-select form-select-sm rounded-pill shadow-none">
                         <option value="">-- All Cost Centers --</option>
                         {% for cc in cost_centers %}
                         <option value="{{ cc.id }}" {% if selected_cc_id == cc.id|stringformat:"s" %}selected{% endif %}>
@@ -47,7 +47,7 @@
                 </div>
                 <div class="col-12 col-sm-6 col-md-2">
                     <label for="periodSelect" class="visually-hidden">Period</label>
-                    <select name="period" id="periodSelect" class="form-select form-select-sm rounded-pill shadow-none" onchange="this.form.submit()">
+                    <select name="period" id="periodSelect" class="form-select form-select-sm rounded-pill shadow-none">
                         <option value="">-- All Fiscal Periods --</option>
                         {% for p in fiscal_periods %}
                         <option value="{{ p.id }}" {% if selected_period_id == p.id|stringformat:"s" %}selected{% endif %}>

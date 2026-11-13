@@ -15,11 +15,20 @@ from django.views.decorators.cache import never_cache
 def portal_login_view(request):
     """
     Renders and processes the ProcureSphere 360 ERP Portal login form.
-    If an authenticated user visits /login/ directly (e.g. in a new tab), expire the previous
-    session and present a clean login form requiring re-authentication.
+    If an authenticated user visits /login/, redirect them to their role dashboard
+    to prevent terminating active sessions.
     """
     if request.user.is_authenticated:
-        logout(request)
+        from apps.core.views import get_dashboard_url_for_user
+
+        next_url = request.GET.get("next")
+        if next_url and not url_has_allowed_host_and_scheme(
+            next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+        ):
+            next_url = None
+        if not next_url:
+            next_url = get_dashboard_url_for_user(request.user)
+        return redirect(next_url)
 
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
@@ -135,6 +144,27 @@ def portal_login_view(request):
             from apps.accounts.models import User
 
             inactive_user = User.objects.filter(email__iexact=email).first()
+
+            try:
+                from apps.audit.models import AuditLog
+                from apps.audit.services import create_audit_log_service
+
+                matched_user = User.objects.filter(email__iexact=str(email).strip()).first()
+                create_audit_log_service(
+                    actor=matched_user,
+                    action=AuditLog.ACTION_LOGIN_FAILED,
+                    target_model="User",
+                    target_object_id=str(matched_user.id if matched_user else email),
+                    new_state={
+                        "event": "LOGIN_FAILED",
+                        "email": str(email).strip().lower(),
+                        "reason": "Account deactivated" if (inactive_user and not inactive_user.is_active) else "Invalid credentials",
+                    },
+                    request=request,
+                )
+            except Exception:
+                pass
+
             if (
                 inactive_user
                 and inactive_user.check_password(password)

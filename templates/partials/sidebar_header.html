@@ -5,7 +5,7 @@
     <a href="{% if dashboard_url %}{{ dashboard_url }}{% elif user.is_superuser or user.role_code == 'SUPER_ADMIN' %}/superadmin/{% elif user.role_code == 'PROC_MGR' %}/manager/{% elif user.role_code == 'AUDITOR' %}/audit/dashboard/{% elif user.role_code == 'REQUESTER' %}/requester/{% elif user.role_code == 'DEPT_APPROVER' %}/approver/{% elif user.role_code == 'FINANCE_AP' %}/finance/{% elif user.role_code == 'STORES_RECEIVER' %}/stores/{% elif user.role_code == 'LEGAL_MGR' %}/legal/{% elif user.role_code == 'VENDOR_USER' %}/vendor/{% else %}/procurement/{% endif %}"
        class="d-flex align-items-center text-decoration-none flex-grow-1 overflow-hidden"
        aria-label="ProcureSphere 360 Home">
-        <img src="{% static 'landing/images/procuresphere_360_nav_brand.png' %}"
+        <img src="{% static 'landing/images/procuresphere_360_nav_brand.webp' %}"
              alt="ProcureSphere 360"
              class="global-brand-logo dashboard-brand-logo"
              style="height: 44px; max-height: 48px; width: auto; max-width: 210px; object-fit: contain;">

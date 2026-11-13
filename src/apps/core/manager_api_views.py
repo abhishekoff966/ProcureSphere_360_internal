@@ -1805,21 +1805,12 @@ class ManagerSupplierCompareAPIView(APIView):
         vendor_b_id = request.GET.get("vendor_b")
 
         if not vendor_a_id or not vendor_b_id:
-            vendors = list(Vendor.objects.all().order_by("-created_at")[:2])
-            if len(vendors) >= 2:
-                vendor_a = vendors[0]
-                vendor_b = vendors[1]
-            elif len(vendors) == 1:
-                vendor_a = vendors[0]
-                vendor_b = vendors[0]
-            else:
-                return Response(
-                    {"error": {"code": "VALIDATION_ERROR", "message": "Both vendor_a and vendor_b query parameters are required."}},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-        else:
-            vendor_a = get_object_or_404(Vendor, pk=vendor_a_id)
-            vendor_b = get_object_or_404(Vendor, pk=vendor_b_id)
+            return Response(
+                {"error": {"code": "VALIDATION_ERROR", "message": "Both vendor_a and vendor_b query parameters are required."}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        vendor_a = get_object_or_404(Vendor, pk=vendor_a_id)
+        vendor_b = get_object_or_404(Vendor, pk=vendor_b_id)
 
         def get_vendor_summary(v):
             latest_sc = v.scorecards.order_by("-created_at").first()
@@ -2135,11 +2126,53 @@ class ManagerApprovalsAPIView(APIView):
 
         # Process PRs
         if type_filter in ['all', 'pr', 'requisition']:
-            for pr in prs_filtered.order_by('-updated_at')[:100]:
+            from django.db.models import Count
+
+            from apps.approvals.models import ApprovalAction, ApprovalPolicy
+            from apps.approvals.services import evaluate_approval_chain
+
+            pr_list = list(prs_filtered.order_by('-updated_at')[:100])
+            pr_step_counts = {}
+            if pr_list:
+                pr_step_counts = {
+                    str(k): v
+                    for k, v in ApprovalAction.objects.filter(
+                        target_object_id__in=[str(p.id) for p in pr_list],
+                        target_model_name="PurchaseRequisition",
+                        action=ApprovalAction.ACTION_APPROVE,
+                    )
+                    .values("target_object_id")
+                    .annotate(cnt=Count("id"))
+                    .values_list("target_object_id", "cnt")
+                }
+
+            for pr in pr_list:
                 urgency = 'HIGH' if pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW or pr.total_amount > Decimal('50000.00') else 'NORMAL'
                 req_name = f"{pr.requester.first_name} {pr.requester.last_name}".strip() if pr.requester else "Unknown"
                 if not req_name and pr.requester:
                     req_name = pr.requester.email
+
+                can_approve_pr = False
+                if pr.status in [PurchaseRequisition.STATUS_SUBMITTED, PurchaseRequisition.STATUS_MANAGER_REVIEW]:
+                    pr_org = (
+                        getattr(getattr(pr, "department", None), "organization", None)
+                        or getattr(getattr(getattr(pr, "cost_center", None), "department", None), "organization", None)
+                        or getattr(pr.requester, "effective_organization", None)
+                    )
+                    chain = evaluate_approval_chain(
+                        module=ApprovalPolicy.MODULE_PR,
+                        amount=pr.total_amount,
+                        department=pr.department,
+                        cost_center=pr.cost_center,
+                        organization=pr_org,
+                    )
+                    step_idx = pr_step_counts.get(str(pr.id), 0)
+                    if chain and step_idx < len(chain):
+                        can_approve_pr = (
+                            request.user.is_superuser
+                            or chain[step_idx]["approver_role"].code == Role.PROC_MGR
+                        )
+
                 items.append({
                     'id': str(pr.id),
                     'type': 'PR',
@@ -2163,7 +2196,7 @@ class ManagerApprovalsAPIView(APIView):
                     'created_at': pr.created_at.isoformat(),
                     'updated_at': pr.updated_at.isoformat(),
                     'detail_url': f'/requisitions/{pr.id}/',
-                    'can_approve': False,  # Procurement Managers maintain approval oversight only
+                    'can_approve': can_approve_pr,
                 })
 
         # Process PO Amendments
@@ -2302,24 +2335,11 @@ class ManagerApprovalActionAPIView(APIView):
     permission_classes = [IsAuthenticated, IsProcurementManager]
 
     def post(self, request):
-        # Procurement Managers maintain approval oversight only, not approval/rejection authority
-        role_code = getattr(request.user.role, 'code', None) if getattr(request.user, 'role', None) else None
-        if not request.user.is_superuser and role_code == Role.PROC_MGR:
-            return Response(
-                {
-                    'error': (
-                        'Permission Denied: Procurement Managers hold approval oversight only '
-                        'and do not possess direct approval or rejection authority. '
-                        'Decisions must be authorized by designated Department or Financial Approvers.'
-                    )
-                },
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         item_type = str(request.data.get('item_type', '')).strip().upper() or 'PR'
         item_id = str(request.data.get('item_id', '')).strip()
         action = str(request.data.get('action', '')).strip().upper() or 'APPROVE'
-        comments = str(request.data.get('comments', '')).strip() or 'Procurement Manager governance oversight review.'
+        raw_comments = str(request.data.get('comments', '')).strip()
+        comments = raw_comments if action == 'REJECT' else (raw_comments or 'Approved by Procurement Manager.')
 
         if action not in ['APPROVE', 'REJECT']:
             return Response(
@@ -2340,7 +2360,7 @@ class ManagerApprovalActionAPIView(APIView):
             role_code = getattr(request.user, "role_code", None) or (
                 request.user.role.code if getattr(request.user, "role", None) else None
             )
-            if role_code in [Role.PROC_MGR, "PROC_MGR"]:
+            if role_code in [Role.PROC_MGR, "PROC_MGR"] and item_type not in ['PR', 'PO_AMENDMENT', 'PO']:
                 return Response(
                     {'error': 'Permission Denied: Procurement Managers maintain approval oversight only and cannot approve or reject.'},
                     status=status.HTTP_403_FORBIDDEN,
@@ -2348,10 +2368,100 @@ class ManagerApprovalActionAPIView(APIView):
 
         try:
             if item_type == 'PR':
-                return Response(
-                    {'error': 'Permission Denied: Procurement Managers maintain view and inspection permissions only and cannot approve or reject purchase requisitions.'},
-                    status=status.HTTP_403_FORBIDDEN,
+                from django.core.exceptions import ValidationError as DjangoValidationError
+
+                from apps.approvals.models import ApprovalAction, ApprovalPolicy
+                from apps.approvals.services import evaluate_approval_chain
+                from apps.requisitions.services import (
+                    approve_purchase_requisition_service,
+                    reject_purchase_requisition_service,
                 )
+
+                pr = PurchaseRequisition.objects.select_related(
+                    'department__organization',
+                    'cost_center__department__organization',
+                    'requester',
+                ).get(id=item_id)
+
+                caller_org = get_user_org(request.user)
+                if caller_org and not request.user.is_superuser:
+                    pr_org = (
+                        getattr(getattr(pr, "department", None), "organization", None)
+                        or getattr(getattr(getattr(pr, "cost_center", None), "department", None), "organization", None)
+                        or getattr(pr.requester, "effective_organization", None)
+                    )
+                    if pr_org and pr_org.id != caller_org.id:
+                        return Response(
+                            {'error': 'Permission Denied: Requisition belongs to another organization.'},
+                            status=status.HTTP_403_FORBIDDEN,
+                        )
+
+                pr_org = (
+                    getattr(getattr(pr, "department", None), "organization", None)
+                    or getattr(getattr(getattr(pr, "cost_center", None), "department", None), "organization", None)
+                    or getattr(pr.requester, "effective_organization", None)
+                )
+                chain = evaluate_approval_chain(
+                    module=ApprovalPolicy.MODULE_PR,
+                    amount=pr.total_amount,
+                    department=pr.department,
+                    cost_center=pr.cost_center,
+                    organization=pr_org,
+                )
+                step_idx = ApprovalAction.objects.filter(
+                    target_object_id=str(pr.id),
+                    target_model_name="PurchaseRequisition",
+                    action=ApprovalAction.ACTION_APPROVE,
+                ).count()
+                is_mgr_step = (
+                    pr.status in [PurchaseRequisition.STATUS_SUBMITTED, PurchaseRequisition.STATUS_MANAGER_REVIEW]
+                    and bool(chain)
+                    and step_idx < len(chain)
+                    and chain[step_idx]["approver_role"].code == Role.PROC_MGR
+                )
+                if not request.user.is_superuser and not is_mgr_step:
+                    return Response(
+                        {'error': 'Permission Denied: Procurement Managers hold approval oversight only until this requisition reaches Procurement Manager step or Finance AP clears any budget overrun.'},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+
+                try:
+                    if action == 'APPROVE':
+                        updated_pr = approve_purchase_requisition_service(
+                            requisition=pr,
+                            approver=request.user,
+                            comments=comments or 'Approved by Procurement Manager.',
+                        )
+                        return Response({
+                            'success': True,
+                            'message': f"Purchase Requisition {updated_pr.pr_number} approved successfully.",
+                            'item_id': str(pr.id),
+                            'new_status': updated_pr.status,
+                        }, status=status.HTTP_200_OK)
+                    else:
+                        if not comments:
+                            return Response(
+                                {'error': 'A rejection reason is required.'},
+                                status=status.HTTP_400_BAD_REQUEST,
+                            )
+                        updated_pr = reject_purchase_requisition_service(
+                            requisition=pr,
+                            approver=request.user,
+                            comments=comments,
+                        )
+                        return Response({
+                            'success': True,
+                            'message': f"Purchase Requisition {updated_pr.pr_number} rejected.",
+                            'item_id': str(pr.id),
+                            'new_status': updated_pr.status,
+                        }, status=status.HTTP_200_OK)
+                except DjangoValidationError as ve:
+                    err_msg = str(ve)
+                    is_perm = any(k in err_msg for k in ['Permission Denied', 'Access Denied', 'not authorized', 'Segregation'])
+                    return Response(
+                        {'error': err_msg},
+                        status=status.HTTP_403_FORBIDDEN if is_perm else status.HTTP_400_BAD_REQUEST,
+                    )
 
             elif item_type == 'PO_APPROVAL':
                 from apps.orders.services import (
@@ -2458,7 +2568,7 @@ class ManagerApprovalActionAPIView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        except (PurchaseRequisition.DoesNotExist, POAmendment.DoesNotExist, PurchaseOrder.DoesNotExist):
+        except (PurchaseRequisition.DoesNotExist, POAmendment.DoesNotExist, PurchaseOrder.DoesNotExist, ValueError):
             return Response(
                 {'error': f"Target {item_type} record with ID {item_id} not found."},
                 status=status.HTTP_404_NOT_FOUND,

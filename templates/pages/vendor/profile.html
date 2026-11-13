@@ -1551,7 +1551,7 @@
         const uploadAllBtn = document.getElementById("uploadAllDocsBtn");
         const kycOverallError = document.getElementById("kycFormOverallError");
 
-        const panInput = document.getElementById("panFileInput");
+        const panFileInput = document.getElementById("panFileInput");
         const taxInput = document.getElementById("taxFileInput");
         const bankInput = document.getElementById("bankFileInput");
         const otherInput = document.getElementById("otherFileInput");
@@ -1653,7 +1653,7 @@
             });
         }
 
-        setupFileInputWatcher(panInput, panFeedback, panBadge, true, "PAN Document");
+        setupFileInputWatcher(panFileInput, panFeedback, panBadge, true, "PAN Document");
         setupFileInputWatcher(taxInput, taxFeedback, taxBadge, true, "TAX Document");
         setupFileInputWatcher(bankInput, bankFeedback, bankBadge, true, "BANK Document");
         setupFileInputWatcher(otherInput, otherFeedback, otherBadge, false, "Other Document");
@@ -1664,11 +1664,11 @@
                 const errorMessages = [];
 
                 // 1. Validate PAN
-                const panFile = panInput && panInput.files && panInput.files[0];
+                const panFile = panFileInput && panFileInput.files && panFileInput.files[0];
                 const panRes = validateFileDoc(panFile, true, "PAN Document");
                 if (!panRes.valid) {
                     hasErrors = true;
-                    if (panInput) panInput.classList.add("is-invalid");
+                    if (panFileInput) panFileInput.classList.add("is-invalid");
                     if (panFeedback) {
                         panFeedback.textContent = panRes.message;
                         panFeedback.style.display = "block";

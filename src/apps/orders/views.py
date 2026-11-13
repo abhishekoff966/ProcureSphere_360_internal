@@ -70,8 +70,8 @@ def list_view(request):
     }
     if role_code in [Role.PROC_MGR, "PROC_MGR"]:
         context["base_layout"] = "manager/base_manager.html"
-    elif role_code == Role.SUPER_ADMIN or getattr(user, "is_superuser", False):
-        context["base_layout"] = "base.html"
+    elif role_code in (Role.SUPER_ADMIN, "SUPER_ADMIN") or getattr(user, "is_superuser", False):
+        context["base_layout"] = "layouts/superadmin_base.html"
 
     return render(
         request,
@@ -155,7 +155,10 @@ def detail_view(request, pk):
                 "PROC_MGR": "manager/base_manager.html",
                 "AUDITOR": "audit/base_auditor.html",
                 "SUPER_ADMIN": "layouts/superadmin_base.html",
-            }.get(role_code, "base.html"),
+            }.get(
+                role_code,
+                "layouts/superadmin_base.html" if getattr(user, "is_superuser", False) else "base.html",
+            ),
         },
     )
 

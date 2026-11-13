@@ -5,7 +5,7 @@
 
 {% block navbar %}
 {% if request.user.is_superuser and not request.user.effective_organization %}
-{% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/admin/' profile_dropdown_id='saProfileDropdown' notification_url='/superadmin/notifications/' %}
+{% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/admin/' profile_dropdown_id='saProfileDropdown' notification_url='/admin/notifications/' %}
 {% else %}
 {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' profile_dropdown_id='saProfileDropdown' notification_url='/superadmin/notifications/' %}
 {% endif %}
@@ -109,7 +109,7 @@
     }
 
     body.modal-open {
-        overflow: visible !important;
+        overflow: hidden !important;
     }
 
     /* Left Sidebar Container */
@@ -353,7 +353,7 @@
         <nav class="flex-grow-1 overflow-y-auto px-2 py-3 d-flex flex-column gap-1 sa-nav-scroll" id="menu" style="flex: 1 1 0%; min-height: 0;" aria-label="Admin Navigation">
             <div class="workspace-heading sa-workspace-header">
                 <i class="fa-solid fa-user-shield me-2"></i>
-                <span>Admin Workspace</span>
+                <span>{% if request.user.is_superuser and not request.user.effective_organization %}Super Admin Workspace{% else %}Admin Workspace{% endif %}</span>
             </div>
 
             {% if request.user.is_superuser and not request.user.effective_organization %}
@@ -369,11 +369,11 @@
             {% if request.user.is_superuser and not request.user.effective_organization %}
             <div class="sa-nav-separator"></div>
             <div class="sa-nav-label">Organization Management</div>
-            <a href="/superadmin/organizations/" class="sa-nav-link {% if '/superadmin/organizations/' in request.path %}active{% endif %}">
+            <a href="/admin/organizations/" class="sa-nav-link {% if '/admin/organizations/' in request.path or '/superadmin/organizations/' in request.path %}active{% endif %}">
                 <span>Organizations</span>
             </a>
-            <a href="/superadmin/users/" class="sa-nav-link {% if '/superadmin/users/' in request.path %}active{% endif %}">
-                <span>Manage Users &amp; Roles</span>
+            <a href="/admin/contact-enquiries/" class="sa-nav-link {% if '/admin/contact-enquiries/' in request.path or '/superadmin/contact-enquiries/' in request.path %}active{% endif %}">
+                <span>Contact Enquiries</span>
             </a>
             {% else %}
             <div class="sa-nav-separator"></div>
@@ -400,7 +400,7 @@
                 <span>Budget Configuration</span>
             </a>
             <a href="/superadmin/rules/" class="sa-nav-link {% if '/invoices/settings/' in request.path or '/superadmin/rules/' in request.path or '/superadmin/business-rules/' in request.path %}active{% endif %}">
-                <span>Business Rules</span>
+                <span>3-Way Match Tolerances</span>
             </a>
 
             <div class="sa-nav-separator"></div>

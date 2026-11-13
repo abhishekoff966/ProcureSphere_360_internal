@@ -82,6 +82,7 @@ def list_view(request):
             "AUDITOR",
             "PROC_MGR",
             "PROC_EXEC",
+            "STORES_RECEIVER",
         ],
     )
     items = scope_invoices_queryset(
@@ -270,8 +271,10 @@ def resolve_exception_view(request, exception_id):
                 action=action,
             )
             messages.success(request, f"Exception successfully {action.lower()}d.")
+            return redirect("exceptions_list")
         except Exception as e:
             messages.error(request, f"Error: {str(e)}")
+            return redirect("exception_detail", exception_id=exception_id)
 
     return redirect("exceptions_list")
 
@@ -309,7 +312,13 @@ def pay_invoice_view(request, invoice_id):
                 request, f"Invoice {invoice.invoice_number} successfully marked as PAID."
             )
         except ValidationError as ve:
-            messages.error(request, f"Error paying invoice: {ve.message if hasattr(ve, 'message') else str(ve)}")
+            if hasattr(ve, "messages") and ve.messages:
+                err_msg = ve.messages[0]
+            elif hasattr(ve, "message"):
+                err_msg = ve.message
+            else:
+                err_msg = str(ve).strip("[]'")
+            messages.error(request, f"Payment Validation Error: {err_msg}")
         except Exception as e:
             messages.error(request, f"Error paying invoice: {str(e)}")
 
@@ -529,8 +538,17 @@ def create_invoice_view(request):
             messages.success(request, f"Invoice {invoice_number} successfully created and matched.")
             return redirect("invoices_list")
 
-        except Exception as e:
-            messages.error(request, f"Error creating invoice: {str(e)}")
+        except ValidationError as ve:
+            if hasattr(ve, "messages") and ve.messages:
+                err_msg = ve.messages[0]
+            elif hasattr(ve, "message"):
+                err_msg = ve.message
+            else:
+                err_msg = str(ve).strip("[]'\"")
+            messages.error(request, err_msg)
+            return render(request, "pages/invoices/create.html", {"vendors": vendors, "pos": pos, "form_data": form_data})
+        except Exception:
+            messages.error(request, "An unexpected error occurred while creating the invoice. Please check your inputs and try again.")
             return render(request, "pages/invoices/create.html", {"vendors": vendors, "pos": pos, "form_data": form_data})
 
     return render(request, "pages/invoices/create.html", {"vendors": vendors, "pos": pos, "form_data": form_data})

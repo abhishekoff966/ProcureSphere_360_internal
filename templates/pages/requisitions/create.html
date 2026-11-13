@@ -357,9 +357,16 @@
 
     function validateQuantityInput(input) {
         if (!input) return;
-        input.value = input.value.replace(/[^0-9]/g, '');
-        if (input.value !== '' && parseInt(input.value, 10) <= 0) {
-            input.value = '1';
+        const val = input.value.trim();
+        if (val === '') {
+            input.classList.remove('is-invalid');
+            return;
+        }
+        const num = Number(val);
+        if (isNaN(num) || !Number.isInteger(num) || num <= 0 || val.includes('.') || val.includes('-')) {
+            input.classList.add('is-invalid');
+        } else {
+            input.classList.remove('is-invalid');
         }
     }
 
@@ -367,11 +374,21 @@
         const rows = document.querySelectorAll('#line-items-body tr');
         let hasValidItem = false;
         let hasInvalidPrice = false;
+        let hasInvalidQty = false;
         rows.forEach(tr => {
             const desc = tr.querySelector('input[name="item_description[]"]');
+            const qty = tr.querySelector('input[name="quantity[]"]');
             const price = tr.querySelector('input[name="estimated_unit_price[]"]');
             if (desc && desc.value.trim() !== '') {
                 hasValidItem = true;
+                const qVal = qty ? qty.value.trim() : '';
+                const qNum = Number(qVal);
+                if (!qty || qVal === '' || isNaN(qNum) || !Number.isInteger(qNum) || qNum <= 0 || qVal.includes('.') || qVal.includes('-')) {
+                    hasInvalidQty = true;
+                    if (qty) qty.classList.add('is-invalid');
+                } else {
+                    if (qty) qty.classList.remove('is-invalid');
+                }
                 if (!price || parseFloat(price.value) <= 0 || isNaN(parseFloat(price.value))) {
                     hasInvalidPrice = true;
                     if (price) price.classList.add('is-invalid');
@@ -396,6 +413,22 @@
             }
             const firstDesc = document.querySelector('input[name="item_description[]"]');
             if (firstDesc) firstDesc.focus();
+            return;
+        }
+
+        if (hasInvalidQty) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            enableCancelButtons();
+            window.PSToast('Quantity must be a positive whole number (integer) greater than zero.', 'danger', 'Invalid Quantity');
+            const form = document.getElementById('pr_create_form');
+            if (form) {
+                delete form.dataset.submitting;
+                const draftBtn = form.querySelector('button[name="submit_action"]');
+                if (draftBtn && window.resetButtonLoading) window.resetButtonLoading(draftBtn);
+            }
+            const firstInvalidQty = document.querySelector('input[name="quantity[]"].is-invalid');
+            if (firstInvalidQty) firstInvalidQty.focus();
             return;
         }
 

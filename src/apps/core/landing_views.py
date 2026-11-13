@@ -168,9 +168,9 @@ def landing_home(request):
         ],
         'trust_cards': [
             {'icon': 'building', 'stat': '13,000+', 'label': 'Global Enterprises', 'desc': 'Across global supply chains', 'color': '#3b82f6', 'tag': 'GLOBAL SCALE'},
-            {'icon': 'chart', 'stat': '$2.5B+', 'label': 'Spend Managed', 'desc': 'Annually across all modules', 'color': '#10b981', 'tag': 'SPEND VOLUME'},
+            {'icon': 'chart', 'stat': '₹ 100Cr+', 'label': 'Spend Managed', 'desc': 'Annually across all modules', 'color': '#10b981', 'tag': 'SPEND VOLUME'},
             {'icon': 'receipt', 'stat': '10M+', 'label': 'Monthly Transactions', 'desc': 'Instant POs & invoices', 'color': '#f59e0b', 'tag': 'HIGH VELOCITY'},
-            {'icon': 'savings', 'stat': '₹120Cr+', 'label': 'Savings Generated', 'desc': 'Through automated negotiations', 'color': '#8b5cf6', 'tag': 'COST SAVINGS'},
+            {'icon': 'savings', 'stat': '₹ 12Cr+', 'label': 'Savings Generated', 'desc': 'Through automated negotiations', 'color': '#8b5cf6', 'tag': 'COST SAVINGS'},
             {'icon': 'users', 'stat': '800+', 'label': 'Procurement Leaders', 'desc': 'Active daily users', 'color': '#ec4899', 'tag': 'ACTIVE TEAMS'},
         ],
         'benefits': [
@@ -834,29 +834,14 @@ def contact_submit(request):
             notification_type="SYSTEM",
             title=f"New Landing Contact Enquiry: {name}",
             message=f"Received a new enquiry from {name} ({email}, {country_code} {phone_clean}): {message[:120]}...",
-            target_url="/admin/core/contactenquiry/",
+            target_url="/admin/contact-enquiries/",
         )
     except Exception:
         pass
 
-    # Authenticate session as Django Platform Admin so redirect opens Platform Admin dashboard directly
-    from django.contrib import messages
-    from django.contrib.auth import login
-
-    from apps.accounts.models import User
-    admin_user = User.objects.filter(email="superadmin@procuresphere.com", is_active=True).first()
-    if admin_user:
-        login(request, admin_user, backend="django.contrib.auth.backends.ModelBackend")
-        request.session["ps_active_tab"] = True
-
-    messages.success(request, f"New contact enquiry from {name} received and logged in Platform Admin.")
-
-    # Success: Redirect to Django Platform Admin dashboard (/admin/)
-    response = render(request, "landing/partials/contact_success.html", {
+    # Success: Render in-place confirmation card on landing page
+    return render(request, "landing/partials/contact_success.html", {
         "name": name,
         "email": email,
         "phone": f"{country_code} {phone_clean}",
-        "redirect_url": "/admin/",
     })
-    response["HX-Redirect"] = "/admin/"
-    return response

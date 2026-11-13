@@ -1403,10 +1403,10 @@ ul[role="tablist"]::-webkit-scrollbar-button {
 
 
 /* ==========================================================================
-   Preserve Sticky Sidebar and Navbar When Bootstrap Modal Opens
+   Prevent Dual Scrollbars and Scroll Trapping When Bootstrap Modal Opens (BUG-006)
    ========================================================================== */
 body.modal-open {
-    overflow: visible !important;
+    overflow: hidden !important;
 }
 
 

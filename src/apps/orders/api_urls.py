@@ -314,6 +314,17 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
                 {"sourcing_event": [f"Cannot create Purchase Order from sourcing event '{sourcing_event.event_number}': Sourcing event status is '{sourcing_event.status}' (must be AWARDED)."]}
             )
 
+        po_num = attrs.get("po_number") or self.initial_data.get("po_number")
+        if po_num and str(po_num).strip():
+            clean_po = str(po_num).strip()
+            qs_po = PurchaseOrder.objects.filter(po_number__iexact=clean_po)
+            if self.instance:
+                qs_po = qs_po.exclude(pk=self.instance.pk)
+            if qs_po.exists():
+                raise serializers.ValidationError(
+                    {"po_number": [f"Purchase Order with number '{clean_po}' already exists."]}
+                )
+
         if self.instance is None:
             lines_data = self.initial_data.get("lines")
             if not lines_data or not isinstance(lines_data, list) or len(lines_data) == 0:
@@ -360,28 +371,34 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
 
 
     def create(self, validated_data):
-        if not validated_data.get("po_number"):
-            from apps.core.services import generate_document_number
-            validated_data["po_number"] = generate_document_number(PurchaseOrder, "po_number", "PO")
-        lines_data = self.initial_data.get("lines", [])
-        po = super().create(validated_data)
-        if lines_data and isinstance(lines_data, list):
-            subtotal = Decimal("0.00")
-            for item in lines_data:
-                line = POLine.objects.create(
-                    po=po,
-                    item_description=item.get("item_description", "Item"),
-                    quantity=Decimal(str(item.get("quantity", "1"))),
-                    unit_price=Decimal(str(item.get("unit_price", "0.00"))),
-                    unit_of_measure=item.get("unit_of_measure", "EA"),
+        from django.db import transaction
+
+        with transaction.atomic():
+            if not validated_data.get("po_number"):
+                from apps.core.services import generate_document_number
+
+                validated_data["po_number"] = generate_document_number(
+                    PurchaseOrder, "po_number", "PO"
                 )
-                subtotal += line.line_total
-            tax = subtotal * Decimal("0.10")
-            po.subtotal = subtotal
-            po.tax_amount = tax
-            po.total_amount = subtotal + tax
-            po.save(update_fields=["subtotal", "tax_amount", "total_amount"])
-        return po
+            lines_data = self.initial_data.get("lines", [])
+            po = super().create(validated_data)
+            if lines_data and isinstance(lines_data, list):
+                subtotal = Decimal("0.00")
+                for item in lines_data:
+                    line = POLine.objects.create(
+                        po=po,
+                        item_description=item.get("item_description", "Item"),
+                        quantity=Decimal(str(item.get("quantity", "1"))),
+                        unit_price=Decimal(str(item.get("unit_price", "0.00"))),
+                        unit_of_measure=item.get("unit_of_measure", "EA"),
+                    )
+                    subtotal += line.line_total
+                tax = subtotal * Decimal("0.10")
+                po.subtotal = subtotal
+                po.tax_amount = tax
+                po.total_amount = subtotal + tax
+                po.save(update_fields=["subtotal", "tax_amount", "total_amount"])
+            return po
 
     def get_vendor_risk_level(self, obj):
         latest_risk = obj.vendor.risk_records.order_by("-created_at").first()
@@ -470,6 +487,26 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         "lines__item_description",
     ]
     ordering_fields = ["created_at", "total_amount", "po_number", "version", "status"]
+
+    def create(self, request, *args, **kwargs):
+        from django.db import IntegrityError, transaction
+        try:
+            with transaction.atomic():
+                return super().create(request, *args, **kwargs)
+        except IntegrityError as exc:
+            err_msg = str(exc).lower()
+            if "po_number" in err_msg or "orders_purchaseorder" in err_msg or "unique" in err_msg:
+                return Response(
+                    {
+                        "error": {
+                            "code": "DUPLICATE_RESOURCE",
+                            "message": "A Purchase Order with this PO number already exists or concurrent creation collided. Please retry.",
+                            "details": {"po_number": ["Purchase Order with this PO number already exists."]},
+                        }
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+            raise
 
     def get_queryset(self):
         user = self.request.user
@@ -808,7 +845,8 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="issue")
     def issue(self, request, pk=None):
         """APPROVED -> ISSUED. Notifies the vendor and requester."""
-        po = self.get_object()
+        base_qs = scope_purchase_orders_queryset(self.queryset, request.user)
+        po = get_object_or_404(base_qs, pk=pk)
         return self._run_lifecycle_action(
             issue_purchase_order_service, po=po, actor=request.user
         )

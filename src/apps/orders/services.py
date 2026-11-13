@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from apps.accounts.models import Role, User
 from apps.audit.models import AuditLog
+from apps.audit.services import create_audit_log_service
 from apps.budgets.models import Budget, SpendLedger
 from apps.notifications.models import Notification
 from apps.organization.models import CostCenter
@@ -136,11 +137,11 @@ def generate_purchase_order_service(
                 description=f"PO Commitment for {vendor.legal_name}",
             )
 
-        if requisition:
+        if target_requisition:
             from apps.budgets.services import release_budget_reservation_service
             try:
                 release_budget_reservation_service(
-                    requisition=requisition,
+                    requisition=target_requisition,
                     user=created_by_user,
                     reason=f"Converted to Purchase Order {po.po_number}",
                 )
@@ -1037,7 +1038,7 @@ def submit_purchase_order_for_approval_service(
         ]
     )
 
-    AuditLog.objects.create(
+    create_audit_log_service(
         actor=actor,
         action=AuditLog.ACTION_SUBMIT,
         target_model="PurchaseOrder",
@@ -1046,21 +1047,19 @@ def submit_purchase_order_for_approval_service(
         new_state={"status": po.status, "submitted_by": actor.email},
     )
 
-    try:
-        from apps.approvals.models import ApprovalAction
-        from apps.approvals.services import record_approval_action_service
+    from apps.approvals.models import ApprovalAction
+    from apps.approvals.services import record_approval_action_service
 
-        record_approval_action_service(
-            target_object_id=po.id,
-            target_model_name="PurchaseOrder",
-            actor=actor,
-            action=ApprovalAction.ACTION_SUBMIT,
-            previous_state=previous_status,
-            new_state=po.status,
-            comments="PO submitted for approval.",
-        )
-    except Exception:
-        pass
+    record_approval_action_service(
+        target_object_id=po.id,
+        target_model_name="PurchaseOrder",
+        actor=actor,
+        action=ApprovalAction.ACTION_SUBMIT,
+        previous_state=previous_status,
+        new_state=po.status,
+        comments="PO submitted for approval.",
+        _skip_audit=True,
+    )
 
     from apps.notifications.services import notify_role_users
 
@@ -1158,7 +1157,7 @@ def approve_purchase_order_service(
                 description=f"PO Commitment on Approval for {po.vendor.legal_name} ({comments or 'Approved'})",
             )
 
-    AuditLog.objects.create(
+    create_audit_log_service(
         actor=approver,
         action=AuditLog.ACTION_APPROVE,
         target_model="PurchaseOrder",
@@ -1178,21 +1177,19 @@ def approve_purchase_order_service(
         except Exception:
             pass
 
-    try:
-        from apps.approvals.models import ApprovalAction
-        from apps.approvals.services import record_approval_action_service
+    from apps.approvals.models import ApprovalAction
+    from apps.approvals.services import record_approval_action_service
 
-        record_approval_action_service(
-            target_object_id=po.id,
-            target_model_name="PurchaseOrder",
-            actor=approver,
-            action=ApprovalAction.ACTION_APPROVE,
-            previous_state=previous_status,
-            new_state=po.status,
-            comments=comments or "PO approved.",
-        )
-    except Exception:
-        pass
+    record_approval_action_service(
+        target_object_id=po.id,
+        target_model_name="PurchaseOrder",
+        actor=approver,
+        action=ApprovalAction.ACTION_APPROVE,
+        previous_state=previous_status,
+        new_state=po.status,
+        comments=comments or "PO approved.",
+        _skip_audit=True,
+    )
 
     # Notify the submitter that their PO was approved and is ready to issue
     if po.submitted_by and po.submitted_by != approver:
@@ -1390,7 +1387,7 @@ def reject_purchase_order_service(
     po.rejection_reason = reason.strip()
     po.save(update_fields=["status", "rejection_reason", "updated_at"])
 
-    AuditLog.objects.create(
+    create_audit_log_service(
         actor=approver,
         action=AuditLog.ACTION_REJECT,
         target_model="PurchaseOrder",
@@ -1399,21 +1396,19 @@ def reject_purchase_order_service(
         new_state={"status": po.status, "rejection_reason": reason},
     )
 
-    try:
-        from apps.approvals.models import ApprovalAction
-        from apps.approvals.services import record_approval_action_service
+    from apps.approvals.models import ApprovalAction
+    from apps.approvals.services import record_approval_action_service
 
-        record_approval_action_service(
-            target_object_id=po.id,
-            target_model_name="PurchaseOrder",
-            actor=approver,
-            action=ApprovalAction.ACTION_REJECT,
-            previous_state=previous_status,
-            new_state=po.status,
-            comments=reason,
-        )
-    except Exception:
-        pass
+    record_approval_action_service(
+        target_object_id=po.id,
+        target_model_name="PurchaseOrder",
+        actor=approver,
+        action=ApprovalAction.ACTION_REJECT,
+        previous_state=previous_status,
+        new_state=po.status,
+        comments=reason,
+        _skip_audit=True,
+    )
 
     if po.submitted_by and po.submitted_by != approver:
         Notification.objects.create(

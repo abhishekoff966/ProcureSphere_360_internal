@@ -19,12 +19,15 @@
                 <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-bold px-3 py-1 rounded-pill shadow-xs" style="font-size: 0.75rem; letter-spacing: 0.04em;">
                     <i class="fa-solid fa-eye me-1 text-primary"></i> EXECUTIVE APPROVAL OVERSIGHT
                 </span>
-                <span class="text-muted small">Enterprise pipeline oversight, tier progression, and bottleneck tracking</span>
             </div>
             <h1 class="h3 fw-bold text-dark mb-1 font-heading">Pending Approvals Oversight Desk</h1>
+            <p class="text-muted small mb-1 fw-semibold">Enterprise pipeline oversight, tier progression, and bottleneck tracking</p>
             <p class="text-muted small mb-0">Monitor enterprise purchase requisitions and change order amendments awaiting authorization across departments. Direct approval decisions are rendered by designated department and finance approvers.</p>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a href="/manager/" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-2xs">
+                <i class="fa-solid fa-arrow-left me-1"></i>Back to Dashboard
+            </a>
             <button onclick="loadApprovals()" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-2xs" id="approvalsRefreshBtn">
                 <i class="fa-solid fa-arrows-rotate me-1" id="approvalsRefreshIcon"></i> Refresh Queue
             </button>
@@ -159,11 +162,11 @@
 <div class="modal fade" id="approvalDecisionModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-white rounded-4 border-0 shadow-lg overflow-hidden">
-            <div class="modal-header bg-hpe-navy text-white px-4 py-3">
-                <h6 class="modal-title fw-bold font-heading d-flex align-items-center gap-2 mb-0">
-                    <i class="fa-solid fa-stamp text-amber"></i> <span id="modalHeaderTitle">Authorize Approval Decision</span>
+            <div class="modal-header border-bottom px-4 py-3" style="background-color: #F9FAFB !important; border-bottom: 1px solid #E5E7EB !important;">
+                <h6 class="modal-title fw-bold font-heading d-flex align-items-center gap-2 mb-0" style="color: #111827 !important;">
+                    <i class="fa-solid fa-stamp text-primary" id="modalHeaderIcon"></i> <span id="modalHeaderTitle" style="color: #111827 !important;">Authorize Approval Decision</span>
                 </h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
                 
@@ -189,8 +192,9 @@
 
                 <!-- Decision Comments Input -->
                 <div class="mb-3">
-                    <label for="modalApprovalComments" class="form-label text-dark small fw-bold mb-1">
-                        Governance Comments / Notes <span class="text-muted fw-normal" id="modalCommentsRequiredText">(Optional for approval)</span>
+                    <label for="modalApprovalComments" class="form-label text-dark small fw-bold mb-1 d-flex align-items-center justify-content-between">
+                        <span id="modalCommentsLabel">Approval Comments / Notes</span>
+                        <span class="text-muted fw-normal small" id="modalCommentsRequiredText">(Optional for approval)</span>
                     </label>
                     <textarea class="form-control rounded-3 small" id="modalApprovalComments" rows="3" placeholder="Provide governance rationale, policy notes, or conditions..."></textarea>
                 </div>
@@ -214,6 +218,9 @@
 <script>
     let currentTab = 'pending';
     let allApprovalItems = [];
+    let filteredApprovalItems = [];
+    let currentApprovalPage = 1;
+    const APPROVALS_PAGE_SIZE = 15;
     let activeDecisionContext = null;
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -222,6 +229,7 @@
 
     function switchTab(tab) {
         currentTab = tab;
+        currentApprovalPage = 1;
         const pendingBtn = document.getElementById('tabPendingBtn');
         const historyBtn = document.getElementById('tabHistoryBtn');
         if (tab === 'pending') {
@@ -324,7 +332,15 @@
             return matchType && matchQuery;
         });
 
+        filteredApprovalItems = filtered;
+        currentApprovalPage = 1;
         renderApprovalsList(filtered);
+    }
+
+    function goToApprovalPage(page) {
+        const totalPages = Math.max(1, Math.ceil(filteredApprovalItems.length / APPROVALS_PAGE_SIZE));
+        currentApprovalPage = Math.min(Math.max(1, page), totalPages);
+        renderApprovalsList(filteredApprovalItems);
     }
 
     function renderApprovalsList(items) {
@@ -365,7 +381,13 @@
                         <tbody class="divide-y">
         `;
 
-        items.forEach(it => {
+        const totalItems = items.length;
+        const totalPages = Math.max(1, Math.ceil(totalItems / APPROVALS_PAGE_SIZE));
+        if (currentApprovalPage > totalPages) currentApprovalPage = totalPages;
+        const startIdx = (currentApprovalPage - 1) * APPROVALS_PAGE_SIZE;
+        const pageItems = items.slice(startIdx, startIdx + APPROVALS_PAGE_SIZE);
+
+        pageItems.forEach(it => {
             const isPR = it.type === 'PR';
             const typeBadge = isPR
                 ? `<span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1 fw-bold"><i class="fa-solid fa-file-lines me-1"></i>Requisition</span>`
@@ -392,11 +414,25 @@
                 ? `<div class="fw-semibold text-dark">${it.department}</div><div class="text-muted small" style="font-size: 0.75rem;"><i class="fa-regular fa-user me-1"></i>${it.requester_name}</div>`
                 : `<div class="fw-semibold text-dark">${it.vendor_name}</div><div class="text-muted small" style="font-size: 0.75rem;">Dept: ${it.department}</div>`;
 
-            const actionButtons = `
-                <a href="${it.detail_url}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-2xs fw-semibold" title="Inspect Full Requisition & Approval Audit">
-                    Inspect <i class="fa-solid fa-arrow-right ms-1"></i>
-                </a>
-            `;
+            const actionButtons = (isPR && it.can_approve && currentTab === 'pending')
+                ? `
+                    <div class="d-inline-flex gap-1 align-items-center justify-content-end flex-wrap">
+                        <button type="button" onclick="openDecisionModal('PR', '${it.id}', 'APPROVE')" class="btn btn-success btn-sm rounded-pill px-3 fw-semibold shadow-2xs" title="Approve Requisition">
+                            <i class="fa-solid fa-check me-1"></i>Approve
+                        </button>
+                        <button type="button" onclick="openDecisionModal('PR', '${it.id}', 'REJECT')" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold shadow-2xs" title="Reject Requisition">
+                            <i class="fa-solid fa-xmark me-1"></i>Reject
+                        </button>
+                        <a href="${it.detail_url}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-2xs fw-semibold" title="Inspect Full Requisition & Approval Audit">
+                            Inspect <i class="fa-solid fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                `
+                : `
+                    <a href="${it.detail_url}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-2xs fw-semibold" title="Inspect Full Requisition & Approval Audit">
+                        Inspect <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </a>
+                `;
 
             html += `
                 <tr>
@@ -421,9 +457,34 @@
             `;
         });
 
+        const showStart = startIdx + 1;
+        const showEnd = Math.min(startIdx + pageItems.length, totalItems);
+        let pageButtonsHtml = '';
+        for (let p = 1; p <= totalPages; p++) {
+            if (p === 1 || p === totalPages || Math.abs(p - currentApprovalPage) <= 1) {
+                pageButtonsHtml += `<li class="page-item ${p === currentApprovalPage ? 'active' : ''}"><button type="button" class="page-link" onclick="goToApprovalPage(${p})">${p}</button></li>`;
+            } else if (Math.abs(p - currentApprovalPage) === 2) {
+                pageButtonsHtml += `<li class="page-item disabled"><span class="page-link">&hellip;</span></li>`;
+            }
+        }
+
         html += `
                         </tbody>
                     </table>
+                </div>
+                <div class="card-footer bg-white border-top px-3 py-2 d-flex flex-wrap justify-content-between align-items-center gap-2" id="approvalsPaginationBar">
+                    <div class="text-muted small" id="approvalsRowSummary">Showing ${showStart}–${showEnd} of ${totalItems} entries</div>
+                    <nav aria-label="Pending approvals pagination">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item ${currentApprovalPage <= 1 ? 'disabled' : ''}">
+                                <button type="button" class="page-link" onclick="goToApprovalPage(${currentApprovalPage - 1})" ${currentApprovalPage <= 1 ? 'disabled' : ''}>Previous</button>
+                            </li>
+                            ${pageButtonsHtml}
+                            <li class="page-item ${currentApprovalPage >= totalPages ? 'disabled' : ''}">
+                                <button type="button" class="page-link" onclick="goToApprovalPage(${currentApprovalPage + 1})" ${currentApprovalPage >= totalPages ? 'disabled' : ''}>Next</button>
+                            </li>
+                        </ul>
+                    </nav>
                 </div>
             </div>
         `;
@@ -439,6 +500,7 @@
 
         const modal = new bootstrap.Modal(document.getElementById('approvalDecisionModal'));
         const titleEl = document.getElementById('modalHeaderTitle');
+        const headerIcon = document.getElementById('modalHeaderIcon');
         const badgeEl = document.getElementById('modalItemTypeBadge');
         const refEl = document.getElementById('modalItemRef');
         const titleTextEl = document.getElementById('modalItemTitle');
@@ -446,6 +508,7 @@
         const amountEl = document.getElementById('modalItemAmount');
         const justEl = document.getElementById('modalItemJustification');
         const commentsInput = document.getElementById('modalApprovalComments');
+        const commentsLabel = document.getElementById('modalCommentsLabel');
         const submitBtn = document.getElementById('modalActionSubmitBtn');
         const submitBtnText = document.getElementById('modalActionSubmitBtnText');
         const reqText = document.getElementById('modalCommentsRequiredText');
@@ -454,16 +517,30 @@
 
         if (action === 'APPROVE') {
             titleEl.textContent = `Authorize Approval — ${item.reference_number}`;
-            submitBtn.className = 'btn btn-emerald btn-sm rounded-pill px-4 fw-bold shadow-sm';
-            submitBtnText.innerHTML = '<i class="fa-solid fa-check me-1"></i> Commit Approval';
+            titleEl.style.color = '#111827';
+            if (headerIcon) headerIcon.className = 'fa-solid fa-circle-check text-success';
+            submitBtn.className = 'btn btn-success btn-sm rounded-pill px-4 fw-bold shadow-sm';
+            submitBtn.style.backgroundColor = '#16a34a';
+            submitBtn.style.borderColor = '#16a34a';
+            submitBtn.style.color = '#ffffff';
+            submitBtnText.innerHTML = '<i class="fa-solid fa-check me-1"></i> Submit Approval';
+            if (commentsLabel) commentsLabel.textContent = 'Approval Comments / Notes';
             reqText.textContent = '(Optional for approval)';
-            reqText.className = 'text-muted fw-normal';
+            reqText.className = 'text-muted fw-normal small';
+            commentsInput.placeholder = 'Provide optional approval rationale, policy notes, or conditions...';
         } else {
             titleEl.textContent = `Reject Transaction — ${item.reference_number}`;
+            titleEl.style.color = '#111827';
+            if (headerIcon) headerIcon.className = 'fa-solid fa-circle-xmark text-danger';
             submitBtn.className = 'btn btn-danger btn-sm rounded-pill px-4 fw-bold shadow-sm';
-            submitBtnText.innerHTML = '<i class="fa-solid fa-xmark me-1"></i> Commit Rejection';
+            submitBtn.style.backgroundColor = '#dc2626';
+            submitBtn.style.borderColor = '#dc2626';
+            submitBtn.style.color = '#ffffff';
+            submitBtnText.innerHTML = '<i class="fa-solid fa-xmark me-1"></i> Submit Rejection';
+            if (commentsLabel) commentsLabel.textContent = 'Reason for Rejection';
             reqText.textContent = '(Mandatory for rejection)';
-            reqText.className = 'text-danger fw-bold';
+            reqText.className = 'text-danger fw-bold small';
+            commentsInput.placeholder = 'Provide clear, specific business reason for rejection...';
         }
 
         badgeEl.textContent = item.type_display;
@@ -484,7 +561,7 @@
         const comments = (document.getElementById('modalApprovalComments')?.value || '').trim();
 
         if (action === 'REJECT' && !comments) {
-            alert('Rejection justification comment is mandatory.');
+            alert('Reason for rejection is mandatory.');
             return;
         }
 
@@ -510,7 +587,7 @@
             showToast(res.message || `Transaction ${action.toLowerCase()}ed successfully.`, 'success');
             loadApprovals();
         } catch (err) {
-            alert(`Error committing approval action: ${err.message || 'Server error'}`);
+            alert(`Error submitting approval decision: ${err.message || 'Server error'}`);
         } finally {
             submitBtn.disabled = false;
             submitBtnText.textContent = 'Confirm Action';

@@ -413,7 +413,7 @@ def test_org_edit_with_custom_password_sends_email(superadmin_client):
 def test_superadmin_sidebar_profile_alignment_and_non_clipping_signout(superadmin_client):
     """Verifies that the Superadmin sidebar profile container includes the circular sign out button and truncation."""
     client, _ = superadmin_client
-    response = client.get(reverse("superadmin:home"))
+    response = client.get(reverse("superadmin:dashboard"), follow=True)
     assert response.status_code == 200
     html = response.content.decode("utf-8")
 

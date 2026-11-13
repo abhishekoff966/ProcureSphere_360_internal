@@ -413,6 +413,8 @@ def test_invoice_exception_resolution_restricted_to_finance(rbac_users, base_org
         ],
         created_by_user=rbac_users["proc_exec"],
     )
+    po.status = PurchaseOrder.STATUS_ISSUED
+    po.save(update_fields=["status"])
     invoice = create_supplier_invoice_service(
         vendor=base_org_data["vendor"],
         po=po,
@@ -628,3 +630,189 @@ def test_po_amendment_unauthorized_role_rejected(rbac_users, base_org_data):
             ],
             requested_by_user=rbac_users["requester"],
         )
+
+
+# =========================================================================
+# 5. PHASE 1 TARGETED REGRESSION & DEFECT REMEDIATION TESTS
+# =========================================================================
+
+@pytest.mark.django_db
+def test_celery_beat_task_name_alias_and_resolution():
+    """BUG-SYS-001 (TC-NOT-013): Verify both Celery Beat schedule names resolve cleanly."""
+    from apps.notifications.tasks import (
+        scan_overdue_approvals_and_escalate,
+        scan_overdue_approvals_and_escalate_alias,
+    )
+
+    res1 = scan_overdue_approvals_and_escalate()
+    res2 = scan_overdue_approvals_and_escalate_alias()
+    assert isinstance(res1, dict)
+    assert isinstance(res2, dict)
+    assert "reminders_sent" in res1
+    assert "escalations_sent" in res2
+
+
+@pytest.mark.django_db
+def test_failed_login_creates_audit_log_entry(rbac_users):
+    """BUG-SYS-002 (TC-AUD-006): Verify failed login attempts create an AuditLog record."""
+    client = Client()
+    initial_failed_count = AuditLog.objects.filter(action=AuditLog.ACTION_LOGIN_FAILED).count()
+
+    response = client.post(
+        "/login/",
+        {"email": "superadmin_test@hpe.com", "password": "WrongPassword999!"},
+    )
+    assert response.status_code in (200, 302, 401)
+
+    new_failed_count = AuditLog.objects.filter(action=AuditLog.ACTION_LOGIN_FAILED).count()
+    assert new_failed_count > initial_failed_count
+
+    latest_log = AuditLog.objects.filter(action=AuditLog.ACTION_LOGIN_FAILED).order_by("-id").first()
+    assert latest_log is not None
+    assert latest_log.action == AuditLog.ACTION_LOGIN_FAILED
+    assert latest_log.new_state.get("event") == "LOGIN_FAILED"
+
+
+@pytest.mark.django_db
+def test_audit_log_deterministic_ordering_and_tie_breaker(rbac_users):
+    """BUG-E2E-003: Verify AuditLogViewSet deterministic ordering by -timestamp and -id."""
+    fixed_time = timezone.now()
+    log1 = AuditLog.objects.create(
+        actor=rbac_users["auditor"],
+        action=AuditLog.ACTION_LOGIN,
+        target_model="User",
+        target_object_id=str(rbac_users["auditor"].id),
+        timestamp=fixed_time,
+    )
+    log2 = AuditLog.objects.create(
+        actor=rbac_users["auditor"],
+        action=AuditLog.ACTION_LOGIN,
+        target_model="User",
+        target_object_id=str(rbac_users["auditor"].id),
+        timestamp=fixed_time,
+    )
+
+    from apps.audit.api_views import AuditLogViewSet
+
+    viewset = AuditLogViewSet()
+    assert viewset.ordering == ["-timestamp", "-id"]
+    from rest_framework.test import APIRequestFactory, force_authenticate
+
+    factory = APIRequestFactory()
+    request = factory.get("/api/v1/audit/logs/")
+    request.user = rbac_users["auditor"]
+    force_authenticate(request, user=rbac_users["auditor"])
+    viewset.request = request
+    qs = list(viewset.get_queryset()[:2])
+    assert len(qs) >= 2
+    # Verify higher ID comes first when timestamps are identical
+    if qs[0].timestamp == qs[1].timestamp:
+        assert qs[0].id > qs[1].id
+
+
+@pytest.mark.django_db
+def test_audit_log_search_finds_pr_number(rbac_users, base_org_data):
+    """BUG-E2E-007 (E2E-WFL-018): Verify search query param finds logs matching PR number."""
+    from rest_framework.test import APIRequestFactory, force_authenticate
+
+    from apps.audit.api_views import AuditLogViewSet
+
+    test_pr_num = "PR-2026-TEST99"
+    AuditLog.objects.create(
+        actor=rbac_users["requester"],
+        action=AuditLog.ACTION_SUBMIT,
+        target_model="PurchaseRequisition",
+        target_object_id="00000000-0000-0000-0000-000000000099",
+        new_state={"pr_number": test_pr_num, "status": "SUBMITTED"},
+    )
+
+    factory = APIRequestFactory()
+    request = factory.get(f"/api/v1/audit/logs/?search={test_pr_num}")
+    force_authenticate(request, user=rbac_users["auditor"])
+
+    view = AuditLogViewSet.as_view({"get": "list"})
+    response = view(request)
+    assert response.status_code == 200
+    results = response.data.get("results", response.data)
+    assert any(item.get("new_state", {}).get("pr_number") == test_pr_num for item in results)
+
+
+@pytest.mark.django_db
+def test_issue_draft_po_returns_400_not_404(rbac_users, base_org_data):
+    """BUG-API-008 (PO-172): Issuing a DRAFT PO returns HTTP 400 Bad Request rather than HTTP 404."""
+    from rest_framework.test import APIClient
+
+    po = generate_purchase_order_service(
+        vendor=base_org_data["vendor"],
+        cost_center=base_org_data["cost_center"],
+        line_items=[
+            {
+                "item_description": "Network Router 48-port",
+                "quantity": Decimal("2.00"),
+                "unit_price": Decimal("1500.00"),
+            }
+        ],
+        created_by_user=rbac_users["proc_exec"],
+    )
+    assert po.status == PurchaseOrder.STATUS_DRAFT
+
+    client = APIClient()
+    client.force_authenticate(user=rbac_users["super_admin"])
+
+    response = client.post(f"/api/v1/purchase-orders/{po.id}/issue/", {})
+    assert response.status_code == 400
+    err_code = response.data.get("error", {}).get("code")
+    err_msg = response.data.get("error", {}).get("message", "")
+    assert err_code in ("VALIDATION_ERROR", "INVALID_TRANSITION")
+    assert "Cannot issue PO in status" in err_msg or "Must be APPROVED" in err_msg
+
+
+@pytest.mark.django_db
+def test_goods_receipt_put_update_remarks_succeeds(rbac_users, base_org_data):
+    """BUG-DOM-006 (TC-GRN-007): Full update (PUT) of an existing Goods Receipt updates remarks without failing PO status check."""
+    from rest_framework.test import APIClient
+
+    po = generate_purchase_order_service(
+        vendor=base_org_data["vendor"],
+        cost_center=base_org_data["cost_center"],
+        line_items=[
+            {
+                "item_description": "Server Rack Cabinet",
+                "quantity": Decimal("1.00"),
+                "unit_price": Decimal("1200.00"),
+            }
+        ],
+        created_by_user=rbac_users["proc_exec"],
+    )
+    po.status = PurchaseOrder.STATUS_ISSUED
+    po.save(update_fields=["status"])
+
+    grn = create_goods_receipt_service(
+        po=po,
+        received_by=rbac_users["stores"],
+        receipt_items=[
+            {
+                "po_line_id": str(po.lines.first().id),
+                "quantity_received": Decimal("1.00"),
+                "quantity_accepted": Decimal("1.00"),
+                "quantity_rejected": Decimal("0.00"),
+            }
+        ],
+        delivery_note_number="DN-TEST-001",
+        remarks="Initial receipt",
+    )
+    assert grn.remarks == "Initial receipt"
+
+    client = APIClient()
+    client.force_authenticate(user=rbac_users["stores"])
+
+    put_data = {
+        "po": str(po.id),
+        "delivery_note_number": "DN-TEST-001",
+        "remarks": "Updated delivery inspection remarks (verified)",
+        "received_date": timezone.now().isoformat(),
+    }
+    response = client.put(f"/api/v1/receipts/{grn.id}/", put_data, format="json")
+    assert response.status_code == 200, response.data
+    grn.refresh_from_db()
+    assert grn.remarks == "Updated delivery inspection remarks (verified)"

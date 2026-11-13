@@ -7,6 +7,7 @@ from django.utils import timezone
 from apps.accounts.models import Role, User
 from apps.audit.models import AuditLog
 from apps.budgets.services import convert_commitment_to_actual_service
+from apps.core.validators import validate_invoice_number, validate_payment_reference, validate_resolution_notes
 from apps.orders.models import PurchaseOrder
 from apps.receipts.models import ReceiptLine
 from apps.vendors.models import Vendor
@@ -72,6 +73,7 @@ def create_supplier_invoice_service(
             )
 
     clean_inv_num = str(invoice_number).strip()
+    clean_inv_num = validate_invoice_number(clean_inv_num)
     if SupplierInvoice.objects.filter(vendor=vendor, invoice_number__iexact=clean_inv_num).exists():
         raise ValidationError(
             f"Duplicate invoice detected: Invoice '{clean_inv_num}' already exists for vendor '{vendor.legal_name}'."
@@ -146,11 +148,11 @@ def create_supplier_invoice_service(
                 or Decimal("0.00")
             )
             if accepted_qty_agg is not None and accepted_qty_agg > Decimal("0.00"):
-                if prior_invoiced_qty + qty > accepted_qty_agg:
+                if enforce_billable_limits and (prior_invoiced_qty + qty > accepted_qty_agg):
                     raise ValidationError(
                         f"Cumulative invoiced quantity ({prior_invoiced_qty + qty}) for '{item_desc}' would exceed accepted receipt quantity ({accepted_qty_agg})."
                     )
-            elif po_line.quantity and (prior_invoiced_qty + qty > po_line.quantity):
+            elif po_line.quantity and enforce_billable_limits and (prior_invoiced_qty + qty > po_line.quantity):
                 raise ValidationError(
                     f"Cumulative invoiced quantity ({prior_invoiced_qty + qty}) for '{item_desc}' would exceed Purchase Order line quantity ({po_line.quantity})."
                 )
@@ -473,6 +475,8 @@ def resolve_match_exception_service(
     if match_exception.status != MatchException.STATUS_OPEN:
         raise ValidationError(f"Match exception is already in status '{match_exception.status}'.")
 
+    resolution_notes = validate_resolution_notes(resolution_notes)
+
     if action == "RESOLVE":
         match_exception.status = MatchException.STATUS_RESOLVED
         match_exception.resolved_by = resolved_by_user
@@ -534,8 +538,7 @@ def mark_invoice_paid_service(
     Requires a payment reference (UTR / Check #). Creates a PaymentStatus record
     for transaction evidence and audit trail.
     """
-    if not payment_reference:
-        raise ValidationError("Transaction / Payment Reference ID (UTR / Check #) is required.")
+    payment_reference = validate_payment_reference(payment_reference)
 
     # Check for unique payment_reference in PaymentStatus
     if PaymentStatus.objects.filter(payment_reference=payment_reference).exists():

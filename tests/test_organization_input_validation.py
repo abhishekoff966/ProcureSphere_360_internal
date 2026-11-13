@@ -76,6 +76,7 @@ class TestOrganizationValidators:
     def test_org_tax_identifier_validation(self):
         assert validate_org_tax_identifier("US-99-8877665") == "US-99-8877665"
         assert validate_org_tax_identifier("27AAAPL1234C1Z5") == "27AAAPL1234C1Z5"
+        assert validate_org_tax_identifier("TECHNOVA001_tax") == "TECHNOVA001_tax"
         assert validate_org_tax_identifier("") == ""
 
         with pytest.raises(ValidationError) as exc:
@@ -309,4 +310,118 @@ def test_org_create_modal_renders_password_visibility_toggle_symbols():
 
     # Verify eye icons
     assert content.count("fa-eye") >= 3
+
+
+@pytest.mark.django_db
+def test_org_modal_uses_innerhtml_and_admin_edit_preserves_modal_and_admin():
+    """Verify org create/edit modals use innerHTML (never outerHTML destroying .modal-content) and /admin/ edit works."""
+    client = Client()
+    role_sa, _ = Role.objects.get_or_create(code=Role.SUPER_ADMIN, defaults={"name": "Super Admin"})
+    sa_user = User.objects.create_superuser(
+        email="global.sa.modaledit@test.local",
+        password="Password123!",
+        role=role_sa,
+    )
+    org = Organization.objects.create(
+        name="TechNova Original",
+        code="TECHNOVA001",
+        tax_identifier="TECHNOVA001_tax",
+        address="Old Address",
+        is_active=True,
+    )
+    org_admin = User.objects.create_user(
+        email="admin@technova.test",
+        password="Password123!",
+        role=role_sa,
+        organization=org,
+    )
+    org.admin_user = org_admin
+    org.save(update_fields=["admin_user"])
+
+    client.force_login(sa_user)
+
+    # /admin/ modal container and HTMX handlers
+    dash_res = client.get("/admin/")
+    assert dash_res.status_code == 200
+    dash_html = dash_res.content.decode("utf-8")
+    assert 'id="modal-content-body"' in dash_html
+    assert "hidden.bs.modal" in dash_html
+
+    # Create error renders neat error banner and keeps hx-swap="innerHTML"
+    create_err = client.post(
+        "/admin/organizations/create/",
+        {
+            "code": "BAD CODE!",
+            "name": "Bad Org",
+            "tax_identifier": "TECHNOVA001_tax",
+            "admin_email": "newadmin@technova.test",
+        },
+    )
+    assert create_err.status_code == 200
+    create_html = create_err.content.decode("utf-8")
+    assert 'hx-swap="innerHTML"' in create_html
+    assert 'hx-swap="outerHTML"' not in create_html
+    assert 'id="orgFormErrorAlert"' in create_html
+
+    # Edit GET and POST under /admin/organizations/<id>/edit/
+    edit_get = client.get(f"/admin/organizations/{org.pk}/edit/")
+    assert edit_get.status_code == 200
+    edit_get_html = edit_get.content.decode("utf-8")
+    assert 'hx-swap="innerHTML"' in edit_get_html
+    assert f'/admin/organizations/{org.pk}/edit/' in edit_get_html
+
+    edit_post = client.post(
+        f"/admin/organizations/{org.pk}/edit/",
+        {
+            "code": "TECHNOVA001",
+            "name": "TechNova Solutions Pvt Ltd",
+            "tax_identifier": "TECHNOVA001_tax",
+            "address": "Updated Address",
+            "is_active": "on",
+            "admin_email": "",
+        },
+    )
+    assert edit_post.status_code == 200
+    org.refresh_from_db()
+    assert org.name == "TechNova Solutions Pvt Ltd"
+    assert org.address == "Updated Address"
+    assert org.admin_user_id == org_admin.id
+
+
+@pytest.mark.django_db
+def test_admin_dashboard_does_not_render_duplicate_top_messagelist(client):
+    role_sa, _ = Role.objects.get_or_create(
+        code=Role.SUPER_ADMIN, defaults={"name": "Super Admin"}
+    )
+    sa_user = User.objects.create_superuser(
+        email="sa.msgcheck@example.com",
+        password="Password123!",
+        role=role_sa,
+    )
+    client.force_login(sa_user)
+
+    create_ok = client.post(
+        "/admin/organizations/create/",
+        {
+            "code": "TECHNOVA-ORG-002",
+            "name": "TechNova Solutions Pvt Ltd",
+            "tax_identifier": "TECHNOVA001_tax",
+            "address": "123 Enterprise Way",
+            "is_active": "on",
+            "admin_email": "admin@technova.example.com",
+            "admin_full_name": "TechNova Admin",
+            "admin_password": "Password123!",
+        },
+        follow=False,
+    )
+    assert create_ok.status_code == 200
+
+    dash_res = client.get("/admin/")
+    assert dash_res.status_code == 200
+    dash_html = dash_res.content.decode("utf-8")
+    assert 'class="messagelist"' not in dash_html
+    assert "TECHNOVA-ORG-002" in dash_html
+    assert dash_html.count("created successfully.") == 1
+
+
 

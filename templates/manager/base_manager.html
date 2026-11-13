@@ -208,7 +208,7 @@
                 <span>Sourcing Events</span>
             </a>
             <a href="/manager/awards/" class="manager-nav-link {% if '/manager/awards/' in request.path or '/sourcing/evaluation' in request.path %}active{% endif %}">
-                <span>Award Approvals</span>
+                <span>Pending Awards</span>
             </a>
 
             <!-- ORDERS SECTION -->
@@ -235,6 +235,9 @@
 
             <!-- WORKFLOW SECTION -->
             <div class="nav-section-label">Workflow</div>
+            <a href="/manager/policy-exceptions/?tab=invoices" class="manager-nav-link {% if '/manager/policy-exceptions/' in request.path %}active{% endif %}">
+                <span>Invoice &amp; Policy Exceptions</span>
+            </a>
             <a href="/manager/notifications/" class="manager-nav-link {% if '/manager/notifications/' in request.path %}active{% endif %}">
                 <span>Notifications &amp; Alerts</span>
             </a>

@@ -51,79 +51,79 @@ def get_pr_aging_report(user=None):
 
 def get_spend_analytics_report(
     user=None,
-    vendor=None,
+    period_days=None,
+    start_date=None,
+    end_date=None,
     category=None,
     department=None,
     cost_center=None,
+    vendor=None,
     period=None,
     date_from=None,
     date_to=None,
 ):
-    """2. Spend by vendor / category / department / cost center / period"""
-    from datetime import date
+    """
+    Spend analytics report: realized spend by vendor / category / department / cost center / period.
+    Strictly restricted to SupplierInvoice.STATUS_PAID (realized actual spend).
+    Invoices in DRAFT, RECEIVED, VALIDATION, MATCHING, EXCEPTION, APPROVAL,
+    READY_FOR_PAYMENT, or REJECTED status are strictly excluded.
+    Preserves multi-tenant organization boundaries and supports multidimensional filtering.
+    """
     from django.db.models import Q as _Q
     from apps.invoices.models import SupplierInvoice
 
     invoices = (
         SupplierInvoice.objects.select_related(
-            "vendor", "vendor__category", "po", "po__cost_center", "po__requisition__department"
+            "vendor",
+            "vendor__category",
+            "po",
+            "po__cost_center",
+            "po__cost_center__department",
+            "po__requisition__department",
         )
         .filter(status=SupplierInvoice.STATUS_PAID)
     )
+
+    # Multi-tenant isolation: superusers see all; org-scoped users see only their tenant
     if user and not getattr(user, "is_superuser", False):
-        org = getattr(user, "effective_organization", None)
+        org = getattr(user, "effective_organization", None) or getattr(user, "organization", None)
         if org:
             invoices = invoices.filter(
                 _Q(po__cost_center__department__organization=org)
                 | _Q(po__requisition__department__organization=org)
+                | _Q(po__created_by__organization=org)
                 | _Q(vendor__organization=org)
             )
         else:
             invoices = invoices.none()
 
-    if vendor:
-        v_str = str(vendor).strip()
-        v_filter = _Q(vendor__legal_name__icontains=v_str) | _Q(vendor__trade_name__icontains=v_str) | _Q(vendor__vendor_number__icontains=v_str)
-        if len(v_str) in (32, 36):
-            v_filter |= _Q(vendor_id=v_str)
-        invoices = invoices.filter(v_filter)
+    if date_from and not start_date:
+        start_date = date_from
+    if date_to and not end_date:
+        end_date = date_to
 
-    if category:
-        cats = [c.strip() for c in str(category).split(",") if c.strip()]
-        cat_q = _Q()
-        for cat in cats:
-            cat_q |= _Q(vendor__category__name__icontains=cat) | _Q(vendor__category__code__icontains=cat)
-        invoices = invoices.filter(cat_q)
-
-    if department:
-        d_str = str(department).strip()
-        invoices = invoices.filter(
-            _Q(po__requisition__department__name__icontains=d_str)
-            | _Q(po__requisition__department__code__icontains=d_str)
-            | _Q(po__cost_center__department__name__icontains=d_str)
-            | _Q(po__cost_center__department__code__icontains=d_str)
-        )
-
-    if cost_center:
-        cc_str = str(cost_center).strip()
-        cc_filter = _Q(po__cost_center__code__icontains=cc_str) | _Q(po__cost_center__name__icontains=cc_str)
-        if len(cc_str) in (32, 36):
-            cc_filter |= _Q(po__cost_center_id=cc_str)
-        invoices = invoices.filter(cc_filter)
-
-    if period:
+    # Period filter (period_days from today)
+    if period_days is not None:
+        try:
+            days = int(period_days)
+            cutoff_date = timezone.now().date() - timezone.timedelta(days=days)
+            invoices = invoices.filter(invoice_date__gte=cutoff_date)
+        except (ValueError, TypeError):
+            pass
+    elif period:
         p_str = str(period).strip().upper()
+        from datetime import date
         if "Q1" in p_str:
-            year = int(p_str.split("-")[0].replace("FY", "")) if p_str.split("-")[0].replace("FY", "").isdigit() else date.today().year
+            year = int(p_str.split("-")[0].replace("FY", "")) if p_str.split("-")[0].replace("FY", "").isdigit() else timezone.now().date().year
             invoices = invoices.filter(invoice_date__gte=date(year, 1, 1), invoice_date__lte=date(year, 3, 31))
         elif "Q2" in p_str:
-            year = int(p_str.split("-")[0].replace("FY", "")) if p_str.split("-")[0].replace("FY", "").isdigit() else date.today().year
+            year = int(p_str.split("-")[0].replace("FY", "")) if p_str.split("-")[0].replace("FY", "").isdigit() else timezone.now().date().year
             invoices = invoices.filter(invoice_date__gte=date(year, 4, 1), invoice_date__lte=date(year, 6, 30))
         elif "Q3" in p_str:
-            year = int(p_str.split("-")[0].replace("FY", "")) if p_str.split("-")[0].replace("FY", "").isdigit() else date.today().year
+            year = int(p_str.split("-")[0].replace("FY", "")) if p_str.split("-")[0].replace("FY", "").isdigit() else timezone.now().date().year
             invoices = invoices.filter(invoice_date__gte=date(year, 7, 1), invoice_date__lte=date(year, 9, 30))
         elif "Q4" in p_str:
-            year = int(p_str.split("-")[0].replace("FY", "")) if p_str.split("-")[0].replace("FY", "").isdigit() else date.today().year
+            year = int(p_str.split("-")[0].replace("FY", "")) if p_str.split("-")[0].replace("FY", "").isdigit() else timezone.now().date().year
             invoices = invoices.filter(invoice_date__gte=date(year, 10, 1), invoice_date__lte=date(year, 12, 31))
         elif p_str.startswith("FY") and p_str[2:].isdigit():
             year = int(p_str[2:])
@@ -138,28 +138,136 @@ def get_spend_analytics_report(
         else:
             invoices = invoices.none()
 
-    if date_from:
-        invoices = invoices.filter(invoice_date__gte=date_from)
-    if date_to:
-        invoices = invoices.filter(invoice_date__lte=date_to)
+    # Inclusive date-range filters
+    if start_date:
+        if isinstance(start_date, str):
+            from datetime import date
+            try:
+                start_dt = date.fromisoformat(str(start_date).strip()[:10])
+            except (ValueError, TypeError):
+                start_dt = None
+        else:
+            start_dt = start_date
+        if start_dt:
+            invoices = invoices.filter(invoice_date__gte=start_dt)
+
+    if end_date:
+        if isinstance(end_date, str):
+            from datetime import date
+            try:
+                end_dt = date.fromisoformat(str(end_date).strip()[:10])
+            except (ValueError, TypeError):
+                end_dt = None
+        else:
+            end_dt = end_date
+        if end_dt:
+            invoices = invoices.filter(invoice_date__lte=end_dt)
+
+    # Category filter (ID or name/code)
+    if category:
+        from django.db.models import Q as _Q
+        cat_val = str(category).strip()
+        if cat_val:
+            try:
+                import uuid
+                uuid.UUID(cat_val)
+                is_id = True
+            except (ValueError, AttributeError):
+                is_id = cat_val.isdigit()
+
+            if is_id:
+                invoices = invoices.filter(vendor__category_id=cat_val)
+            else:
+                invoices = invoices.filter(
+                    _Q(vendor__category__name__icontains=cat_val)
+                    | _Q(vendor__category__code__icontains=cat_val)
+                )
+
+    # Department filter (ID or name/code)
+    if department:
+        from django.db.models import Q as _Q
+        dept_val = str(department).strip()
+        if dept_val:
+            try:
+                import uuid
+                uuid.UUID(dept_val)
+                is_id = True
+            except (ValueError, AttributeError):
+                is_id = dept_val.isdigit()
+
+            if is_id:
+                invoices = invoices.filter(
+                    _Q(po__cost_center__department_id=dept_val)
+                    | _Q(po__requisition__department_id=dept_val)
+                )
+            else:
+                invoices = invoices.filter(
+                    _Q(po__cost_center__department__name__icontains=dept_val)
+                    | _Q(po__cost_center__department__code__icontains=dept_val)
+                    | _Q(po__requisition__department__name__icontains=dept_val)
+                    | _Q(po__requisition__department__code__icontains=dept_val)
+                )
+
+    # Cost center filter (ID or code/name)
+    if cost_center:
+        from django.db.models import Q as _Q
+        cc_val = str(cost_center).strip()
+        if cc_val:
+            try:
+                import uuid
+                uuid.UUID(cc_val)
+                is_id = True
+            except (ValueError, AttributeError):
+                is_id = cc_val.isdigit()
+
+            if is_id:
+                invoices = invoices.filter(po__cost_center_id=cc_val)
+            else:
+                invoices = invoices.filter(
+                    _Q(po__cost_center__code__icontains=cc_val)
+                    | _Q(po__cost_center__name__icontains=cc_val)
+                )
+
+    # Vendor filter (ID or legal_name/vendor_code)
+    if vendor:
+        from django.db.models import Q as _Q
+        vend_val = str(vendor).strip()
+        if vend_val:
+            try:
+                import uuid
+                uuid.UUID(vend_val)
+                is_id = True
+            except (ValueError, AttributeError):
+                is_id = vend_val.isdigit()
+
+            if is_id:
+                invoices = invoices.filter(vendor_id=vend_val)
+            else:
+                invoices = invoices.filter(
+                    _Q(vendor__legal_name__icontains=vend_val)
+                    | _Q(vendor__trade_name__icontains=vend_val)
+                    | _Q(vendor__vendor_code__icontains=vend_val)
+                    | _Q(vendor__vendor_number__icontains=vend_val)
+                )
 
     invoices = invoices.order_by("-invoice_date")
 
     report_data = []
     for inv in invoices:
         po = inv.po
-        dept_name = (
-            po.requisition.department.name
-            if po and po.requisition and po.requisition.department
-            else "N/A"
-        )
+        dept_name = "N/A"
+        if po and po.cost_center and getattr(po.cost_center, "department", None):
+            dept_name = po.cost_center.department.name
+        elif po and po.requisition and getattr(po.requisition, "department", None):
+            dept_name = po.requisition.department.name
+
         cc_code = po.cost_center.code if po and po.cost_center else "N/A"
-        cat_name = inv.vendor.category.name if inv.vendor.category else "Uncategorized"
+        cat_name = inv.vendor.category.name if inv.vendor and inv.vendor.category else "Uncategorized"
         period_str = inv.invoice_date.strftime("%Y-%m")
 
         report_data.append(
             {
-                "vendor_name": inv.vendor.legal_name,
+                "vendor_name": inv.vendor.legal_name if inv.vendor else "N/A",
                 "vendor_category": cat_name,
                 "department": dept_name,
                 "cost_center": cc_code,

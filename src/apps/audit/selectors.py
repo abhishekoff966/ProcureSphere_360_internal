@@ -150,8 +150,16 @@ def get_scoped_audit_logs_queryset(base_qs=None, organization=None):
     actor_in_org_q = Q(actor__organization=organization)
     ids_bundle = get_organization_scoped_entity_ids(organization)
 
+    from apps.accounts.models import User
+    org_ids = [str(organization.id), str(organization.id).replace("-", "")]
+    usr_ids = list(set([str(x) for x in User.objects.filter(organization=organization).values_list("id", flat=True)]))
+    org_emails = [u.lower() for u in User.objects.filter(organization=organization).values_list("email", flat=True) if u]
+
     entity_matches_q = (
-        Q(target_model="PurchaseRequisition", target_object_id__in=ids_bundle["pr_ids"])
+        Q(target_model="Organization", target_object_id__in=org_ids)
+        | Q(target_model="User", target_object_id__in=usr_ids)
+        | Q(target_model="User", target_object_id__in=org_emails)
+        | Q(target_model="PurchaseRequisition", target_object_id__in=ids_bundle["pr_ids"])
         | Q(target_model="PurchaseOrder", target_object_id__in=ids_bundle["po_ids"])
         | Q(target_model="Vendor", target_object_id__in=ids_bundle["vnd_ids"])
         | Q(target_model="SupplierInvoice", target_object_id__in=ids_bundle["inv_ids"])
@@ -159,10 +167,14 @@ def get_scoped_audit_logs_queryset(base_qs=None, organization=None):
         | Q(target_model="SourcingEvent", target_object_id__in=ids_bundle["se_ids"])
     )
 
-    business_models = ["PurchaseRequisition", "PurchaseOrder", "Vendor", "SupplierInvoice", "Contract", "SourcingEvent"]
+    business_models = ["Organization", "User", "PurchaseRequisition", "PurchaseOrder", "Vendor", "SupplierInvoice", "Contract", "SourcingEvent"]
     generic_actor_q = actor_in_org_q & ~Q(target_model__in=business_models)
 
-    return base_qs.filter(entity_matches_q | generic_actor_q)
+    null_actor_failed_login_q = Q(actor__isnull=True, action=AuditLog.ACTION_LOGIN_FAILED) & (
+        Q(target_object_id__in=usr_ids) | Q(target_object_id__in=org_emails) | Q(new_state__email__in=org_emails)
+    )
+
+    return base_qs.filter(entity_matches_q | generic_actor_q | null_actor_failed_login_q)
 
 
 def get_audit_logs(
@@ -1319,6 +1331,7 @@ def get_security_events_audit(
     """
     security_actions = [
         AuditLog.ACTION_LOGIN,
+        AuditLog.ACTION_LOGIN_FAILED,
         AuditLog.ACTION_LOGOUT,
         AuditLog.ACTION_EXPORT,
         AuditLog.ACTION_OVERRIDE,
@@ -1332,7 +1345,16 @@ def get_security_events_audit(
     ).select_related("actor", "actor__role")
 
     if organization:
-        qs = qs.filter(Q(actor__organization=organization) | Q(actor__department__organization=organization))
+        from apps.accounts.models import User
+        org_users = list(User.objects.filter(organization=organization).values("id", "email"))
+        org_user_ids = [str(u["id"]) for u in org_users]
+        org_emails = [u["email"].lower() for u in org_users if u["email"]]
+
+        actor_match_q = Q(actor__organization=organization) | Q(actor__department__organization=organization)
+        target_user_q = Q(target_model="User", target_object_id__in=org_user_ids) | Q(target_model="User", target_object_id__in=org_emails)
+        null_actor_security_q = Q(actor__isnull=True) & (target_user_q | Q(new_state__email__in=org_emails))
+
+        qs = qs.filter(actor_match_q | target_user_q | null_actor_security_q)
 
     if action:
         qs = qs.filter(action=action)
@@ -1380,6 +1402,7 @@ def get_security_events_audit(
     sec_stats = qs.aggregate(
         total=Count("id"),
         logins=Count("id", filter=Q(action=AuditLog.ACTION_LOGIN)),
+        failed_logins=Count("id", filter=Q(action=AuditLog.ACTION_LOGIN_FAILED)),
         logouts=Count("id", filter=Q(action=AuditLog.ACTION_LOGOUT)),
         exports=Count("id", filter=Q(action=AuditLog.ACTION_EXPORT)),
         overrides=Count("id", filter=Q(action=AuditLog.ACTION_OVERRIDE)),
@@ -1389,6 +1412,7 @@ def get_security_events_audit(
             "total_security_events": sec_stats["total"] or 0,
             "logins_count": sec_stats["logins"] or 0,
             "login_count": sec_stats["logins"] or 0,
+            "failed_logins_count": sec_stats["failed_logins"] or 0,
             "logouts_count": sec_stats["logouts"] or 0,
             "logout_count": sec_stats["logouts"] or 0,
             "exports_count": sec_stats["exports"] or 0,

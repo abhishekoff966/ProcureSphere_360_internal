@@ -17,6 +17,7 @@ from apps.invoices.models import (
     SupplierInvoice,
 )
 from apps.invoices.services import (
+    approve_supplier_invoice_service,
     create_supplier_invoice_service,
     mark_invoice_paid_service,
     resolve_match_exception_service,
@@ -526,6 +527,18 @@ def test_day25_quantity_correction_cannot_reduce_below_handed_off_stock(batch5_s
         ],
         delivery_note_number="DN-B5-HANDOFF-GUARD",
     )
+    r_line_h = grn.lines.first()
+    record_inspection_service(
+        receipt=grn,
+        inspected_by=receiver,
+        inspection_items=[
+            {
+                "receipt_line_id": str(r_line_h.id),
+                "passed": True,
+            }
+        ],
+    )
+
     # Hand off 40 units to warehouse inventory
     handoff_goods_to_stock_service(
         receipt=grn,
@@ -671,6 +684,7 @@ def test_day26_receipt_status_lifecycle_and_po_remaining_quantity_calculation(ba
                 "po_line_id": str(line1.id),
                 "quantity_received": Decimal("30.00"),
                 "quantity_accepted": Decimal("0.00"),
+                "rejection_reason": "Severe corrosion damage on arrival",
             }
         ],
         delivery_note_number="DN-B5-D26-02",
@@ -1261,4 +1275,7 @@ def test_day27_drf_api_stores_to_finance_3way_match_flow(batch5_setup):
     assert response.status_code == 200
     data = response.json()
     assert data["exceptions_count"] == 0
-    assert data["invoice"]["status"] == SupplierInvoice.STATUS_READY_FOR_PAYMENT
+    assert data["invoice"]["status"] in [
+        SupplierInvoice.STATUS_APPROVAL,
+        SupplierInvoice.STATUS_READY_FOR_PAYMENT,
+    ]

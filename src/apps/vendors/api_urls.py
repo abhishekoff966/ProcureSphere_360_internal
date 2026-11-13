@@ -404,11 +404,11 @@ class VendorSerializer(serializers.ModelSerializer):
         from apps.core.services import generate_document_number
 
         for attempt in range(15):
-            validated_data["vendor_number"] = generate_document_number(
-                Vendor, "vendor_number", "VND", offset=attempt
-            )
             try:
                 with transaction.atomic():
+                    validated_data["vendor_number"] = generate_document_number(
+                        Vendor, "vendor_number", "VND", offset=attempt
+                    )
                     return super().create(validated_data)
             except IntegrityError:
                 if attempt < 14:
@@ -491,23 +491,9 @@ class VendorViewSet(viewsets.ModelViewSet):
         )
         qs = annotate_governance(base_qs)
 
-        # Vendor user scoping
-        if getattr(user, "is_vendor", False) or getattr(user, "vendor_id", None):
-            if getattr(user, "vendor_id", None):
-                qs = qs.filter(id=user.vendor_id)
-            elif getattr(user, "vendor", None):
-                qs = qs.filter(id=user.vendor.id)
-            else:
-                return qs.none()
-        elif not user.is_superuser:
-            scoped_org = getattr(user, "effective_organization", None)
-            if scoped_org:
-                qs = qs.filter(
-                    Q(organization=scoped_org)
-                    | Q(organization__isnull=True)
-                    | Q(created_by__organization=scoped_org)
-                    | Q(created_by__department__organization=scoped_org)
-                )
+        # Scoping aligned with master vendor governance policy
+        from apps.vendors.selectors import scope_vendors_queryset
+        qs = scope_vendors_queryset(qs, user)
 
         filterset = VendorFilter(self.request.query_params, queryset=qs)
         if not filterset.is_valid():

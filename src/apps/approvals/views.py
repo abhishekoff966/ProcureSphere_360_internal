@@ -92,8 +92,26 @@ def _get_approval_querysets(user, role_code):
                     organization=user.organization
                 ).first()
 
+        user_org = getattr(user, "organization", None) or (
+            user_dept.organization if user_dept else None
+        )
         if user_dept:
-            q = Q(department=user_dept) | Q(cost_center__manager=user)
+            from apps.organization.models import Department
+
+            depts_with_approvers = Department.objects.filter(
+                organization=user_org,
+                users__role__code=Role.DEPT_APPROVER,
+                users__is_active=True,
+            ).exclude(id=user_dept.id)
+
+            q = (
+                Q(department=user_dept)
+                | Q(cost_center__manager=user)
+                | (
+                    Q(department__organization=user_org)
+                    & ~Q(department__in=depts_with_approvers)
+                )
+            )
             pending_qs = PurchaseRequisition.objects.filter(
                 q, status__in=pending_statuses
             ).exclude(id__in=user_approved_pr_ids).distinct()
@@ -101,8 +119,8 @@ def _get_approval_querysets(user, role_code):
                 q & (Q(status__in=history_statuses) | Q(id__in=user_approved_pr_ids))
             ).distinct()
             return pending_qs, history_qs
-        elif getattr(user, "organization", None):
-            q = Q(department__organization=user.organization) | Q(
+        elif user_org:
+            q = Q(department__organization=user_org) | Q(
                 cost_center__manager=user
             )
             pending_qs = PurchaseRequisition.objects.filter(
@@ -165,12 +183,6 @@ def _handle_approval_post(request, role_code):
             "Permission Denied: Compliance Auditors hold strictly read-only permissions and cannot approve or reject requisitions.",
         )
         return redirect("approvals_inbox")
-    if role_code in [Role.PROC_MGR, "PROC_MGR"] and not request.user.is_superuser:
-        messages.error(
-            request,
-            "Permission Denied: Procurement Managers maintain view and inspection permissions only and cannot approve or reject purchase requisitions.",
-        )
-        return redirect("manager_approvals")
     if not request.user.is_superuser and role_code in [
         Role.LEGAL_MGR,
         Role.STORES_RECEIVER,
@@ -361,6 +373,105 @@ def approvals_inbox_view(request):
             page_obj = pending_paginator.get_page(page_number)
             pending_display = page_obj
             history_display = history_prs
+
+            # Annotate inline approval eligibility and budget overrun status without altering routing rules
+            from apps.approvals.models import ApprovalPolicy
+            from apps.approvals.services import evaluate_approval_chain
+            from apps.budgets.models import Budget
+
+            today_date = timezone.now().date()
+            pending_items = list(page_obj.object_list)
+            cc_ids = [pr.cost_center_id for pr in pending_items if pr.cost_center_id]
+            active_budgets = {}
+            if cc_ids:
+                for b in Budget.objects.filter(
+                    cost_center_id__in=cc_ids,
+                    fiscal_period__start_date__lte=today_date,
+                    fiscal_period__end_date__gte=today_date,
+                    fiscal_period__is_closed=False,
+                ).order_by("-fiscal_period__start_date"):
+                    active_budgets.setdefault(b.cost_center_id, b)
+                missing_cc_ids = [cid for cid in cc_ids if cid not in active_budgets]
+                if missing_cc_ids:
+                    for b in Budget.objects.filter(
+                        cost_center_id__in=missing_cc_ids,
+                        fiscal_period__is_closed=False,
+                    ).order_by("-fiscal_period__start_date"):
+                        active_budgets.setdefault(b.cost_center_id, b)
+
+            is_restricted_role = not user.is_superuser and role_code in [
+                Role.AUDITOR,
+                Role.LEGAL_MGR,
+                Role.STORES_RECEIVER,
+                Role.REQUESTER,
+            ]
+            for pr in pending_items:
+                b = active_budgets.get(pr.cost_center_id)
+                pr.is_over_budget = bool(
+                    pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW
+                    or (b is not None and (b.available_amount <= 0 or pr.total_amount > b.available_amount))
+                )
+                can_decide = False
+                if not is_restricted_role and pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW:
+                    if user.is_superuser or role_code in [Role.FINANCE_AP, Role.PROC_MGR, Role.SUPER_ADMIN]:
+                        can_decide = True
+                elif not is_restricted_role and pr.status in [
+                    PurchaseRequisition.STATUS_SUBMITTED,
+                    PurchaseRequisition.STATUS_MANAGER_REVIEW,
+                ] and not (pr.is_over_budget and role_code == Role.DEPT_APPROVER):
+                    if user.is_superuser:
+                        can_decide = True
+                    else:
+                        pr_org = (
+                            getattr(getattr(pr, "department", None), "organization", None)
+                            or getattr(getattr(getattr(pr, "cost_center", None), "department", None), "organization", None)
+                            or getattr(pr.requester, "effective_organization", None)
+                        )
+                        chain = evaluate_approval_chain(
+                            module=ApprovalPolicy.MODULE_PR,
+                            amount=pr.total_amount,
+                            department=pr.department,
+                            cost_center=pr.cost_center,
+                            organization=pr_org,
+                        )
+                        step_idx = ApprovalAction.objects.filter(
+                            target_object_id=str(pr.id),
+                            target_model_name="PurchaseRequisition",
+                            action=ApprovalAction.ACTION_APPROVE,
+                        ).count()
+                        if chain and step_idx < len(chain):
+                            step_info = chain[step_idx]
+                            req_role = step_info["approver_role"]
+                            spec_app = step_info["specific_approver"]
+                            eff_app = step_info["effective_approver"]
+                            if spec_app:
+                                can_decide = user == eff_app or user == spec_app
+                            else:
+                                approver_role_code = getattr(getattr(user, "role", None), "code", None)
+                                if (getattr(user, "role_id", None) == req_role.id) or (approver_role_code == req_role.code):
+                                    pr_dept = pr.department or (
+                                        pr.cost_center.department if pr.cost_center else None
+                                    )
+                                    if req_role.code == Role.DEPT_APPROVER and pr_dept and user.department:
+                                        has_own_approver = (
+                                            User.objects.filter(
+                                                role__code=Role.DEPT_APPROVER,
+                                                department=pr_dept,
+                                                is_active=True,
+                                            )
+                                            .exclude(id=user.id)
+                                            .exists()
+                                        )
+                                        can_decide = (
+                                            user.department == pr_dept
+                                            or (pr.cost_center and user == pr.cost_center.manager)
+                                            or not has_own_approver
+                                        )
+                                    else:
+                                        can_decide = True
+                        elif not chain and role_code in [Role.DEPT_APPROVER, Role.SUPER_ADMIN]:
+                            can_decide = True
+                pr.can_inline_decide = can_decide
 
         legal_pending_display = []
         legal_history_display = []

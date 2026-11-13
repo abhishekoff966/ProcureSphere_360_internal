@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
 
-from apps.accounts.models import Role
+from apps.accounts.models import Role, User
 from apps.audit.permissions import AuditorReadOnlyPermission
 
 from .models import PRAttachment, PRLine, PurchaseRequisition
@@ -154,6 +154,17 @@ class PurchaseRequisitionSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         department = attrs.get("department") or getattr(self.instance, "department", None)
         cost_center = attrs.get("cost_center") or getattr(self.instance, "cost_center", None)
+
+        if not cost_center:
+            raise serializers.ValidationError({"cost_center": ["Cost center is required."]})
+        if not department:
+            raise serializers.ValidationError({"department": ["Department is required."]})
+
+        if cost_center.department_id != department.id:
+            raise serializers.ValidationError(
+                {"cost_center": ["Cost center must belong to the selected department."]}
+            )
+
         request = self.context.get("request")
         user = getattr(request, "user", None)
         if user and not user.is_superuser and getattr(user, "role_code", None) == Role.REQUESTER:
@@ -164,86 +175,143 @@ class PurchaseRequisitionSerializer(serializers.ModelSerializer):
                         {"code": "forbidden", "fields": {"cost_center": ["Cost center not authorized for this requester."]}}
                     )
 
-        if department and cost_center:
-            if cost_center.department_id != department.id:
-                raise serializers.ValidationError(
-                    {"cost_center": ["Cost center must belong to the selected department."]}
-                )
+        # Organization / Tenant isolation check
+        if request and request.user and request.user.is_authenticated and not request.user.is_superuser:
+            user_org = getattr(request.user, "organization", None) or getattr(request.user, "effective_organization", None)
+            if user_org:
+                if getattr(department, "organization_id", None) and department.organization_id != user_org.id:
+                    raise serializers.ValidationError(
+                        {"department": ["Department does not belong to your organization."]}
+                    )
+                if cost_center.department and getattr(cost_center.department, "organization_id", None) and cost_center.department.organization_id != user_org.id:
+                    raise serializers.ValidationError(
+                        {"cost_center": ["Cost center does not belong to your organization."]}
+                    )
+
+        lines_data = self.initial_data.get("line_items", self.initial_data.get("lines"))
         if self.instance is None:
-            lines_data = self.initial_data.get("line_items", self.initial_data.get("lines"))
-            if lines_data is None or len(lines_data) == 0:
-                raise serializers.ValidationError({"lines": ["At least one line item is required."]})
+            if lines_data is None or not isinstance(lines_data, list) or len(lines_data) == 0:
+                raise serializers.ValidationError({"lines": ["A requisition must contain at least one line item."]})
+        else:
+            if lines_data is not None and (not isinstance(lines_data, list) or len(lines_data) == 0):
+                raise serializers.ValidationError({"lines": ["A requisition must contain at least one line item."]})
+
+        if lines_data and isinstance(lines_data, list):
+            for idx, item in enumerate(lines_data):
+                if not isinstance(item, dict):
+                    raise serializers.ValidationError(
+                        {"lines": [f"Line item {idx + 1} must be an object."]}
+                    )
+                desc = str(item.get("item_description", "")).strip()
+                if not desc:
+                    raise serializers.ValidationError(
+                        {"lines": [f"Item description is required for line item {idx + 1}."]}
+                    )
+                qty = item.get("quantity")
+                if qty is not None:
+                    try:
+                        d_qty = Decimal(str(qty))
+                        if d_qty <= Decimal("0.00"):
+                            raise serializers.ValidationError(
+                                {"lines": [f"Quantity must be greater than zero for line item {idx + 1}."]}
+                            )
+                        if d_qty % 1 != 0:
+                            raise serializers.ValidationError(
+                                {"lines": [f"Quantity must be a whole number (no decimal points allowed) for line item {idx + 1}."]}
+                            )
+                    except (TypeError, ValueError, ArithmeticError) as e:
+                        if isinstance(e, serializers.ValidationError):
+                            raise
+                        raise serializers.ValidationError(
+                            {"lines": [f"Invalid quantity for line item {idx + 1}."]}
+                        )
+                price = item.get("estimated_unit_price") if item.get("estimated_unit_price") is not None else item.get("unit_price")
+                if price is not None:
+                    try:
+                        d_price = Decimal(str(price))
+                        if d_price < Decimal("0.00"):
+                            raise serializers.ValidationError(
+                                {"lines": [f"Estimated unit price cannot be negative for line item {idx + 1}."]}
+                            )
+                    except (TypeError, ValueError, ArithmeticError):
+                        raise serializers.ValidationError(
+                            {"lines": [f"Invalid estimated unit price for line item {idx + 1}."]}
+                        )
+
         return attrs
 
     def create(self, validated_data):
-        lines_data = self.initial_data.get("line_items", self.initial_data.get("lines", []))
-        if not lines_data:
-            raise serializers.ValidationError({"lines": ["At least one line item is required."]})
-        validated_data.pop("lines", None)
+        from django.db import transaction
 
-        if not validated_data.get("pr_number"):
-            from apps.core.services import generate_document_number
+        with transaction.atomic():
+            lines_data = self.initial_data.get("line_items", self.initial_data.get("lines", []))
+            if not lines_data:
+                raise serializers.ValidationError({"lines": ["At least one line item is required."]})
+            validated_data.pop("lines", None)
 
-            validated_data["pr_number"] = generate_document_number(
-                PurchaseRequisition, "pr_number", "PR"
+            if not validated_data.get("pr_number"):
+                from apps.core.services import generate_document_number
+
+                validated_data["pr_number"] = generate_document_number(
+                    PurchaseRequisition, "pr_number", "PR"
+                )
+
+            pr = super().create(validated_data)
+
+            total = Decimal("0.00")
+            for item in lines_data:
+                qty = Decimal(str(item.get("quantity", 1)))
+                if qty <= Decimal("0.00"):
+                    raise serializers.ValidationError(
+                        {"quantity": "Quantity must be greater than zero."}
+                    )
+                if qty % 1 != 0:
+                    raise serializers.ValidationError(
+                        {"quantity": "Quantity must be a whole number (no decimal points allowed)."}
+                    )
+                price = Decimal(
+                    str(
+                        item.get("estimated_unit_price")
+                        if item.get("estimated_unit_price") is not None
+                        else item.get("unit_price", 0)
+                    )
+                )
+                line_tot = qty * price
+                total += line_tot
+                PRLine.objects.create(
+                    requisition=pr,
+                    item_description=item.get("item_description", "Line Item"),
+                    quantity=qty,
+                    unit_of_measure=item.get("unit_of_measure", "EA"),
+                    estimated_unit_price=price,
+                    estimated_total=line_tot,
+                    specifications=item.get("specifications", ""),
+                )
+
+            if total > Decimal("0.00"):
+                pr.total_amount = total
+                pr.save(update_fields=["total_amount"])
+
+            from apps.audit.models import AuditLog
+
+            req_user = (
+                self.context.get("request").user
+                if self.context.get("request")
+                else getattr(pr, "requester", None)
+            )
+            AuditLog.objects.create(
+                actor=req_user if req_user and req_user.is_authenticated else None,
+                action=AuditLog.ACTION_CREATE,
+                target_model="PurchaseRequisition",
+                target_object_id=str(pr.id),
+                new_state={
+                    "pr_number": pr.pr_number,
+                    "status": pr.status,
+                    "total_amount": str(pr.total_amount),
+                },
             )
 
-        pr = super().create(validated_data)
-
-        total = Decimal("0.00")
-        for item in lines_data:
-            qty = Decimal(str(item.get("quantity", 1)))
-            if qty <= Decimal("0.00"):
-                raise serializers.ValidationError(
-                    {"quantity": "Quantity must be greater than zero."}
-                )
-            if qty % 1 != 0:
-                raise serializers.ValidationError(
-                    {"quantity": "Quantity must be a whole number (no decimal points allowed)."}
-                )
-            price = Decimal(
-                str(
-                    item.get("estimated_unit_price")
-                    if item.get("estimated_unit_price") is not None
-                    else item.get("unit_price", 0)
-                )
-            )
-            line_tot = qty * price
-            total += line_tot
-            PRLine.objects.create(
-                requisition=pr,
-                item_description=item.get("item_description", "Line Item"),
-                quantity=qty,
-                unit_of_measure=item.get("unit_of_measure", "EA"),
-                estimated_unit_price=price,
-                estimated_total=line_tot,
-                specifications=item.get("specifications", ""),
-            )
-
-        if total > Decimal("0.00"):
-            pr.total_amount = total
-            pr.save(update_fields=["total_amount"])
-
-        from apps.audit.models import AuditLog
-
-        req_user = (
-            self.context.get("request").user
-            if self.context.get("request")
-            else getattr(pr, "requester", None)
-        )
-        AuditLog.objects.create(
-            actor=req_user if req_user and req_user.is_authenticated else None,
-            action=AuditLog.ACTION_CREATE,
-            target_model="PurchaseRequisition",
-            target_object_id=str(pr.id),
-            new_state={
-                "pr_number": pr.pr_number,
-                "status": pr.status,
-                "total_amount": str(pr.total_amount),
-            },
-        )
-
-        return pr
+            return pr
 
     def update(self, instance, validated_data):
         lines_data = self.initial_data.get("line_items", self.initial_data.get("lines", None))
@@ -309,7 +377,7 @@ class CanCreateRequisitionPermission(permissions.BasePermission):
 
         if not request.user.is_superuser and (
             getattr(request.user, "is_vendor", False)
-            or role_code in [Role.VENDOR_USER, Role.STORES_RECEIVER, Role.LEGAL_MGR]
+            or role_code in [Role.VENDOR_USER]
         ):
             return False
 
@@ -335,6 +403,7 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
         PurchaseRequisition.objects.select_related("requester", "department", "cost_center")
         .prefetch_related("lines", "attachments")
         .all()
+        .order_by("-created_at")
     )
     serializer_class = PurchaseRequisitionSerializer
     permission_classes = [
@@ -352,8 +421,8 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
             user.role.code if hasattr(user, "role") and user.role else None
         )
 
-        # Vendors, Stores Receivers, and Legal have zero access to requisitions (DEF-046)
-        if getattr(user, "is_vendor", False) or role_code in [Role.VENDOR_USER, Role.STORES_RECEIVER, Role.LEGAL_MGR]:
+        # External vendor users have zero access to requisitions
+        if getattr(user, "is_vendor", False) or role_code in [Role.VENDOR_USER, "VENDOR_USER"]:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Access to purchase requisitions is denied for your role.")
 
@@ -363,17 +432,35 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
             Role.PROC_MGR,
             Role.AUDITOR,
             Role.FINANCE_AP,
+            Role.STORES_RECEIVER,
+            Role.LEGAL_MGR,
         ]:
             qs = self.queryset
         elif role_code == Role.DEPT_APPROVER:
             from django.db.models import Q
+            user_org = getattr(user, "organization", None) or (
+                user.department.organization if user.department else None
+            )
             if user.department_id:
+                from apps.organization.models import Department
+
+                depts_with_approvers = Department.objects.filter(
+                    organization=user_org,
+                    users__role__code=Role.DEPT_APPROVER,
+                    users__is_active=True,
+                ).exclude(id=user.department_id)
+
                 qs = self.queryset.filter(
-                    Q(department_id=user.department_id) | Q(cost_center__manager=user)
+                    Q(department_id=user.department_id)
+                    | Q(cost_center__manager=user)
+                    | (
+                        Q(department__organization=user_org)
+                        & ~Q(department__in=depts_with_approvers)
+                    )
                 ).distinct()
-            elif getattr(user, "organization", None):
+            elif user_org:
                 qs = self.queryset.filter(
-                    Q(department__organization=user.organization) | Q(cost_center__manager=user)
+                    Q(department__organization=user_org) | Q(cost_center__manager=user)
                 ).distinct()
             else:
                 qs = self.queryset.all()
@@ -488,6 +575,7 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
             )
         if not user.is_superuser and role_code not in [
             Role.DEPT_APPROVER,
+            Role.PROC_MGR,
             Role.FINANCE_AP,
             Role.SUPER_ADMIN,
         ]:
@@ -497,9 +585,19 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
         if role_code == Role.DEPT_APPROVER:
             req_dept = pr.department or (pr.cost_center.department if pr.cost_center else None)
             if (user.department_id and req_dept and user.department_id != req_dept.id) and not (pr.cost_center and user.id == pr.cost_center.manager_id):
-                raise permissions.exceptions.PermissionDenied(
-                    "Department Approver can only approve requisitions for their own department."
+                has_own_approver = (
+                    User.objects.filter(
+                        role__code=Role.DEPT_APPROVER,
+                        department=req_dept,
+                        is_active=True,
+                    )
+                    .exclude(id=user.id)
+                    .exists()
                 )
+                if has_own_approver:
+                    raise permissions.exceptions.PermissionDenied(
+                        "Department Approver can only approve requisitions for their own department."
+                    )
         from apps.requisitions.services import approve_purchase_requisition_service
 
         comments = request.data.get("comments", "")

@@ -982,7 +982,7 @@ def receipt_line_correct_view(request, line_id):
             request,
             "Permission Denied: Only Stores Receiver or Super Admin can correct receipt quantities.",
         )
-        return redirect("receipts_list")
+        return redirect("receipts_rejections_queue")
 
     line = get_object_or_404(
         ReceiptLine.objects.select_related("receipt__po", "po_line"),

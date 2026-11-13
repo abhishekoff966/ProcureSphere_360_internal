@@ -15,7 +15,7 @@
                 {{ n.get_notification_type_display }}
             </span>
             <div class="fw-semibold small mt-1 text-truncate" title="{{ n.title }}">{{ n.title }}</div>
-            {% if n.target_url %}
+            {% if n.target_url and request.user.role_code != 'PROC_EXEC' %}
             <a href="{{ n.target_url }}" class="btn btn-sm btn-outline-primary rounded-pill mt-1">Take action</a>
             {% endif %}
         </div>

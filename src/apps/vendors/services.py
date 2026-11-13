@@ -1450,18 +1450,18 @@ def set_vendor_status_governance_service(
         actor=actor,
 
         action=(
-
-            AuditLog.ACTION_REJECT
-
-            if new_status == Vendor.STATUS_REJECTED
-
-            else AuditLog.ACTION_UPDATE
-
+            AuditLog.ACTION_APPROVE
+            if new_status == Vendor.STATUS_ACTIVE
+            else (
+                AuditLog.ACTION_REJECT
+                if new_status == Vendor.STATUS_REJECTED
+                else AuditLog.ACTION_UPDATE
+            )
         ),
 
         target_model="Vendor",
 
-        target_object_id=vendor.id,
+        target_object_id=str(vendor.id),
 
         previous_state={"status": previous_status},
 

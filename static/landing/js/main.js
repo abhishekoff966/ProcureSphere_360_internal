@@ -587,7 +587,7 @@
       // Update active label
       const label = document.getElementById('active-module-label');
       if (label && card) {
-        label.textContent = card.dataset.name + ' selected →';
+        label.innerHTML = `${card.dataset.name} selected <span class="desktop-arrow">→</span><span class="mobile-arrow">↓</span>`;
         label.style.color = card.dataset.color;
       }
     };

@@ -1,5 +1,6 @@
 from apps.accounts.models import Role
 from apps.notifications.models import Notification
+from apps.notifications.selectors import scope_notifications_for_user
 from apps.requisitions.models import PurchaseRequisition
 
 
@@ -17,8 +18,11 @@ def notifications_processor(request):
     user = request.user
     role_code = getattr(user, "role_code", None)
 
-    # 1. Calculate unread notifications count for recipient
-    unread_count = Notification.objects.filter(recipient=user, is_read=False).count()
+    # 1. Calculate unread notifications count for recipient (scoped per workspace)
+    scoped_notifications = scope_notifications_for_user(
+        Notification.objects.filter(recipient=user), user
+    )
+    unread_count = scoped_notifications.filter(is_read=False).count()
 
     # 2. Calculate pending approvals count for DEPT_APPROVER, PROC_MGR, or SUPER_ADMIN
     pending_count = 0
@@ -95,7 +99,7 @@ def notifications_processor(request):
 
         pending_count = Contract.objects.filter(status=Contract.STATUS_LEGAL_REVIEW).count()
 
-    recent_notifications = Notification.objects.filter(recipient=user).order_by("-created_at")[:5]
+    recent_notifications = scoped_notifications.order_by("-created_at")[:5]
 
     return {
         "unread_notifications_count": unread_count,

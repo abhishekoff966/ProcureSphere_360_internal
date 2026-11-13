@@ -194,8 +194,9 @@ def pr_aging_report_view(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, CanViewSpendAnalytics])
 def spend_analytics_report_view(request):
+    period_days = None
     period_days_raw = request.GET.get("period_days")
-    if period_days_raw is not None:
+    if period_days_raw is not None and str(period_days_raw).strip() != "":
         try:
             period_days = int(period_days_raw)
             if period_days < 0 or period_days > 3650:
@@ -208,26 +209,46 @@ def spend_analytics_report_view(request):
                 {"error": {"code": "VALIDATION_ERROR", "message": "period_days must be a valid integer."}},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-    vendor = request.GET.get("vendor")
+    start_date = request.GET.get("start_date") or request.GET.get("date_from") or request.GET.get("from")
+    if start_date:
+        try:
+            from datetime import date
+            date.fromisoformat(str(start_date).strip()[:10])
+        except (ValueError, TypeError):
+            return Response(
+                {"error": {"code": "VALIDATION_ERROR", "message": "start_date must be in YYYY-MM-DD format."}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    end_date = request.GET.get("end_date") or request.GET.get("date_to") or request.GET.get("to")
+    if end_date:
+        try:
+            from datetime import date
+            date.fromisoformat(str(end_date).strip()[:10])
+        except (ValueError, TypeError):
+            return Response(
+                {"error": {"code": "VALIDATION_ERROR", "message": "end_date must be in YYYY-MM-DD format."}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     category = request.GET.get("category")
     department = request.GET.get("department")
     cost_center = request.GET.get("cost_center")
+    vendor = request.GET.get("vendor")
     period = request.GET.get("period")
-    date_from = request.GET.get("date_from") or request.GET.get("from")
-    date_to = request.GET.get("date_to") or request.GET.get("to")
-    return Response(
-        get_spend_analytics_report(
-            user=request.user,
-            vendor=vendor,
-            category=category,
-            department=department,
-            cost_center=cost_center,
-            period=period,
-            date_from=date_from,
-            date_to=date_to,
-        ),
-        status=status.HTTP_200_OK,
+
+    report_data = get_spend_analytics_report(
+        user=request.user,
+        period_days=period_days,
+        start_date=start_date,
+        end_date=end_date,
+        category=category,
+        department=department,
+        cost_center=cost_center,
+        vendor=vendor,
+        period=period,
     )
+    return Response(report_data, status=status.HTTP_200_OK)
 
 
 @extend_schema(exclude=True)

@@ -9,6 +9,7 @@ from apps.accounts.models import User
 from apps.approvals.models import ApprovalAction, ApprovalPolicy
 from apps.approvals.services import evaluate_approval_chain, record_approval_action_service
 from apps.audit.models import AuditLog
+from apps.audit.services import create_audit_log_service
 from apps.budgets.services import (
     BudgetOverrunException,
     check_and_reserve_budget_service,
@@ -130,7 +131,7 @@ def create_purchase_requisition_service(
                 file=uploaded_file,
             )
 
-    AuditLog.objects.create(
+    create_audit_log_service(
         actor=requester,
         action=AuditLog.ACTION_CREATE,
         target_model="PurchaseRequisition",
@@ -161,14 +162,28 @@ def submit_purchase_requisition_service(
             f"Cannot submit requisition in status '{requisition.status}'. Must be DRAFT."
         )
 
+    if not requisition.lines.exists():
+        raise ValidationError("Purchase Requisition must contain at least one line item.")
+
     if requisition.total_amount <= Decimal("0.00"):
         raise ValidationError("Requisition total amount must be greater than zero.")
 
     # Evaluate approval policy (PR-08 fail-closed on missing policy)
+    req_org = (
+        requisition.department.organization
+        if requisition.department and requisition.department.organization
+        else (
+            requisition.cost_center.department.organization
+            if requisition.cost_center and requisition.cost_center.department
+            else getattr(requisition.requester, "effective_organization", None)
+        )
+    )
     chain = evaluate_approval_chain(
         module=ApprovalPolicy.MODULE_PR,
         amount=requisition.total_amount,
         department=requisition.department,
+        cost_center=requisition.cost_center,
+        organization=req_org,
     )
     if not chain:
         dept_name = requisition.department.name if requisition.department else "Global"
@@ -196,9 +211,10 @@ def submit_purchase_requisition_service(
         previous_state=previous_status,
         new_state=requisition.status,
         comments="PR submitted for approval workflow.",
+        _skip_audit=True,
     )
 
-    AuditLog.objects.create(
+    create_audit_log_service(
         actor=user,
         action=AuditLog.ACTION_SUBMIT,
         target_model="PurchaseRequisition",
@@ -247,17 +263,17 @@ def submit_purchase_requisition_service(
             approver_list.append(requisition.cost_center.manager)
 
     if requisition.status == PurchaseRequisition.STATUS_BUDGET_REVIEW:
-        proc_users = User.objects.filter(role__code=Role.PROC_MGR, is_active=True)
+        finance_users = User.objects.filter(role__code=Role.FINANCE_AP, is_active=True)
         if target_org:
-            proc_users = proc_users.filter(
+            finance_users = finance_users.filter(
                 Q(organization=target_org) | Q(department__organization=target_org)
             )
-        for proc_user in proc_users:
+        for fin_user in finance_users:
             Notification.objects.create(
-                recipient=proc_user,
+                recipient=fin_user,
                 notification_type=Notification.TYPE_APPROVAL_REQUIRED,
                 title=f"Budget Exception Alert: PR {requisition.pr_number} Exceeds Budget",
-                message=f"Requisition {requisition.pr_number} (${requisition.total_amount:,.2f}) exceeds available budget for Cost Center {requisition.cost_center.code} and requires Procurement Manager approval.",
+                message=f"Requisition {requisition.pr_number} (${requisition.total_amount:,.2f}) exceeds available budget for Cost Center {requisition.cost_center.code} and requires Finance AP budget exception approval.",
                 target_url=f"/requisitions/{requisition.id}/",
             )
         for approver in approver_list:
@@ -265,7 +281,7 @@ def submit_purchase_requisition_service(
                 recipient=approver,
                 notification_type=Notification.TYPE_APPROVAL_REQUIRED,
                 title=f"Budget Alert: PR {requisition.pr_number} Exceeds Budget",
-                message=f"Requisition {requisition.pr_number} (${requisition.total_amount:,.2f}) exceeds available budget for Cost Center {requisition.cost_center.code} and is queued for Procurement Manager budget exception review.",
+                message=f"Requisition {requisition.pr_number} (${requisition.total_amount:,.2f}) exceeds available budget for Cost Center {requisition.cost_center.code} and is queued for Finance AP budget exception review.",
                 target_url=f"/requisitions/{requisition.id}/",
             )
     else:
@@ -317,8 +333,8 @@ def approve_purchase_requisition_service(
         approver_role_code = getattr(approver, "role_code", None) or (
             approver.role.code if hasattr(approver, "role") and approver.role else None
         )
-        if not (approver.is_superuser or approver_role_code in [Role.PROC_MGR, Role.SUPER_ADMIN]):
-            raise ValidationError("Permission Denied: Only Procurement Manager can approve a budget overrun exception.")
+        if not (approver.is_superuser or approver_role_code in [Role.FINANCE_AP, Role.PROC_MGR, Role.SUPER_ADMIN]):
+            raise ValidationError("Permission Denied: Only Finance AP or Procurement Manager can approve a budget overrun exception.")
 
         # Check if cost center budget allows overspend
         from apps.budgets.models import Budget
@@ -329,13 +345,14 @@ def approve_purchase_requisition_service(
                 f"allow_overspend is disabled and requested amount (${requisition.total_amount:,.2f}) exceeds available budget (${budget.available_amount:,.2f})."
             )
 
-        # Procurement Manager is approving an overrun explicitly, force the reservation
+        # Finance AP (or Procurement Manager fallback) is approving an overrun explicitly, force the reservation
         check_and_reserve_budget_service(
             requisition=requisition, requested_by_user=approver, force_overrun=True
         )
         requisition.status = PurchaseRequisition.STATUS_APPROVED
         requisition.save(update_fields=["status", "updated_at"])
 
+        actor_label = "Finance AP" if approver_role_code == Role.FINANCE_AP else "Procurement Manager"
         record_approval_action_service(
             target_object_id=requisition.id,
             target_model_name="PurchaseRequisition",
@@ -343,7 +360,7 @@ def approve_purchase_requisition_service(
             action=ApprovalAction.ACTION_APPROVE,
             previous_state=previous_status,
             new_state=requisition.status,
-            comments=comments or "Budget overrun exception approved by Procurement Manager.",
+            comments=comments or f"Budget overrun exception approved by {actor_label}.",
         )
 
         if requisition.requester:
@@ -352,7 +369,7 @@ def approve_purchase_requisition_service(
                     recipient=requisition.requester,
                     notification_type=Notification.TYPE_APPROVAL_REQUIRED,
                     title=f"Requisition Approved: {requisition.pr_number}",
-                    message=f"Your requisition {requisition.pr_number} has been approved by Procurement Manager (Budget Overrun Exception) and is progressing to sourcing/PO execution.",
+                    message=f"Your requisition {requisition.pr_number} has been approved by {actor_label} (Budget Overrun Exception) and is progressing to sourcing/PO execution.",
                     target_url=f"/requisitions/{requisition.id}/",
                 )
             except Exception:
@@ -373,10 +390,21 @@ def approve_purchase_requisition_service(
         return requisition
 
     # Evaluate approval chain for this requisition
+    req_org = (
+        requisition.department.organization
+        if requisition.department and requisition.department.organization
+        else (
+            requisition.cost_center.department.organization
+            if requisition.cost_center and requisition.cost_center.department
+            else getattr(requisition.requester, "effective_organization", None)
+        )
+    )
     chain = evaluate_approval_chain(
         module=ApprovalPolicy.MODULE_PR,
         amount=requisition.total_amount,
         department=requisition.department,
+        cost_center=requisition.cost_center,
+        organization=req_org,
     )
 
     # Determine completed approval steps
@@ -416,7 +444,17 @@ def approve_purchase_requisition_service(
                 if required_role.code == Role.DEPT_APPROVER:
                     req_dept = requisition.department or (requisition.cost_center.department if requisition.cost_center else None)
                     if (approver.department_id and req_dept and approver.department_id != req_dept.id) and not (requisition.cost_center and approver.id == requisition.cost_center.manager_id):
-                        raise ValidationError("Department Approver can only approve requisitions for their own department.")
+                        has_own_approver = (
+                            User.objects.filter(
+                                role__code=Role.DEPT_APPROVER,
+                                department=req_dept,
+                                is_active=True,
+                            )
+                            .exclude(id=approver.id)
+                            .exists()
+                        )
+                        if has_own_approver:
+                            raise ValidationError("Department Approver can only approve requisitions for their own department.")
                     is_authorized = True
                 else:
                     is_authorized = True

@@ -10,7 +10,7 @@
             <p class="text-muted mb-0">{% if scoped_org %}Operational units and functional divisions for {{ scoped_org.name }}.{% else %}Manage all tenant legal entities and multi-tenant organizations.{% endif %}</p>
         </div>
         {% if is_superuser and not scoped_org %}
-        <button hx-get="/superadmin/organizations/create/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-primary text-white fw-bold rounded-pill px-4 shadow-sm w-100 w-sm-auto text-nowrap">
+        <button hx-get="{% if '/admin/' in request.path %}/admin/organizations/create/{% else %}/superadmin/organizations/create/{% endif %}" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-primary text-white fw-bold rounded-pill px-4 shadow-sm w-100 w-sm-auto text-nowrap">
             <i class="fa-solid fa-plus me-2"></i> Add Organization
         </button>
         {% endif %}
@@ -21,17 +21,24 @@
     <div class="col-lg-12">
         {% if not scoped_org %}
         <div class="card border-0 shadow-sm rounded-4 mb-4">
-            <div class="card-header bg-white pt-4 pb-0 px-4 border-bottom-0">
-                <h5 class="fw-bold text-dark">Legal Entities</h5>
+            <div class="card-header bg-white pt-4 pb-0 px-4 border-bottom-0 d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2" id="orgCardHeader">
+                <div>
+                    <h5 class="fw-bold text-dark mb-1">Legal Entities</h5>
+                    <p class="text-muted small mb-0">{{ orgs|length }} provisioned organization{{ orgs|length|pluralize }}</p>
+                </div>
+                <div class="input-group input-group-sm" style="max-width: 260px;">
+                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" id="orgQuickFilter" class="form-control border-start-0" placeholder="Filter by code or name..." oninput="filterOrgDirectory(this.value)">
+                </div>
             </div>
             <div class="card-body p-0">
                 <!-- Mobile Card View (< 768px) -->
-                <div class="d-md-none p-3 d-flex flex-column gap-2">
+                <div class="d-md-none p-3 d-flex flex-column gap-2" id="orgMobileList">
                     {% for org in orgs %}
-                    <div class="card border rounded-3 p-3 bg-white shadow-sm" style="cursor: pointer;" onclick="if (!event.target.closest('a, button')) { window.location.href='/superadmin/organizations/{{ org.pk }}/'; }">
+                    <div class="card border rounded-3 p-3 bg-white shadow-sm org-directory-item{% if forloop.counter > 5 %} org-extra-row d-none{% endif %}" data-org-search="{{ org.code|lower }} {{ org.name|lower }}" style="cursor: pointer;" onclick="if (!event.target.closest('a, button')) { window.location.href='{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/'; }">
                         <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
                             <div class="min-width-0">
-                                <a href="/superadmin/organizations/{{ org.pk }}/" class="text-decoration-none fw-bold text-primary fs-6 d-block text-truncate" title="Open {{ org.code }} Dashboard">
+                                <a href="{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/" class="text-decoration-none fw-bold text-primary fs-6 d-block text-truncate" title="Open {{ org.code }} Dashboard">
                                     {{ org.code }}
                                 </a>
                                 <div class="fw-semibold text-dark text-break">{{ org.name }}</div>
@@ -57,14 +64,14 @@
                         </div>
 
                         <div class="d-flex gap-2 pt-1 flex-wrap" onclick="event.stopPropagation();">
-                            <a href="/superadmin/organizations/{{ org.pk }}/" data-view-url="/superadmin/organizations/{{ org.pk }}/view/" class="btn btn-sm btn-outline-info rounded-pill flex-fill text-center fw-medium" title="Open Organization Operational Dashboard">
+                            <a href="{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/" data-view-url="{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/view/" class="btn btn-sm btn-outline-info rounded-pill flex-fill text-center fw-medium" title="Open Organization Operational Dashboard">
                                 <i class="fa-solid fa-eye me-1"></i> View
                             </a>
                             {% if is_superuser and not scoped_org %}
-                            <button hx-get="/superadmin/organizations/{{ org.pk }}/edit/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-secondary rounded-pill px-3" title="Edit Organization">
+                            <button hx-get="{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/edit/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-secondary rounded-pill px-3" title="Edit Organization">
                                 <i class="fa-solid fa-pen-to-square"></i> Edit
                             </button>
-                            <button hx-get="/superadmin/organizations/{{ org.pk }}/delete/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-danger rounded-pill px-3" title="Delete Organization">
+                            <button hx-get="{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/delete/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-danger rounded-pill px-3" title="Delete Organization">
                                 <i class="fa-solid fa-trash"></i> Delete
                             </button>
                             {% endif %}
@@ -89,14 +96,14 @@
                     </thead>
                     <tbody>
                         {% for org in orgs %}
-                        <tr style="cursor: pointer;" onclick="if (!event.target.closest('a, button')) { window.location.href='/superadmin/organizations/{{ org.pk }}/'; }">
+                        <tr class="org-directory-item{% if forloop.counter > 5 %} org-extra-row d-none{% endif %}" data-org-search="{{ org.code|lower }} {{ org.name|lower }}" style="cursor: pointer;" onclick="if (!event.target.closest('a, button')) { window.location.href='{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/'; }">
                             <td class="ps-4 fw-bold text-primary text-nowrap">
-                                <a href="/superadmin/organizations/{{ org.pk }}/" class="text-decoration-none fw-bold text-primary" title="Open {{ org.code }} Dashboard">
+                                <a href="{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/" class="text-decoration-none fw-bold text-primary" title="Open {{ org.code }} Dashboard">
                                     {{ org.code }}
                                 </a>
                             </td>
                             <td class="text-nowrap">
-                                <a href="/superadmin/organizations/{{ org.pk }}/" class="text-decoration-none text-dark fw-semibold" title="Open {{ org.name }} Dashboard">
+                                <a href="{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/" class="text-decoration-none text-dark fw-semibold" title="Open {{ org.name }} Dashboard">
                                     {{ org.name }}
                                 </a>
                             </td>
@@ -118,14 +125,14 @@
                             </td>
                             <td class="pe-4 text-end text-nowrap">
                                 <div class="d-inline-flex gap-1" onclick="event.stopPropagation();">
-                                    <a href="/superadmin/organizations/{{ org.pk }}/" data-view-url="/superadmin/organizations/{{ org.pk }}/view/" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1" title="Open Organization Operational Dashboard">
+                                    <a href="{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/" data-view-url="{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/view/" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1" title="Open Organization Operational Dashboard">
                                         <i class="fa-solid fa-eye me-1"></i> View
                                     </a>
                                     {% if is_superuser and not scoped_org %}
-                                    <button hx-get="/superadmin/organizations/{{ org.pk }}/edit/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" title="Edit Organization">
+                                    <button hx-get="{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/edit/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" title="Edit Organization">
                                         <i class="fa-solid fa-pen-to-square me-1"></i> Edit
                                     </button>
-                                    <button hx-get="/superadmin/organizations/{{ org.pk }}/delete/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1" title="Delete Organization">
+                                    <button hx-get="{% if '/admin/' in request.path %}/admin/organizations/{% else %}/superadmin/organizations/{% endif %}{{ org.pk }}/delete/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1" title="Delete Organization">
                                         <i class="fa-solid fa-trash me-1"></i> Delete
                                     </button>
                                     {% endif %}
@@ -139,6 +146,13 @@
                 </table>
                 </div>
             </div>
+            {% if orgs|length > 5 %}
+            <div class="card-footer bg-white border-top py-3 text-center" id="orgToggleFooter">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-4 fw-semibold shadow-2xs" id="toggleOrgBtn" onclick="toggleSectionRows('org', {{ orgs|length|add:'-5' }})">
+                    <span id="toggleOrgText"><i class="fa-solid fa-chevron-down me-1"></i> Show More ({{ orgs|length|add:'-5' }} more)</span>
+                </button>
+            </div>
+            {% endif %}
         </div>
         {% endif %}
 
@@ -229,16 +243,6 @@
                     <p class="text-muted small mb-0">Financial tracking units tied to departments.</p>
                 </div>
                 <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 w-100 w-sm-auto">
-                    <form method="get" class="d-flex align-items-center mb-0 w-100 w-sm-auto">
-                        <select name="department" class="form-select form-select-sm rounded-pill w-100" onchange="this.form.submit()" style="min-width: 170px;">
-                            <option value="">-- All Departments --</option>
-                            {% for dept in departments %}
-                            <option value="{{ dept.pk }}" {% if selected_dept == dept.pk|stringformat:"s" %}selected{% endif %}>
-                                {{ dept.name }} ({{ dept.code }})
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </form>
                     <button hx-get="/superadmin/cost-centers/create/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-primary text-white fw-bold rounded-pill px-3 px-sm-4 shadow-sm btn-sm w-100 w-sm-auto text-nowrap">
                         <i class="fa-solid fa-plus me-1"></i> Add Cost Center
                     </button>
@@ -336,9 +340,10 @@
 
 <script>
     function toggleSectionRows(prefix, remainingCount) {
-        var isDept = prefix === 'dept';
         var extraRows = document.querySelectorAll('.' + prefix + '-extra-row');
-        var btnText = document.getElementById(isDept ? 'toggleDeptsText' : 'toggleCCText');
+        var btnId = prefix === 'dept' ? 'toggleDeptsText' : (prefix === 'cc' ? 'toggleCCText' : 'toggleOrgText');
+        var hdrId = prefix === 'dept' ? 'deptCardHeader' : (prefix === 'cc' ? 'ccCardHeader' : 'orgCardHeader');
+        var btnText = document.getElementById(btnId);
         if (!extraRows.length || !btnText) return;
 
         var isCurrentlyHidden = extraRows[0].classList.contains('d-none');
@@ -355,11 +360,43 @@
             btnText.innerHTML = '<i class="fa-solid fa-chevron-up me-1"></i> Show Less';
         } else {
             btnText.innerHTML = '<i class="fa-solid fa-chevron-down me-1"></i> Show More (' + remainingCount + ' more)';
-            var headerEl = document.getElementById(isDept ? 'deptCardHeader' : 'ccCardHeader');
+            var headerEl = document.getElementById(hdrId);
             if (headerEl) {
                 headerEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         }
+    }
+
+    function filterOrgDirectory(query) {
+        var q = (query || '').trim().toLowerCase();
+        var items = document.querySelectorAll('.org-directory-item');
+        var footer = document.getElementById('orgToggleFooter');
+        if (!items.length) return;
+        if (!q) {
+            items.forEach(function(el) {
+                if (el.classList.contains('org-extra-row')) {
+                    el.classList.add('d-none');
+                } else {
+                    el.classList.remove('d-none');
+                }
+            });
+            var orgBtnText = document.getElementById('toggleOrgText');
+            if (orgBtnText) {
+                var extraCount = document.querySelectorAll('.org-directory-item.org-extra-row').length / 2;
+                orgBtnText.innerHTML = '<i class="fa-solid fa-chevron-down me-1"></i> Show More (' + extraCount + ' more)';
+            }
+            if (footer) footer.classList.remove('d-none');
+            return;
+        }
+        if (footer) footer.classList.add('d-none');
+        items.forEach(function(el) {
+            var text = el.getAttribute('data-org-search') || '';
+            if (text.indexOf(q) !== -1) {
+                el.classList.remove('d-none');
+            } else {
+                el.classList.add('d-none');
+            }
+        });
     }
 </script>
     </div>

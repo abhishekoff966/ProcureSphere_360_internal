@@ -10,6 +10,7 @@ from .selectors import (
     get_pending_action_notifications,
     get_recent_unread_notifications,
     get_unread_count,
+    scope_notifications_for_user,
 )
 from .services import mark_notification_as_read
 
@@ -19,7 +20,10 @@ def notification_list_view(request):
     """Internal users' in-app notifications (vendors use /vendor/notifications/)."""
     if request.user.is_vendor:
         return redirect("vendor_notifications")
-    qs = Notification.objects.filter(recipient=request.user).order_by("-created_at")
+    base_qs = scope_notifications_for_user(
+        Notification.objects.filter(recipient=request.user), request.user
+    )
+    qs = base_qs.order_by("-created_at")
     if request.GET.get("filter") == "unread":
         qs = qs.filter(is_read=False)
     page = Paginator(qs, 25).get_page(request.GET.get("page"))
@@ -36,19 +40,21 @@ def notification_list_view(request):
         "AUDITOR": "audit/base_auditor.html",
         "SUPER_ADMIN": "layouts/superadmin_base.html",
     }
-    base_layout = layout_map.get(role_code, "base.html")
+    base_layout = layout_map.get(
+        role_code,
+        "layouts/superadmin_base.html" if getattr(request.user, "is_superuser", False) else "base.html",
+    )
     return render(
         request,
         "notifications/notification_list.html",
         {
             "page_obj": page,
             "notifications": page.object_list,
-            "unread_count": Notification.objects.filter(
-                recipient=request.user, is_read=False
-            ).count(),
+            "unread_count": base_qs.filter(is_read=False).count(),
             "only_unread": request.GET.get("filter") == "unread",
             "querystring": "filter=unread" if request.GET.get("filter") == "unread" else "",
             "base_layout": base_layout,
+            "is_proc_exec": str(role_code).upper() == "PROC_EXEC",
         },
     )
 
@@ -60,16 +66,52 @@ def notification_open_view(request, notification_id):
     if not notification.is_read:
         notification.is_read = True
         notification.save(update_fields=["is_read", "updated_at"])
-    target = notification.target_url
+    role_code = getattr(request.user, "role_code", "") or (
+        request.user.role.code if getattr(request.user, "role", None) else ""
+    )
+    if str(role_code).upper() == "PROC_EXEC":
+        return redirect("notification_list")
+    target = (notification.target_url or "").strip()
+    is_global_superadmin = bool(
+        getattr(request.user, "is_superuser", False)
+        and not getattr(request.user, "effective_organization", None)
+    )
+    if target.startswith("/admin/core/contactenquiry"):
+        target = "/admin/contact-enquiries/" if is_global_superadmin else "/superadmin/contact-enquiries/"
+    elif target.startswith("/superadmin/contact-enquiries") and is_global_superadmin:
+        target = "/admin/contact-enquiries/"
+    elif target.startswith("/admin/organization/organization"):
+        target = "/admin/organizations/" if is_global_superadmin else "/superadmin/organizations/"
+    elif target == "/admin/" or target.startswith("/admin/core/") or target.startswith("/admin/accounts/"):
+        target = "/admin/notifications/" if is_global_superadmin else "/superadmin/notifications/"
+    elif is_global_superadmin and target.startswith(
+        (
+            "/orders/",
+            "/purchase-orders/",
+            "/requisitions/",
+            "/invoices/",
+            "/contracts/",
+            "/vendors/",
+            "/receipts/",
+            "/sourcing-events/",
+            "/notifications/",
+        )
+    ):
+        target = f"/admin{target}"
     if target and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
         return redirect(target)
-    return redirect("notification_list")
+    return redirect("admin_notifications" if is_global_superadmin else "notification_list")
 
 
 @login_required(login_url="/login/")
 @require_POST
 def notification_mark_all_read_view(request):
-    Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+    scope_notifications_for_user(
+        Notification.objects.filter(recipient=request.user, is_read=False),
+        request.user,
+    ).update(is_read=True)
+    if request.path.startswith("/admin/"):
+        return redirect("admin_notifications")
     return redirect("notification_list")
 
 
