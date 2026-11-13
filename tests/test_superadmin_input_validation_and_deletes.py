@@ -284,6 +284,12 @@ class TestAdminIndexTemplateSyntax:
             )
         response = client.get("/admin/")
         assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert "{% else %}" not in content
+        assert "{{" not in content
+        assert "%}" not in content
+        assert "Super Admin Control Center" in content
+        assert "Total Organizations" in content
 
 
 @pytest.mark.django_db
