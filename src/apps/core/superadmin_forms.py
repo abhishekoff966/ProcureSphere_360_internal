@@ -1597,6 +1597,15 @@ class CostCenterAdminForm(BootstrapValidationMixin, forms.ModelForm):
         self.fields["name"].error_messages["required"] = "Cost Center Name is required."
         self.fields["department"].error_messages["required"] = "Department is required."
 
+        # Exclude departments already assigned to existing Cost Centers
+        assigned_depts = CostCenter.objects.filter(department__isnull=False)
+        if self.instance and self.instance.pk and not getattr(self.instance, "_state", None).adding:
+            assigned_depts = assigned_depts.exclude(pk=self.instance.pk)
+        assigned_dept_ids = set(assigned_depts.values_list("department_id", flat=True))
+
+        if not self.is_bound and assigned_dept_ids:
+            dept_qs = dept_qs.exclude(id__in=assigned_dept_ids)
+
         self.fields["department"].queryset = dept_qs
 
 
@@ -1637,19 +1646,9 @@ class CostCenterAdminForm(BootstrapValidationMixin, forms.ModelForm):
         if not dept:
             raise forms.ValidationError("Department is required.")
 
-
-
         scoped_org = _get_form_scoped_org(self.request)
-
-
-
         if scoped_org and dept and dept.organization_id != scoped_org.id:
-
-
-
             raise forms.ValidationError("You cannot assign a cost center to another organization's department.")
-
-
 
         return dept
 

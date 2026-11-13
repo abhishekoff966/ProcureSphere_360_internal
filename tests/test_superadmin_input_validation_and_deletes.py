@@ -234,6 +234,59 @@ class TestRequesterCostCenterExclusivity:
 
 
 @pytest.mark.django_db
+class TestCostCenterDepartmentExclusivity:
+    """Requirement: Once a department is assigned to a Cost Center, do not show it again in CostCenter create dropdown."""
+
+    def test_assigned_department_excluded_from_cost_center_create_dropdown(self, test_org):
+        dept1 = Department.objects.create(
+            organization=test_org,
+            code="DEPT-CC-EXCL-01",
+            name="Assigned Dept Alpha",
+        )
+        dept2 = Department.objects.create(
+            organization=test_org,
+            code="DEPT-CC-EXCL-02",
+            name="Unassigned Dept Beta",
+        )
+        cc1 = CostCenter.objects.create(
+            department=dept1,
+            code="CC-DEPT-EXCL-01",
+            name="Operations Center Alpha",
+        )
+
+        # In create mode (unbound GET), dept1 should be excluded while dept2 is available
+        form = CostCenterAdminForm()
+        dept_ids_in_form = list(form.fields["department"].queryset.values_list("id", flat=True))
+        assert dept1.id not in dept_ids_in_form
+        assert dept2.id in dept_ids_in_form
+
+        # In edit mode for cc1, cc1's own department (dept1) MUST remain available
+        edit_form = CostCenterAdminForm(instance=cc1)
+        edit_dept_ids = list(edit_form.fields["department"].queryset.values_list("id", flat=True))
+        assert dept1.id in edit_dept_ids
+
+        # Verifies that already assigned departments are excluded from the choices in the dropdown
+        assert dept1.id not in dept_ids_in_form
+        assert dept2.id in dept_ids_in_form
+
+
+@pytest.mark.django_db
+class TestAdminIndexTemplateSyntax:
+    """Test that /admin/ index template renders cleanly without TemplateSyntaxError."""
+
+    def test_admin_index_forloop_syntax(self, client, test_org, superadmin_user):
+        client.force_login(superadmin_user)
+        # Create more than 5 organizations to trigger the {% if forloop.counter > 5 %} branch
+        for i in range(7):
+            Organization.objects.get_or_create(
+                code=f"TEST-ORG-INDEX-{i}",
+                defaults={"name": f"Index Org {i}", "is_active": True},
+            )
+        response = client.get("/admin/")
+        assert response.status_code == 200
+
+
+@pytest.mark.django_db
 class TestBudgetFormSelectOption:
     """Requirement 4: Fiscal Period displays '-- Select Fiscal Period --' by default."""
 
