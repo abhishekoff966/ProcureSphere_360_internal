@@ -3050,6 +3050,9 @@ def policy_create_view(request):
     if scoped_org:
         user_qs = user_qs.filter(Q(organization=scoped_org) | Q(department__organization=scoped_org))
 
+    submitted_steps = request.POST.get("steps_data") if request.method == "POST" else None
+    steps_json = submitted_steps if submitted_steps else json.dumps(initial_steps)
+
     return render(
         request,
         "pages/dashboards/superadmin/policy_form.html",
@@ -3057,7 +3060,7 @@ def policy_create_view(request):
             "form": form,
             "is_edit": False,
             "policy": None,
-            "steps_json": json.dumps(initial_steps),
+            "steps_json": steps_json,
             "available_roles": available_roles,
             "available_users": user_qs,
         },
@@ -3130,6 +3133,9 @@ def policy_edit_view(request, policy_id):
     if scoped_org:
         user_qs = user_qs.filter(Q(organization=scoped_org) | Q(department__organization=scoped_org))
 
+    submitted_steps = request.POST.get("steps_data") if request.method == "POST" else None
+    steps_json = submitted_steps if submitted_steps else json.dumps(steps_list)
+
     return render(
         request,
         "pages/dashboards/superadmin/policy_form.html",
@@ -3137,7 +3143,7 @@ def policy_edit_view(request, policy_id):
             "form": form,
             "is_edit": True,
             "policy": policy,
-            "steps_json": json.dumps(steps_list),
+            "steps_json": steps_json,
             "available_roles": available_roles,
             "available_users": user_qs,
         },

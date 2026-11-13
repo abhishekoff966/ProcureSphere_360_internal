@@ -99,7 +99,7 @@
                     <button hx-get="/superadmin/locations/{{ loc.pk }}/edit/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-primary rounded-pill px-3">
                         <i class="fa-solid fa-pen-to-square me-1"></i> Edit
                     </button>
-                    <form method="POST" action="/superadmin/locations/{{ loc.pk }}/delete/" onsubmit="return confirm('Are you sure you want to delete location {{ loc.name }}?');" class="d-inline m-0">
+                    <form method="POST" action="/superadmin/locations/{{ loc.pk }}/delete/" onsubmit="if (!confirm('Are you sure you want to delete location {{ loc.name }}?')) { if (window.resetButtonLoading && this._ps360_clickedSubmitBtn) window.resetButtonLoading(this._ps360_clickedSubmitBtn); delete this.dataset.submitting; return false; }" class="d-inline m-0">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
                             <i class="fa-solid fa-trash me-1"></i> Delete
@@ -154,7 +154,7 @@
                             <button hx-get="/superadmin/locations/{{ loc.pk }}/edit/" hx-target="#modal-content-body" data-bs-toggle="modal" data-bs-target="#modal-container" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1">
                                 <i class="fa-solid fa-pen-to-square me-1"></i> Edit
                             </button>
-                            <form method="POST" action="/superadmin/locations/{{ loc.pk }}/delete/" onsubmit="return confirm('Are you sure you want to delete location {{ loc.name }}?');" class="d-inline m-0">
+                            <form method="POST" action="/superadmin/locations/{{ loc.pk }}/delete/" onsubmit="if (!confirm('Are you sure you want to delete location {{ loc.name }}?')) { if (window.resetButtonLoading && this._ps360_clickedSubmitBtn) window.resetButtonLoading(this._ps360_clickedSubmitBtn); delete this.dataset.submitting; return false; }" class="d-inline m-0">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
                                     <i class="fa-solid fa-trash me-1"></i> Delete

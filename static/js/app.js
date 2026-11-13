@@ -405,7 +405,16 @@ document.addEventListener('DOMContentLoaded', function () {
     // Global Form Double-Submit Protection & Loading State
     document.addEventListener('submit', function (e) {
         const form = e.target;
-        if (!form || form.tagName !== 'FORM') return;
+        if (!form || form.tagName !== 'FORM' || e.defaultPrevented) {
+            if (form && form._ps360_clickedSubmitBtn && window.resetButtonLoading) {
+                delete form.dataset.submitting;
+                window.resetButtonLoading(form._ps360_clickedSubmitBtn);
+            }
+            if (form && window.resetFormCancelButtons) {
+                window.resetFormCancelButtons(form);
+            }
+            return;
+        }
 
         // Skip forms marked to ignore auto-loading (e.g. instant download links or search filters)
         if (form.dataset.noLoading === 'true' || form.getAttribute('method') === 'GET') {
@@ -421,6 +430,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // 2. Check HTML5 form validity; if invalid, browser stops submission and we shouldn't lock
         if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+            delete form.dataset.submitting;
+            if (form._ps360_clickedSubmitBtn && window.resetButtonLoading) {
+                window.resetButtonLoading(form._ps360_clickedSubmitBtn);
+            }
+            if (window.resetFormCancelButtons) {
+                window.resetFormCancelButtons(form);
+            }
             return;
         }
 
@@ -459,6 +475,45 @@ document.addEventListener('DOMContentLoaded', function () {
         // Disable Cancel buttons and navigation actions while form is submitting/loading
         window.disableFormCancelButtons(form);
     }, false);
+
+    // Reset button states on modal dismissals (e.g. user closes modal without saving)
+    document.addEventListener('hidden.bs.modal', function (e) {
+        const modal = e.target;
+        if (!modal) return;
+        modal.querySelectorAll('form').forEach(function (form) {
+            delete form.dataset.submitting;
+            form.querySelectorAll('.btn-loading').forEach(function (btn) {
+                if (window.resetButtonLoading) window.resetButtonLoading(btn);
+            });
+            if (window.resetFormCancelButtons) window.resetFormCancelButtons(form);
+        });
+    });
+
+    // Reset loading state on HTMX request completion or error
+    document.addEventListener('htmx:afterRequest', function (e) {
+        const elt = e.detail && e.detail.elt;
+        if (!elt) return;
+        const form = elt.closest('form') || (elt.tagName === 'FORM' ? elt : null);
+        if (form) {
+            delete form.dataset.submitting;
+            form.querySelectorAll('.btn-loading').forEach(function (btn) {
+                if (window.resetButtonLoading) window.resetButtonLoading(btn);
+            });
+            if (window.resetFormCancelButtons) window.resetFormCancelButtons(form);
+        }
+    });
+    document.addEventListener('htmx:responseError', function (e) {
+        const elt = e.detail && e.detail.elt;
+        if (!elt) return;
+        const form = elt.closest('form') || (elt.tagName === 'FORM' ? elt : null);
+        if (form) {
+            delete form.dataset.submitting;
+            form.querySelectorAll('.btn-loading').forEach(function (btn) {
+                if (window.resetButtonLoading) window.resetButtonLoading(btn);
+            });
+            if (window.resetFormCancelButtons) window.resetFormCancelButtons(form);
+        }
+    });
 
     // Intercept logout links to trigger session termination and redirect directly to /login/
     document.addEventListener('click', function (e) {

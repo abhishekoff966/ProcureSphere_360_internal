@@ -314,6 +314,88 @@ class TestAllFormsValidation:
         assert "min_amount" in form.errors
         assert "cannot be greater than maximum amount" in str(form.errors["min_amount"])
 
+    def test_policy_form_exception_routing_validation(self, org_and_masters):
+        org = org_and_masters["org"]
+        # Exception routing enabled without required exception approver role
+        form = PolicyAdminForm(data={
+            "organization": org.id,
+            "name": "Exception PR Policy",
+            "module": ApprovalPolicy.MODULE_PR,
+            "min_amount": "0.00",
+            "has_exception_routing": True,
+            "exception_amount_threshold": "-500.00",
+            "exception_escalation_time_hours": "0",
+        })
+        assert not form.is_valid()
+        assert "exception_approver_role" in form.errors
+        assert "Exception Approver Role is required when exception routing is enabled." in str(form.errors["exception_approver_role"])
+        assert "exception_amount_threshold" in form.errors
+        assert "Exception Amount Threshold cannot be negative." in str(form.errors["exception_amount_threshold"])
+        assert "exception_escalation_time_hours" in form.errors
+        assert "Escalation Window must be at least 1 hour." in str(form.errors["exception_escalation_time_hours"])
+
+    def test_policy_form_steps_data_validation(self, org_and_masters):
+        import json
+        org = org_and_masters["org"]
+        # Step with missing role, negative limit, and zero escalation hours
+        invalid_steps = json.dumps([
+            {
+                "step_number": 1,
+                "role_id": "",
+                "approval_limit": "-100.00",
+                "escalation_hours": 0,
+            }
+        ])
+        form = PolicyAdminForm(data={
+            "organization": org.id,
+            "name": "Steps Validation Policy",
+            "module": ApprovalPolicy.MODULE_PR,
+            "min_amount": "0.00",
+            "steps_data": invalid_steps,
+        })
+        assert not form.is_valid()
+        assert "steps_data" in form.errors
+        err_str = str(form.errors["steps_data"])
+        assert "Select an Approver Role for Level 1." in err_str
+        assert "Step Limit for Level 1 must be a positive amount." in err_str
+        assert "Escalation SLA for Level 1 must be at least 1 hour." in err_str
+
+    def test_policy_form_edit_mode_preserves_valid_policy(self, org_and_masters):
+        import json
+        from apps.accounts.models import Role
+        org = org_and_masters["org"]
+        role = Role.objects.first()
+        policy = ApprovalPolicy.objects.create(
+            organization=org,
+            name="Original Policy Name",
+            module=ApprovalPolicy.MODULE_PR,
+            min_amount=Decimal("0.00"),
+            max_amount=Decimal("100000.00"),
+            is_active=True,
+            status=ApprovalPolicy.STATUS_ACTIVE,
+        )
+        valid_steps = json.dumps([
+            {
+                "step_number": 1,
+                "role_id": str(role.id),
+                "approval_limit": "50000.00",
+                "escalation_hours": 24,
+            }
+        ])
+        form = PolicyAdminForm(instance=policy, data={
+            "organization": org.id,
+            "name": "Original Policy Name Updated",
+            "module": ApprovalPolicy.MODULE_PR,
+            "min_amount": "0.00",
+            "max_amount": "100000.00",
+            "is_active": True,
+            "status": ApprovalPolicy.STATUS_ACTIVE,
+            "steps_data": valid_steps,
+        })
+        assert form.is_valid(), form.errors
+        updated_policy = form.save()
+        assert updated_policy.name == "Original Policy Name Updated"
+
     # 8. MatchTolerancePolicy (Tolerance Settings) Tests
     def test_match_tolerance_policy_bounds(self, org_and_masters):
         policy = MatchTolerancePolicy.get_current()
