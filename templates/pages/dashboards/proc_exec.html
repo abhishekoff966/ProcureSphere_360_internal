@@ -36,6 +36,7 @@
                                  class="notif-feed-scroll flex-grow-1"
                                  hx-get="{% url 'proc_exec_pending_actions' %}"
                                  hx-trigger="load, every 60s, notification-read from:body"
+                                 hx-headers='{"X-PS-Background-Poll": "true"}'
                                  hx-swap="innerHTML"
                                  aria-live="polite">
                                 <div class="text-center py-3 text-muted small">
@@ -57,6 +58,7 @@
                                  class="notif-feed-scroll flex-grow-1"
                                  hx-get="{% url 'proc_exec_notifications_feed' %}"
                                  hx-trigger="load, every 60s, notification-read from:body"
+                                 hx-headers='{"X-PS-Background-Poll": "true"}'
                                  hx-swap="innerHTML"
                                  aria-live="polite">
                                 <div class="text-center py-3 text-muted small">

@@ -62,4 +62,20 @@
   {{ block.super }}
 {% endblock %}
 
+{% block footer %}
+{{ block.super }}
+{% if request.user.is_authenticated %}
+<script>
+  window.PS360_SESSION_CONFIG = {
+    idleTimeoutSeconds: {{ session_idle_timeout_seconds|default:300 }},
+    warningSeconds: 30,
+    keepAliveUrl: "/api/v1/auth/session-keepalive/",
+    logoutUrl: "/logout/?reason=inactivity",
+    loginUrl: "/login/?session_expired=1"
+  };
+</script>
+<script src="/static/js/session_timeout.js?v=1"></script>
+{% endif %}
+{% endblock %}
+
 {% block nav-global %}{% endblock %}

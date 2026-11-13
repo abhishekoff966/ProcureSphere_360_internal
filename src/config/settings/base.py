@@ -183,6 +183,8 @@ MIDDLEWARE = [
 
     "django.contrib.auth.middleware.AuthenticationMiddleware",
 
+    "apps.accounts.middleware.SessionIdleTimeoutMiddleware",
+
     "apps.core.middleware.VendorPortalIsolationMiddleware",
 
     "apps.accounts.middleware.PasswordChangeRequiredMiddleware",
@@ -240,6 +242,7 @@ TEMPLATES = [
 
                 "apps.core.context_processors.layout_context",
                 "apps.core.context_processors.seo_context",
+                "apps.core.context_processors.session_security_context",
 
             ],
 
@@ -412,6 +415,12 @@ REST_FRAMEWORK = {
 
 
 # Session & CSRF Security Baseline
+
+SESSION_IDLE_TIMEOUT_SECONDS = env.int("SESSION_IDLE_TIMEOUT_SECONDS", default=300)
+
+SESSION_COOKIE_AGE = SESSION_IDLE_TIMEOUT_SECONDS
+
+SESSION_SAVE_EVERY_REQUEST = True
 
 SESSION_COOKIE_HTTPONLY = True
 

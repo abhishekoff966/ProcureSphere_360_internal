@@ -140,7 +140,8 @@
             </div>
             <div id="pending-actions-widget" class="notif-feed-scroll"
                  hx-get="{% url 'proc_exec_pending_actions' %}"
-                 hx-trigger="load, every 60s, notification-read from:body" hx-swap="innerHTML" aria-live="polite">
+                 hx-trigger="load, every 60s, notification-read from:body"
+                 hx-headers='{"X-PS-Background-Poll": "true"}' hx-swap="innerHTML" aria-live="polite">
                 <div class="text-center py-3 text-muted small"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Loading pending actions&hellip;</div>
             </div>
         </div>
@@ -153,7 +154,8 @@
             </div>
             <div id="proc-exec-notif-feed" class="notif-feed-scroll"
                  hx-get="{% url 'proc_exec_notifications_feed' %}"
-                 hx-trigger="load, every 60s, notification-read from:body" hx-swap="innerHTML" aria-live="polite">
+                 hx-trigger="load, every 60s, notification-read from:body"
+                 hx-headers='{"X-PS-Background-Poll": "true"}' hx-swap="innerHTML" aria-live="polite">
                 <div class="text-center py-3 text-muted small"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Loading notifications&hellip;</div>
             </div>
         </div>

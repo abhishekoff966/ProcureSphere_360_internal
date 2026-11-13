@@ -1378,11 +1378,20 @@ def receipt_delivery_performance_report_view(request):
             )
             return response
 
+    paginator = Paginator(report_lines, 10)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
+    querystring = query_params.urlencode()
+
     return render(
         request,
         "receipts/delivery_performance_report.html",
         {
-            "report_lines": report_lines,
+            "report_lines": page_obj,
+            "page_obj": page_obj,
+            "paginator": paginator,
+            "querystring": querystring,
             "summary": summary,
             "filters": {
                 "start_date": start_date or "",
