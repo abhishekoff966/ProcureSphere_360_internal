@@ -92,8 +92,26 @@ def _get_approval_querysets(user, role_code):
                     organization=user.organization
                 ).first()
 
+        user_org = getattr(user, "organization", None) or (
+            user_dept.organization if user_dept else None
+        )
         if user_dept:
-            q = Q(department=user_dept) | Q(cost_center__manager=user)
+            from apps.organization.models import Department
+
+            depts_with_approvers = Department.objects.filter(
+                organization=user_org,
+                users__role__code=Role.DEPT_APPROVER,
+                users__is_active=True,
+            ).exclude(id=user_dept.id)
+
+            q = (
+                Q(department=user_dept)
+                | Q(cost_center__manager=user)
+                | (
+                    Q(department__organization=user_org)
+                    & ~Q(department__in=depts_with_approvers)
+                )
+            )
             pending_qs = PurchaseRequisition.objects.filter(
                 q, status__in=pending_statuses
             ).exclude(id__in=user_approved_pr_ids).distinct()
@@ -101,8 +119,8 @@ def _get_approval_querysets(user, role_code):
                 q & (Q(status__in=history_statuses) | Q(id__in=user_approved_pr_ids))
             ).distinct()
             return pending_qs, history_qs
-        elif getattr(user, "organization", None):
-            q = Q(department__organization=user.organization) | Q(
+        elif user_org:
+            q = Q(department__organization=user_org) | Q(
                 cost_center__manager=user
             )
             pending_qs = PurchaseRequisition.objects.filter(
@@ -435,9 +453,19 @@ def approvals_inbox_view(request):
                                         pr.cost_center.department if pr.cost_center else None
                                     )
                                     if req_role.code == Role.DEPT_APPROVER and pr_dept and user.department:
+                                        has_own_approver = (
+                                            User.objects.filter(
+                                                role__code=Role.DEPT_APPROVER,
+                                                department=pr_dept,
+                                                is_active=True,
+                                            )
+                                            .exclude(id=user.id)
+                                            .exists()
+                                        )
                                         can_decide = (
                                             user.department == pr_dept
                                             or (pr.cost_center and user == pr.cost_center.manager)
+                                            or not has_own_approver
                                         )
                                     else:
                                         can_decide = True

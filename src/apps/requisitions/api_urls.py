@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
 
-from apps.accounts.models import Role
+from apps.accounts.models import Role, User
 from apps.audit.permissions import AuditorReadOnlyPermission
 
 from .models import PRAttachment, PRLine, PurchaseRequisition
@@ -432,13 +432,29 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
             qs = self.queryset
         elif role_code == Role.DEPT_APPROVER:
             from django.db.models import Q
+            user_org = getattr(user, "organization", None) or (
+                user.department.organization if user.department else None
+            )
             if user.department_id:
+                from apps.organization.models import Department
+
+                depts_with_approvers = Department.objects.filter(
+                    organization=user_org,
+                    users__role__code=Role.DEPT_APPROVER,
+                    users__is_active=True,
+                ).exclude(id=user.department_id)
+
                 qs = self.queryset.filter(
-                    Q(department_id=user.department_id) | Q(cost_center__manager=user)
+                    Q(department_id=user.department_id)
+                    | Q(cost_center__manager=user)
+                    | (
+                        Q(department__organization=user_org)
+                        & ~Q(department__in=depts_with_approvers)
+                    )
                 ).distinct()
-            elif getattr(user, "organization", None):
+            elif user_org:
                 qs = self.queryset.filter(
-                    Q(department__organization=user.organization) | Q(cost_center__manager=user)
+                    Q(department__organization=user_org) | Q(cost_center__manager=user)
                 ).distinct()
             else:
                 qs = self.queryset.all()
@@ -563,9 +579,19 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
         if role_code == Role.DEPT_APPROVER:
             req_dept = pr.department or (pr.cost_center.department if pr.cost_center else None)
             if (user.department_id and req_dept and user.department_id != req_dept.id) and not (pr.cost_center and user.id == pr.cost_center.manager_id):
-                raise permissions.exceptions.PermissionDenied(
-                    "Department Approver can only approve requisitions for their own department."
+                has_own_approver = (
+                    User.objects.filter(
+                        role__code=Role.DEPT_APPROVER,
+                        department=req_dept,
+                        is_active=True,
+                    )
+                    .exclude(id=user.id)
+                    .exists()
                 )
+                if has_own_approver:
+                    raise permissions.exceptions.PermissionDenied(
+                        "Department Approver can only approve requisitions for their own department."
+                    )
         from apps.requisitions.services import approve_purchase_requisition_service
 
         comments = request.data.get("comments", "")
