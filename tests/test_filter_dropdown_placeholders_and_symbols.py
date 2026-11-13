@@ -3,9 +3,9 @@ from django.test import Client
 from django.urls import reverse
 
 from apps.accounts.models import Role, User
-from apps.organization.models import CostCenter, Department, Organization
-from apps.core.superadmin_forms import BudgetAdminForm
 from apps.contracts.forms import ContractCreateForm
+from apps.core.superadmin_forms import BudgetAdminForm
+from apps.organization.models import CostCenter, Department, Organization
 from apps.sourcing.forms import SourcingEventForm
 from apps.vendors.filters import VendorFilter
 from apps.vendors.forms import VendorEditForm, VendorRegistrationForm
@@ -81,8 +81,8 @@ def test_superadmin_users_filter_dropdown_options(superadmin_client):
 
 
 @pytest.mark.django_db
-def test_superadmin_organizations_department_filter(superadmin_client):
-    """Verify Superadmin Organizations/Cost Centers page has '-- All Departments --'."""
+def test_superadmin_organizations_cost_center_no_department_filter(superadmin_client):
+    """Verify Superadmin Organizations/Cost Centers page does not have department filter dropdown."""
     client, admin_user = superadmin_client
     org = Organization.objects.create(name="HPE Test Org", code="HPE_TST", is_active=True)
     admin_user.organization = org
@@ -93,8 +93,9 @@ def test_superadmin_organizations_department_filter(superadmin_client):
     resp = client.get(reverse("superadmin:organizations"))
     assert resp.status_code == 200
     content = resp.content.decode("utf-8")
-    assert "-- All Departments --" in content
-    assert "---------" not in content
+    assert "-- All Departments --" not in content
+    assert "Add Cost Center" in content
+    assert "Cloud Infra" in content
 
 
 @pytest.mark.django_db

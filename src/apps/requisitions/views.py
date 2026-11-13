@@ -11,7 +11,7 @@ from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from apps.accounts.models import Role
+from apps.accounts.models import Role, User
 from apps.approvals.models import ApprovalAction
 from apps.approvals.services import process_approval_action_service
 from apps.budgets.models import Budget
@@ -80,19 +80,33 @@ def list_view(request):
                     organization=user.organization
                 ).first()
 
+        user_org = getattr(user, "organization", None) or (
+            user_department.organization if user_department else None
+        )
         if user_department:
+            depts_with_approvers = Department.objects.filter(
+                organization=user_org,
+                users__role__code=Role.DEPT_APPROVER,
+                users__is_active=True,
+            ).exclude(id=user_department.id)
+
             items = (
                 PurchaseRequisition.objects.filter(
-                    Q(department=user_department) | Q(cost_center__manager=user)
+                    Q(department=user_department)
+                    | Q(cost_center__manager=user)
+                    | (
+                        Q(department__organization=user_org)
+                        & ~Q(department__in=depts_with_approvers)
+                    )
                 )
                 .exclude(status=PurchaseRequisition.STATUS_DRAFT)
                 .distinct()
                 .order_by("-created_at")
             )
-        elif getattr(user, "organization", None):
+        elif user_org:
             items = (
                 PurchaseRequisition.objects.filter(
-                    Q(department__organization=user.organization) | Q(cost_center__manager=user)
+                    Q(department__organization=user_org) | Q(cost_center__manager=user)
                 )
                 .exclude(status=PurchaseRequisition.STATUS_DRAFT)
                 .distinct()
@@ -730,7 +744,20 @@ def detail_view(request, pk):
                         pr.cost_center.department if pr.cost_center else None
                     )
                     if req_role.code == Role.DEPT_APPROVER and pr_dept and user.department:
-                        if user.department == pr_dept or (pr.cost_center and user == pr.cost_center.manager):
+                        has_own_approver = (
+                            User.objects.filter(
+                                role__code=Role.DEPT_APPROVER,
+                                department=pr_dept,
+                                is_active=True,
+                            )
+                            .exclude(id=user.id)
+                            .exists()
+                        )
+                        if (
+                            user.department == pr_dept
+                            or (pr.cost_center and user == pr.cost_center.manager)
+                            or not has_own_approver
+                        ):
                             can_approve = True
                     else:
                         can_approve = True
@@ -1048,9 +1075,19 @@ def attachment_download_view(request, pk, attachment_id):
             and pr.department
             and user_dept.id != pr.department.id
         ):
-            raise PermissionDenied(
-                "You do not have permission to access attachments for another department's requisition."
+            has_own_approver = (
+                User.objects.filter(
+                    role__code=Role.DEPT_APPROVER,
+                    department=pr.department,
+                    is_active=True,
+                )
+                .exclude(id=user.id)
+                .exists()
             )
+            if has_own_approver:
+                raise PermissionDenied(
+                    "You do not have permission to access attachments for another department's requisition."
+                )
 
     attachment = get_object_or_404(PRAttachment, pk=attachment_id, requisition=pr)
 

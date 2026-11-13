@@ -444,7 +444,17 @@ def approve_purchase_requisition_service(
                 if required_role.code == Role.DEPT_APPROVER:
                     req_dept = requisition.department or (requisition.cost_center.department if requisition.cost_center else None)
                     if (approver.department_id and req_dept and approver.department_id != req_dept.id) and not (requisition.cost_center and approver.id == requisition.cost_center.manager_id):
-                        raise ValidationError("Department Approver can only approve requisitions for their own department.")
+                        has_own_approver = (
+                            User.objects.filter(
+                                role__code=Role.DEPT_APPROVER,
+                                department=req_dept,
+                                is_active=True,
+                            )
+                            .exclude(id=approver.id)
+                            .exists()
+                        )
+                        if has_own_approver:
+                            raise ValidationError("Department Approver can only approve requisitions for their own department.")
                     is_authorized = True
                 else:
                     is_authorized = True

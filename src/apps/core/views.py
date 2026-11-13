@@ -566,13 +566,27 @@ def approver_dashboard_view(request):
             "Dashboard figures are limited until an administrator assigns your scope.",
         )
 
+    user_org = getattr(user, "organization", None) or (
+        user_department.organization if user_department else None
+    )
     if user_department:
+        depts_with_approvers = Department.objects.filter(
+            organization=user_org,
+            users__role__code=Role.DEPT_APPROVER,
+            users__is_active=True,
+        ).exclude(id=user_department.id)
+
         dept_prs = PurchaseRequisition.objects.filter(
-            Q(department=user_department) | Q(cost_center__manager=user)
+            Q(department=user_department)
+            | Q(cost_center__manager=user)
+            | (
+                Q(department__organization=user_org)
+                & ~Q(department__in=depts_with_approvers)
+            )
         ).exclude(status=PurchaseRequisition.STATUS_DRAFT).distinct()
-    elif getattr(user, "organization", None):
+    elif user_org:
         dept_prs = PurchaseRequisition.objects.filter(
-            Q(department__organization=user.organization) | Q(cost_center__manager=user)
+            Q(department__organization=user_org) | Q(cost_center__manager=user)
         ).exclude(status=PurchaseRequisition.STATUS_DRAFT).distinct()
     else:
         dept_prs = PurchaseRequisition.objects.none()
@@ -607,14 +621,17 @@ def approver_dashboard_view(request):
     else:
         has_open_period = FiscalPeriod.objects.filter(period_filter).exists()
 
-    if getattr(user, "department_id", None):
-        dept_ccs = CostCenter.objects.filter(department_id=user.department_id)
-    elif user_department:
+    if user_department:
         dept_ccs = CostCenter.objects.filter(
-            Q(department=user_department) | Q(manager=user)
+            Q(department=user_department)
+            | Q(manager=user)
+            | (
+                Q(department__organization=user_org)
+                & ~Q(department__in=depts_with_approvers)
+            )
         ).distinct()
-    elif getattr(user, "organization", None):
-        dept_ccs = CostCenter.objects.filter(department__organization=user.organization)
+    elif user_org:
+        dept_ccs = CostCenter.objects.filter(department__organization=user_org)
     else:
         dept_ccs = CostCenter.objects.filter(manager=user)
 

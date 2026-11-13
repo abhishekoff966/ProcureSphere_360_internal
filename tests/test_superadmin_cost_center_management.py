@@ -63,7 +63,7 @@ def test_cost_center_section_and_add_button_rendered(superadmin_client, sample_o
     assert "Cloud Infrastructure" in content
     assert "CC-HR-201" in content
     assert "Talent Acquisition" in content
-    assert "All Departments" in content
+    assert "-- All Departments --" not in content
 
 
 @pytest.mark.django_db

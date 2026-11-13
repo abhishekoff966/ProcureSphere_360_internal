@@ -643,4 +643,111 @@ def test_department_prs_uses_approver_prefixed_url(client, setup_approver_env):
     assert client.get("/approver/requisitions/").status_code == 200
 
 
+@pytest.mark.django_db
+def test_approver_sees_and_approves_prs_from_departments_without_own_approver(client, setup_approver_env):
+    """
+    When an organization has departments without dedicated approvers, the organization's
+    active department approvers must see those PRs in their pending queue, inbox, and list,
+    and have full authority to approve or reject them.
+    """
+    from apps.requisitions.services import submit_purchase_requisition_service
+
+    env = setup_approver_env
+    org = env["org"]
+    approver = env["approver"]
+
+    # 1. Create a 2nd department with cost center and requester, but NO approver
+    dept2 = Department.objects.create(organization=org, name="Operations", code="OPS-02")
+    cc2 = CostCenter.objects.create(department=dept2, name="Logistics", code="CC-OPS-02")
+    Budget.objects.create(
+        cost_center=cc2,
+        fiscal_period=env["fp"],
+        allocated_amount=Decimal("100000.00"),
+    )
+    requester_role = Role.objects.get(code=Role.REQUESTER)
+    requester2 = User.objects.create_user(
+        email="requester2_ops@hpe.com",
+        password="Password123!",
+        role=requester_role,
+        department=dept2,
+        organization=org,
+    )
+
+    # Org-wide policy step for PRs
+    policy2 = ApprovalPolicy.objects.create(
+        name="Ops Policy",
+        organization=org,
+        department=dept2,
+        module=ApprovalPolicy.MODULE_PR,
+        min_amount=Decimal("0.00"),
+        max_amount=Decimal("1000000.00"),
+        is_active=True,
+    )
+    ApprovalStep.objects.create(
+        policy=policy2,
+        step_number=1,
+        approver_role=Role.objects.get(code=Role.DEPT_APPROVER),
+    )
+
+    # 2. Requester2 submits PR
+    pr2 = PurchaseRequisition.objects.create(
+        requester=requester2,
+        department=dept2,
+        cost_center=cc2,
+        title="Warehouse Tools",
+        justification="Safety tools for operations",
+        requested_delivery_date=timezone.now().date() + timezone.timedelta(days=7),
+    )
+    PRLine.objects.create(
+        requisition=pr2,
+        item_description="Pallet Jack",
+        quantity=Decimal("2.00"),
+        unit_of_measure="EA",
+        estimated_unit_price=Decimal("1500.00"),
+    )
+    pr2.total_amount = Decimal("3000.00")
+    pr2.save(update_fields=["total_amount"])
+    pr2 = submit_purchase_requisition_service(requisition=pr2, user=requester2)
+    assert pr2.status == PurchaseRequisition.STATUS_MANAGER_REVIEW
+
+    # 3. Approver (from dept1) logs in
+    client.force_login(approver)
+
+    # Check Approver Dashboard (/approver/)
+    dash_resp = client.get("/approver/")
+    assert dash_resp.status_code == 200
+    dash_html = dash_resp.content.decode("utf-8")
+    assert pr2.pr_number in dash_html
+    assert "Warehouse Tools" in dash_html
+    assert 'name="action" value="APPROVED"' in dash_html
+
+    # Check Department PRs list (/approver/department-prs/)
+    dept_prs_resp = client.get("/approver/department-prs/")
+    assert dept_prs_resp.status_code == 200
+    assert pr2.pr_number in dept_prs_resp.content.decode("utf-8")
+
+    # Check Approvals Inbox (/approvals/inbox/)
+    inbox_resp = client.get("/approvals/inbox/?status=PENDING")
+    assert inbox_resp.status_code == 200
+    assert pr2.pr_number in inbox_resp.content.decode("utf-8")
+
+    # Check PR Detail page (/requisitions/<id>/) - Approve/Reject buttons must be visible
+    detail_resp = client.get(f"/requisitions/{pr2.id}/")
+    assert detail_resp.status_code == 200
+    detail_html = detail_resp.content.decode("utf-8")
+    assert "Approve PR" in detail_html
+    assert "Reject PR" in detail_html
+
+    # 4. Approver approves the PR
+    approve_resp = client.post(
+        f"/requisitions/{pr2.id}/approve/",
+        data={"comments": "Approved on behalf of unassigned department."},
+        follow=True,
+    )
+    assert approve_resp.status_code == 200
+    pr2.refresh_from_db()
+    assert pr2.status == PurchaseRequisition.STATUS_APPROVED
+
+
+
 
