@@ -162,11 +162,11 @@
 <div class="modal fade" id="approvalDecisionModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-white rounded-4 border-0 shadow-lg overflow-hidden">
-            <div class="modal-header bg-hpe-navy text-white px-4 py-3">
-                <h6 class="modal-title fw-bold font-heading d-flex align-items-center gap-2 mb-0">
-                    <i class="fa-solid fa-stamp text-amber"></i> <span id="modalHeaderTitle">Authorize Approval Decision</span>
+            <div class="modal-header border-bottom px-4 py-3" style="background-color: #F9FAFB !important; border-bottom: 1px solid #E5E7EB !important;">
+                <h6 class="modal-title fw-bold font-heading d-flex align-items-center gap-2 mb-0" style="color: #111827 !important;">
+                    <i class="fa-solid fa-stamp text-primary" id="modalHeaderIcon"></i> <span id="modalHeaderTitle" style="color: #111827 !important;">Authorize Approval Decision</span>
                 </h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
                 
@@ -192,8 +192,9 @@
 
                 <!-- Decision Comments Input -->
                 <div class="mb-3">
-                    <label for="modalApprovalComments" class="form-label text-dark small fw-bold mb-1">
-                        Governance Comments / Notes <span class="text-muted fw-normal" id="modalCommentsRequiredText">(Optional for approval)</span>
+                    <label for="modalApprovalComments" class="form-label text-dark small fw-bold mb-1 d-flex align-items-center justify-content-between">
+                        <span id="modalCommentsLabel">Approval Comments / Notes</span>
+                        <span class="text-muted fw-normal small" id="modalCommentsRequiredText">(Optional for approval)</span>
                     </label>
                     <textarea class="form-control rounded-3 small" id="modalApprovalComments" rows="3" placeholder="Provide governance rationale, policy notes, or conditions..."></textarea>
                 </div>
@@ -499,6 +500,7 @@
 
         const modal = new bootstrap.Modal(document.getElementById('approvalDecisionModal'));
         const titleEl = document.getElementById('modalHeaderTitle');
+        const headerIcon = document.getElementById('modalHeaderIcon');
         const badgeEl = document.getElementById('modalItemTypeBadge');
         const refEl = document.getElementById('modalItemRef');
         const titleTextEl = document.getElementById('modalItemTitle');
@@ -506,6 +508,7 @@
         const amountEl = document.getElementById('modalItemAmount');
         const justEl = document.getElementById('modalItemJustification');
         const commentsInput = document.getElementById('modalApprovalComments');
+        const commentsLabel = document.getElementById('modalCommentsLabel');
         const submitBtn = document.getElementById('modalActionSubmitBtn');
         const submitBtnText = document.getElementById('modalActionSubmitBtnText');
         const reqText = document.getElementById('modalCommentsRequiredText');
@@ -514,16 +517,30 @@
 
         if (action === 'APPROVE') {
             titleEl.textContent = `Authorize Approval — ${item.reference_number}`;
-            submitBtn.className = 'btn btn-emerald btn-sm rounded-pill px-4 fw-bold shadow-sm';
-            submitBtnText.innerHTML = '<i class="fa-solid fa-check me-1"></i> Commit Approval';
+            titleEl.style.color = '#111827';
+            if (headerIcon) headerIcon.className = 'fa-solid fa-circle-check text-success';
+            submitBtn.className = 'btn btn-success btn-sm rounded-pill px-4 fw-bold shadow-sm';
+            submitBtn.style.backgroundColor = '#16a34a';
+            submitBtn.style.borderColor = '#16a34a';
+            submitBtn.style.color = '#ffffff';
+            submitBtnText.innerHTML = '<i class="fa-solid fa-check me-1"></i> Submit Approval';
+            if (commentsLabel) commentsLabel.textContent = 'Approval Comments / Notes';
             reqText.textContent = '(Optional for approval)';
-            reqText.className = 'text-muted fw-normal';
+            reqText.className = 'text-muted fw-normal small';
+            commentsInput.placeholder = 'Provide optional approval rationale, policy notes, or conditions...';
         } else {
             titleEl.textContent = `Reject Transaction — ${item.reference_number}`;
+            titleEl.style.color = '#111827';
+            if (headerIcon) headerIcon.className = 'fa-solid fa-circle-xmark text-danger';
             submitBtn.className = 'btn btn-danger btn-sm rounded-pill px-4 fw-bold shadow-sm';
-            submitBtnText.innerHTML = '<i class="fa-solid fa-xmark me-1"></i> Commit Rejection';
+            submitBtn.style.backgroundColor = '#dc2626';
+            submitBtn.style.borderColor = '#dc2626';
+            submitBtn.style.color = '#ffffff';
+            submitBtnText.innerHTML = '<i class="fa-solid fa-xmark me-1"></i> Submit Rejection';
+            if (commentsLabel) commentsLabel.textContent = 'Reason for Rejection';
             reqText.textContent = '(Mandatory for rejection)';
-            reqText.className = 'text-danger fw-bold';
+            reqText.className = 'text-danger fw-bold small';
+            commentsInput.placeholder = 'Provide clear, specific business reason for rejection...';
         }
 
         badgeEl.textContent = item.type_display;
@@ -544,7 +561,7 @@
         const comments = (document.getElementById('modalApprovalComments')?.value || '').trim();
 
         if (action === 'REJECT' && !comments) {
-            alert('Rejection justification comment is mandatory.');
+            alert('Reason for rejection is mandatory.');
             return;
         }
 
@@ -570,7 +587,7 @@
             showToast(res.message || `Transaction ${action.toLowerCase()}ed successfully.`, 'success');
             loadApprovals();
         } catch (err) {
-            alert(`Error committing approval action: ${err.message || 'Server error'}`);
+            alert(`Error submitting approval decision: ${err.message || 'Server error'}`);
         } finally {
             submitBtn.disabled = false;
             submitBtnText.textContent = 'Confirm Action';
