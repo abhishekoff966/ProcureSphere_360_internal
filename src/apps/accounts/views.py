@@ -141,6 +141,27 @@ def portal_login_view(request):
             from apps.accounts.models import User
 
             inactive_user = User.objects.filter(email__iexact=email).first()
+
+            try:
+                from apps.audit.models import AuditLog
+                from apps.audit.services import create_audit_log_service
+
+                matched_user = User.objects.filter(email__iexact=str(email).strip()).first()
+                create_audit_log_service(
+                    actor=matched_user,
+                    action=AuditLog.ACTION_LOGIN_FAILED,
+                    target_model="User",
+                    target_object_id=str(matched_user.id if matched_user else email),
+                    new_state={
+                        "event": "LOGIN_FAILED",
+                        "email": str(email).strip().lower(),
+                        "reason": "Account deactivated" if (inactive_user and not inactive_user.is_active) else "Invalid credentials",
+                    },
+                    request=request,
+                )
+            except Exception:
+                pass
+
             if (
                 inactive_user
                 and inactive_user.check_password(password)
