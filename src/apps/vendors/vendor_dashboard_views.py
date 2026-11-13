@@ -308,9 +308,9 @@ def vendor_profile_view(request):
                     files_to_process.append(("Other Document", other_file, other_type, other_title, other_expiry))
 
                 DISALLOWED_IMAGE_EXTENSIONS = {
-                    "gif", "webp", "bmp", "svg", "tiff", "ico", "avif", "heic", "heif"
+                    "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "tiff", "ico", "avif", "heic", "heif"
                 }
-                SUPPORTED_DOCUMENT_EXTENSIONS = {"pdf", "doc", "docx", "xlsx", "csv", "png", "jpg", "jpeg"}
+                SUPPORTED_DOCUMENT_EXTENSIONS = {"pdf", "doc", "docx", "xlsx", "csv"}
                 MAX_FILE_SIZE = 10 * 1024 * 1024
 
                 validation_errors = []
@@ -325,13 +325,13 @@ def vendor_profile_view(request):
                     elif file_size > MAX_FILE_SIZE:
                         validation_errors.append(f"{label}: File '{file_name}' exceeds the maximum allowed limit of 10 MB.")
 
-                    if (ext in DISALLOWED_IMAGE_EXTENSIONS) or (raw_content_type.startswith("image/") and ext not in {"png", "jpg", "jpeg"}):
+                    if (ext in DISALLOWED_IMAGE_EXTENSIONS) or raw_content_type.startswith("image/"):
                         validation_errors.append(
-                            f"{label}: Image file format (.{ext or 'image'}) is not allowed. Please upload a supported format (PDF, DOC, DOCX, XLSX, CSV, PNG, JPG)."
+                            f"{label}: Image files (.{ext or 'image'}) are strictly prohibited. Please upload a supported document format (PDF, DOC, DOCX, XLSX, CSV)."
                         )
                     elif ext not in SUPPORTED_DOCUMENT_EXTENSIONS:
                         validation_errors.append(
-                            f"{label}: File extension '.{ext}' is not permitted. Only PDF, DOC, DOCX, XLSX, CSV, PNG, JPG are allowed."
+                            f"{label}: File extension '.{ext}' is not permitted. Only PDF, DOC, DOCX, XLSX, CSV are allowed."
                         )
 
                 if validation_errors:
@@ -385,20 +385,20 @@ def vendor_profile_view(request):
                         raw_content_type = (getattr(doc_file, "content_type", "") or "").split(";")[0].strip().lower()
 
                         DISALLOWED_IMAGE_EXTENSIONS = {
-                            "gif", "webp", "bmp", "svg", "tiff", "ico", "avif"
+                            "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "tiff", "ico", "avif", "heic", "heif"
                         }
-                        SUPPORTED_DOCUMENT_EXTENSIONS = {"pdf", "doc", "docx", "xlsx", "csv", "png", "jpg", "jpeg"}
+                        SUPPORTED_DOCUMENT_EXTENSIONS = {"pdf", "doc", "docx", "xlsx", "csv"}
 
-                        if (ext in DISALLOWED_IMAGE_EXTENSIONS) or (raw_content_type.startswith("image/") and ext not in {"png", "jpg", "jpeg"}):
+                        if (ext in DISALLOWED_IMAGE_EXTENSIONS) or raw_content_type.startswith("image/"):
                             raise ValidationError(
-                                f"Image file format (.{ext or 'image'}) is not supported. "
-                                "Please upload supported formats (PDF, DOC, DOCX, XLSX, CSV, PNG, JPG)."
+                                f"Image file format (.{ext or 'image'}) is strictly prohibited. "
+                                "Please upload a supported document format (PDF, DOC, DOCX, XLSX, CSV)."
                             )
 
                         if ext not in SUPPORTED_DOCUMENT_EXTENSIONS:
                             raise ValidationError(
                                 f"File extension '.{ext}' is not permitted. "
-                                "Please upload a supported document file (PDF, DOC, DOCX, XLSX, CSV, PNG, JPG)."
+                                "Please upload a supported document file (PDF, DOC, DOCX, XLSX, CSV)."
                             )
 
                         upload_vendor_document_service(
