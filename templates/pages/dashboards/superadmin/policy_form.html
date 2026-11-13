@@ -4,20 +4,24 @@
             <i class="fa-solid fa-scale-balanced fs-5"></i>
         </div>
         <div>
-            <h5 class="modal-title fw-bold text-dark mb-0">{% if is_edit %}Edit Approval Policy: {{ policy.name }}{% else %}Create Enterprise Approval Policy{% endif %}</h5>
-            <div class="small text-muted">Configurable multi-level routing, amount slabs, cost centers, and exception escalation.</div>
+            <h5 class="modal-title fw-bold text-dark mb-0">{% if is_edit %}Edit Approval Policy: {{ policy.name }}{%
+                else %}Create Enterprise Approval Policy{% endif %}</h5>
+            <div class="small text-muted">Configurable multi-level routing, amount slabs, cost centers, and exception
+                escalation.</div>
         </div>
     </div>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
-<form id="policyForm" hx-post="{% if is_edit %}/superadmin/policies/{{ form.instance.pk }}/edit/{% else %}/superadmin/policies/create/{% endif %}" hx-target="#modal-content-body" hx-swap="innerHTML" class="bg-white rounded-bottom-4">
+<form id="policyForm"
+    hx-post="{% if is_edit %}/superadmin/policies/{{ form.instance.pk }}/edit/{% else %}/superadmin/policies/create/{% endif %}"
+    hx-target="#modal-content-body" hx-swap="innerHTML" class="bg-white rounded-bottom-4" novalidate>
     {% csrf_token %}
     <input type="hidden" name="steps_data" id="id_steps_data" value="{{ steps_json|default:'[]' }}">
 
     <div class="modal-body pt-3">
         {% if form.non_field_errors %}
-        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
+        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
             <i class="fa-solid fa-circle-exclamation flex-shrink-0"></i>
             <div>{{ form.non_field_errors }}</div>
         </div>
@@ -26,17 +30,23 @@
         <!-- Navigation Tabs -->
         <ul class="nav nav-pills nav-fill bg-light p-1 rounded-3 mb-4" id="policyTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active rounded-pill fw-semibold small py-2" id="tab-scope-btn" data-bs-toggle="pill" data-bs-target="#tab-scope" type="button" role="tab">
+                <button class="nav-link active rounded-pill fw-semibold small py-2" id="tab-scope-btn"
+                    data-bs-toggle="pill" data-bs-target="#tab-scope" type="button" role="tab" aria-controls="tab-scope"
+                    aria-selected="true">
                     <i class="fa-solid fa-sliders me-1"></i> 1. Scope & Amounts
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-pill fw-semibold small py-2" id="tab-workflow-btn" data-bs-toggle="pill" data-bs-target="#tab-workflow" type="button" role="tab">
+                <button class="nav-link rounded-pill fw-semibold small py-2" id="tab-workflow-btn" data-bs-toggle="pill"
+                    data-bs-target="#tab-workflow" type="button" role="tab" aria-controls="tab-workflow"
+                    aria-selected="false">
                     <i class="fa-solid fa-arrow-progress me-1"></i> 2. Approval Sequence
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-pill fw-semibold small py-2" id="tab-exception-btn" data-bs-toggle="pill" data-bs-target="#tab-exception" type="button" role="tab">
+                <button class="nav-link rounded-pill fw-semibold small py-2" id="tab-exception-btn"
+                    data-bs-toggle="pill" data-bs-target="#tab-exception" type="button" role="tab"
+                    aria-controls="tab-exception" aria-selected="false">
                     <i class="fa-solid fa-triangle-exclamation me-1"></i> 3. Exception Routing
                 </button>
             </li>
@@ -45,72 +55,116 @@
         <!-- Tab Content -->
         <div class="tab-content" id="policyTabsContent">
             <!-- TAB 1: SCOPE & AMOUNT SLABS -->
-            <div class="tab-pane fade show active" id="tab-scope" role="tabpanel">
+            <div class="tab-pane fade show active" id="tab-scope" role="tabpanel" aria-labelledby="tab-scope-btn">
                 <div class="row g-3">
                     <div class="col-md-8">
-                        <label for="id_name" class="form-label fw-semibold text-secondary small">Policy Name <span class="text-danger">*</span></label>
+                        <label for="id_name" class="form-label fw-semibold text-secondary small">Policy Name <span
+                                class="text-danger">*</span></label>
                         {{ form.name }}
-                        {% if form.name.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_name-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.name.errors.0 }}</span></div>{% endif %}
+                        <div class="invalid-feedback {% if form.name.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                            id="id_name-error" role="alert">
+                            <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{
+                                form.name.errors.0 }}</span>
+                        </div>
                     </div>
                     <div class="col-md-4">
                         <label for="id_currency" class="form-label fw-semibold text-secondary small">Currency</label>
                         {{ form.currency }}
-                        {% if form.currency.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_currency-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.currency.errors.0 }}</span></div>{% endif %}
+                        <div class="invalid-feedback {% if form.currency.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                            id="id_currency-error" role="alert">
+                            <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{
+                                form.currency.errors.0 }}</span>
+                        </div>
                     </div>
 
                     <div class="col-md-6">
-                        <label for="id_module" class="form-label fw-semibold text-secondary small">Transaction Type / Module <span class="text-danger">*</span></label>
+                        <label for="id_module" class="form-label fw-semibold text-secondary small">Transaction Type /
+                            Module <span class="text-danger">*</span></label>
                         {{ form.module }}
-                        {% if form.module.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_module-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.module.errors.0 }}</span></div>{% endif %}
+                        <div class="invalid-feedback {% if form.module.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                            id="id_module-error" role="alert">
+                            <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{
+                                form.module.errors.0 }}</span>
+                        </div>
                     </div>
 
                     {% if form.organization.is_hidden %}
-                        {{ form.organization }}
+                    {{ form.organization }}
                     {% else %}
                     <div class="col-md-6">
-                        <label for="id_policy_organization" class="form-label fw-semibold text-secondary small">Organization</label>
+                        <label for="id_policy_organization"
+                            class="form-label fw-semibold text-secondary small">Organization</label>
                         {{ form.organization }}
-                        {% if form.organization.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_organization-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.organization.errors.0 }}</span></div>{% endif %}
+                        <div class="invalid-feedback {% if form.organization.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                            id="id_organization-error" role="alert">
+                            <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{
+                                form.organization.errors.0 }}</span>
+                        </div>
                     </div>
                     {% endif %}
 
                     <div class="col-md-6">
-                        <label for="id_policy_department" class="form-label fw-semibold text-secondary small">Department Scope</label>
+                        <label for="id_policy_department" class="form-label fw-semibold text-secondary small">Department
+                            Scope</label>
                         {{ form.department }}
                         <div class="form-text small text-muted">Leave blank for All Departments (Default policy).</div>
-                        {% if form.department.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_department-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.department.errors.0 }}</span></div>{% endif %}
+                        <div class="invalid-feedback {% if form.department.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                            id="id_department-error" role="alert">
+                            <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{
+                                form.department.errors.0 }}</span>
+                        </div>
                     </div>
 
                     <div class="col-md-6">
-                        <label for="id_policy_cost_center" class="form-label fw-semibold text-secondary small">Cost Center Scope</label>
+                        <label for="id_policy_cost_center" class="form-label fw-semibold text-secondary small">Cost
+                            Center Scope</label>
                         {{ form.cost_center }}
                         <div class="form-text small text-muted">Leave blank for All Cost Centers under department.</div>
-                        {% if form.cost_center.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_cost_center-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.cost_center.errors.0 }}</span></div>{% endif %}
+                        <div class="invalid-feedback {% if form.cost_center.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                            id="id_cost_center-error" role="alert">
+                            <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{
+                                form.cost_center.errors.0 }}</span>
+                        </div>
                     </div>
 
                     <div class="col-md-6">
-                        <label for="id_min_amount" class="form-label fw-semibold text-secondary small">Minimum Amount <span class="text-danger">*</span></label>
+                        <label for="id_min_amount" class="form-label fw-semibold text-secondary small">Minimum Amount
+                            <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text bg-light text-muted fw-bold" id="currPrefixMin">₹</span>
                             {{ form.min_amount }}
                         </div>
-                        {% if form.min_amount.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_min_amount-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.min_amount.errors.0 }}</span></div>{% endif %}
+                        <div class="invalid-feedback {% if form.min_amount.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                            id="id_min_amount-error" role="alert">
+                            <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{
+                                form.min_amount.errors.0 }}</span>
+                        </div>
                     </div>
 
                     <div class="col-md-6">
-                        <label for="id_max_amount" class="form-label fw-semibold text-secondary small">Maximum Amount (Upper Bound)</label>
+                        <label for="id_max_amount" class="form-label fw-semibold text-secondary small">Maximum Amount
+                            (Upper Bound)</label>
                         <div class="input-group">
                             <span class="input-group-text bg-light text-muted fw-bold" id="currPrefixMax">₹</span>
                             {{ form.max_amount }}
                         </div>
                         <div class="form-text small text-muted">Leave blank for unlimited (no ceiling).</div>
-                        {% if form.max_amount.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_max_amount-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.max_amount.errors.0 }}</span></div>{% endif %}
+                        <div class="invalid-feedback {% if form.max_amount.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                            id="id_max_amount-error" role="alert">
+                            <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{
+                                form.max_amount.errors.0 }}</span>
+                        </div>
                     </div>
 
                     <div class="col-12">
-                        <label for="id_description" class="form-label fw-semibold text-secondary small">Description & Governance Notes</label>
+                        <label for="id_description" class="form-label fw-semibold text-secondary small">Description &
+                            Governance Notes</label>
                         {{ form.description }}
-                        {% if form.description.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_description-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.description.errors.0 }}</span></div>{% endif %}
+                        <div class="invalid-feedback {% if form.description.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                            id="id_description-error" role="alert">
+                            <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{
+                                form.description.errors.0 }}</span>
+                        </div>
                     </div>
 
                     <!-- Active Policy Switch -->
@@ -118,12 +172,16 @@
                         <div class="d-flex align-items-center justify-content-between p-3 rounded-3 bg-light border">
                             <div>
                                 <div class="fw-bold text-dark small">Policy Activation Status</div>
-                                <div class="text-muted small">Active policies immediately govern submitted transactions matching this scope and amount slab.</div>
+                                <div class="text-muted small">Active policies immediately govern submitted transactions
+                                    matching this scope and amount slab.</div>
                             </div>
                             <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
-                                <input type="checkbox" name="is_active" class="form-check-input" id="id_is_active" {% if is_edit %}{% if policy.is_active %}checked{% endif %}{% else %}checked{% endif %}>
-                                <span id="policySwitchLabel" class="badge {% if is_edit and not policy.is_active %}bg-secondary bg-opacity-10 text-secondary border border-secondary{% else %}bg-success bg-opacity-10 text-success border border-success{% endif %} fw-semibold">
-                                    {% if is_edit and not policy.is_active %}Draft / Inactive{% else %}Active Policy{% endif %}
+                                <input type="checkbox" name="is_active" class="form-check-input" id="id_is_active" {% if
+                                    is_edit %}{% if policy.is_active %}checked{% endif %}{% else %}checked{% endif %}>
+                                <span id="policySwitchLabel"
+                                    class="badge {% if is_edit and not policy.is_active %}bg-secondary bg-opacity-10 text-secondary border border-secondary{% else %}bg-success bg-opacity-10 text-success border border-success{% endif %} fw-semibold">
+                                    {% if is_edit and not policy.is_active %}Draft / Inactive{% else %}Active Policy{%
+                                    endif %}
                                 </span>
                             </div>
                         </div>
@@ -132,20 +190,31 @@
             </div>
 
             <!-- TAB 2: DYNAMIC APPROVAL WORKFLOW BUILDER -->
-            <div class="tab-pane fade" id="tab-workflow" role="tabpanel">
+            <div class="tab-pane fade" id="tab-workflow" role="tabpanel" aria-labelledby="tab-workflow-btn">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
                         <h6 class="fw-bold text-dark mb-0">Multi-Level Approval Sequence</h6>
-                        <div class="small text-muted">Add, remove, and reorder sequential or parallel approval levels.</div>
+                        <div class="small text-muted">Add, remove, and reorder sequential or parallel approval levels.
+                        </div>
                     </div>
                     <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" id="addStepBtn">
                         <i class="fa-solid fa-plus me-1"></i> Add Approval Level
                     </button>
                 </div>
 
+                <!-- Sequence-Level Error Alert -->
+                <div id="steps-sequence-error"
+                    class="alert alert-danger {% if form.steps_data.errors %}d-block{% else %}d-none{% endif %} py-2 px-3 small fw-semibold mb-3"
+                    role="alert">
+                    <i class="fa-solid fa-circle-exclamation me-1"></i>
+                    <span class="error-text">{% if form.steps_data.errors %}{{ form.steps_data.errors.0 }}{% endif
+                        %}</span>
+                </div>
+
                 <!-- Live Visual Pipeline Preview -->
                 <div class="p-3 bg-light rounded-3 border mb-3">
-                    <div class="text-secondary small fw-bold text-uppercase mb-2"><i class="fa-solid fa-diagram-project me-1 text-primary"></i> Live Approval Flow Preview</div>
+                    <div class="text-secondary small fw-bold text-uppercase mb-2"><i
+                            class="fa-solid fa-diagram-project me-1 text-primary"></i> Live Approval Flow Preview</div>
                     <div class="d-flex align-items-center gap-2 overflow-auto pb-2" id="visualPipelinePreview">
                         <!-- Rendered dynamically by JS -->
                     </div>
@@ -158,7 +227,7 @@
             </div>
 
             <!-- TAB 3: OPTIONAL EXCEPTION ROUTING -->
-            <div class="tab-pane fade" id="tab-exception" role="tabpanel">
+            <div class="tab-pane fade" id="tab-exception" role="tabpanel" aria-labelledby="tab-exception-btn">
                 <div class="p-3 bg-light rounded-3 border mb-3">
                     <div class="form-check form-switch d-flex align-items-center gap-3">
                         {{ form.has_exception_routing }}
@@ -167,57 +236,95 @@
                         </label>
                     </div>
                     <div class="small text-muted mt-1 ps-5">
-                        Route transactions to designated executive approvers when thresholds are exceeded or budget exceptions occur.
+                        Route transactions to designated executive approvers when thresholds are exceeded or budget
+                        exceptions occur.
                     </div>
                 </div>
 
                 <div id="exceptionFieldsWrapper" style="display: none;">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary small">Exception Amount Threshold</label>
+                            <label for="id_exception_amount_threshold"
+                                class="form-label fw-semibold text-secondary small">Exception Amount Threshold</label>
                             {{ form.exception_amount_threshold }}
-                            <div class="form-text small text-muted">Transactions exceeding this amount trigger exception escalation.</div>
-                            {% if form.exception_amount_threshold.errors %}<div class="text-danger small mt-1">{{ form.exception_amount_threshold.errors }}</div>{% endif %}
+                            <div class="form-text small text-muted">Transactions exceeding this amount trigger exception
+                                escalation.</div>
+                            <div class="invalid-feedback {% if form.exception_amount_threshold.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                                id="id_exception_amount_threshold-error" role="alert">
+                                <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span
+                                    class="text-danger">{{ form.exception_amount_threshold.errors.0 }}</span>
+                            </div>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary small">Exception Approver Role</label>
+                            <label for="id_exception_approver_role"
+                                class="form-label fw-semibold text-secondary small">Exception Approver Role <span
+                                    class="text-danger">*</span></label>
                             {{ form.exception_approver_role }}
-                            {% if form.exception_approver_role.errors %}<div class="text-danger small mt-1">{{ form.exception_approver_role.errors }}</div>{% endif %}
+                            <div class="invalid-feedback {% if form.exception_approver_role.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                                id="id_exception_approver_role-error" role="alert">
+                                <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span
+                                    class="text-danger">{{ form.exception_approver_role.errors.0 }}</span>
+                            </div>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary small">Optional Specific Escalation Approver</label>
+                            <label for="id_exception_specific_approver"
+                                class="form-label fw-semibold text-secondary small">Optional Specific Escalation
+                                Approver</label>
                             {{ form.exception_specific_approver }}
-                            {% if form.exception_specific_approver.errors %}<div class="text-danger small mt-1">{{ form.exception_specific_approver.errors }}</div>{% endif %}
+                            <div class="invalid-feedback {% if form.exception_specific_approver.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                                id="id_exception_specific_approver-error" role="alert">
+                                <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span
+                                    class="text-danger">{{ form.exception_specific_approver.errors.0 }}</span>
+                            </div>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary small">Routing Action / Behavior</label>
+                            <label for="id_exception_routing_behavior"
+                                class="form-label fw-semibold text-secondary small">Routing Action / Behavior</label>
                             {{ form.exception_routing_behavior }}
-                            {% if form.exception_routing_behavior.errors %}<div class="text-danger small mt-1">{{ form.exception_routing_behavior.errors }}</div>{% endif %}
+                            <div class="invalid-feedback {% if form.exception_routing_behavior.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                                id="id_exception_routing_behavior-error" role="alert">
+                                <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span
+                                    class="text-danger">{{ form.exception_routing_behavior.errors.0 }}</span>
+                            </div>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary small">Escalation Window (Hours SLA)</label>
+                            <label for="id_exception_escalation_time_hours"
+                                class="form-label fw-semibold text-secondary small">Escalation Window (Hours
+                                SLA)</label>
                             {{ form.exception_escalation_time_hours }}
-                            {% if form.exception_escalation_time_hours.errors %}<div class="text-danger small mt-1">{{ form.exception_escalation_time_hours.errors }}</div>{% endif %}
+                            <div class="invalid-feedback {% if form.exception_escalation_time_hours.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                                id="id_exception_escalation_time_hours-error" role="alert">
+                                <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span
+                                    class="text-danger">{{ form.exception_escalation_time_hours.errors.0 }}</span>
+                            </div>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold text-secondary small">Exception Reason Tag</label>
+                            <label for="id_exception_reason"
+                                class="form-label fw-semibold text-secondary small">Exception Reason Tag</label>
                             {{ form.exception_reason }}
-                            {% if form.exception_reason.errors %}<div class="text-danger small mt-1">{{ form.exception_reason.errors }}</div>{% endif %}
+                            <div class="invalid-feedback {% if form.exception_reason.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                                id="id_exception_reason-error" role="alert">
+                                <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span
+                                    class="text-danger">{{ form.exception_reason.errors.0 }}</span>
+                            </div>
                         </div>
 
                         <div class="col-12">
                             <div class="p-3 rounded-3 border bg-white">
-                                <div class="fw-semibold text-dark small mb-2"><i class="fa-solid fa-bell me-1 text-warning"></i> Additional Exception Triggers</div>
+                                <div class="fw-semibold text-dark small mb-2"><i
+                                        class="fa-solid fa-bell me-1 text-warning"></i> Additional Exception Triggers
+                                </div>
                                 <div class="row g-2">
                                     <div class="col-md-6">
                                         <div class="form-check">
                                             {{ form.exception_trigger_on_missing_cost_center }}
-                                            <label class="form-check-label small" for="{{ form.exception_trigger_on_missing_cost_center.id_for_label }}">
+                                            <label class="form-check-label small"
+                                                for="{{ form.exception_trigger_on_missing_cost_center.id_for_label }}">
                                                 Trigger if Cost Center is unassigned
                                             </label>
                                         </div>
@@ -225,7 +332,8 @@
                                     <div class="col-md-6">
                                         <div class="form-check">
                                             {{ form.exception_trigger_on_budget_exceeded }}
-                                            <label class="form-check-label small" for="{{ form.exception_trigger_on_budget_exceeded.id_for_label }}">
+                                            <label class="form-check-label small"
+                                                for="{{ form.exception_trigger_on_budget_exceeded.id_for_label }}">
                                                 Trigger if Transaction exceeds available budget
                                             </label>
                                         </div>
@@ -235,9 +343,14 @@
                         </div>
 
                         <div class="col-12">
-                            <label class="form-label fw-semibold text-secondary small">Exception Routing Notes</label>
+                            <label for="id_exception_description"
+                                class="form-label fw-semibold text-secondary small">Exception Routing Notes</label>
                             {{ form.exception_description }}
-                            {% if form.exception_description.errors %}<div class="text-danger small mt-1">{{ form.exception_description.errors }}</div>{% endif %}
+                            <div class="invalid-feedback {% if form.exception_description.errors %}d-block{% else %}d-none{% endif %} mt-1 small fw-semibold"
+                                id="id_exception_description-error" role="alert">
+                                <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span
+                                    class="text-danger">{{ form.exception_description.errors.0 }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -248,15 +361,18 @@
     <div class="modal-footer border-top-0 pt-0 d-flex justify-content-between align-items-center">
         <div>
             <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-outline-secondary rounded-pill px-4 ms-2 d-none" id="policyWizardBackBtn">
+            <button type="button" class="btn btn-outline-secondary rounded-pill px-4 ms-2 d-none"
+                id="policyWizardBackBtn">
                 <i class="fa-solid fa-arrow-left me-1"></i> Back
             </button>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-primary text-white fw-bold rounded-pill px-4 shadow-sm" id="policyWizardNextBtn">
+            <button type="button" class="btn btn-primary text-white fw-bold rounded-pill px-4 shadow-sm"
+                id="policyWizardNextBtn">
                 Next <i class="fa-solid fa-arrow-right ms-1"></i>
             </button>
-            <button type="submit" class="btn btn-success text-white fw-bold rounded-pill px-4 shadow-sm d-none" id="savePolicySubmitBtn">
+            <button type="submit" class="btn btn-success text-white fw-bold rounded-pill px-4 shadow-sm d-none"
+                id="savePolicySubmitBtn">
                 <i class="fa-solid fa-check me-1"></i> Save Policy
             </button>
         </div>
@@ -264,35 +380,36 @@
 </form>
 
 <script>
-window.updatePolicyActiveSwitch = function(el) {
-    var label = document.getElementById("policySwitchLabel");
-    if (!label) return;
-    if (el.checked) {
-        label.className = "badge bg-success bg-opacity-10 text-success border border-success fw-semibold";
-        label.textContent = "Active Policy";
-    } else {
-        label.className = "badge bg-secondary bg-opacity-10 text-secondary border border-secondary fw-semibold";
-        label.textContent = "Draft / Inactive";
-    }
-};
+    window.updatePolicyActiveSwitch = function (el) {
+        var label = document.getElementById("policySwitchLabel");
+        if (!label) return;
+        if (el.checked) {
+            label.className = "badge bg-success bg-opacity-10 text-success border border-success fw-semibold";
+            label.textContent = "Active Policy";
+        } else {
+            label.className = "badge bg-secondary bg-opacity-10 text-secondary border border-secondary fw-semibold";
+            label.textContent = "Draft / Inactive";
+        }
+    };
 
-(function() {
-    var activeCheck = document.getElementById("id_is_active");
-    if (activeCheck) {
-        activeCheck.addEventListener("change", function() {
-            window.updatePolicyActiveSwitch(this);
-        });
-        window.updatePolicyActiveSwitch(activeCheck);
-    }
-    var rolesData = [
-        {% for r in available_roles %}
-        { id: "{{ r.id }}", name: "{{ r.name|escapejs }}", code: "{{ r.code|escapejs }}" }{% if not forloop.last %},{% endif %}
-        {% endfor %}
+    (function () {
+        var activeCheck = document.getElementById("id_is_active");
+        if (activeCheck) {
+            activeCheck.addEventListener("change", function () {
+                window.updatePolicyActiveSwitch(this);
+            });
+            window.updatePolicyActiveSwitch(activeCheck);
+        }
+
+        var rolesData = [
+            {% for r in available_roles %}
+        { id: "{{ r.id }}", name: "{{ r.name|escapejs }}", code: "{{ r.code|escapejs }}" } {% if not forloop.last %}, {% endif %}
+    {% endfor %}
     ];
     var usersData = [
         {% for u in available_users %}
-        { id: "{{ u.id }}", email: "{{ u.email|escapejs }}" }{% if not forloop.last %},{% endif %}
-        {% endfor %}
+    { id: "{{ u.id }}", email: "{{ u.email|escapejs }}" } {% if not forloop.last %}, {% endif %}
+    {% endfor %}
     ];
 
     var rawSteps = [];
@@ -301,11 +418,10 @@ window.updatePolicyActiveSwitch = function(el) {
         if (rawVal) {
             rawSteps = JSON.parse(rawVal);
         }
-    } catch(e) {
+    } catch (e) {
         console.warn("Could not parse steps JSON:", e);
     }
     if (!rawSteps || rawSteps.length === 0) {
-        // Fallback default
         if (rolesData.length > 0) {
             rawSteps = [
                 {
@@ -322,6 +438,36 @@ window.updatePolicyActiveSwitch = function(el) {
                     escalation_hours: 48
                 }
             ];
+        }
+    }
+
+    // Helper functions for showing and clearing field errors
+    function setFieldError(inputEl, errorEl, message) {
+        if (inputEl) {
+            inputEl.classList.add("is-invalid");
+            inputEl.setAttribute("aria-invalid", "true");
+            if (errorEl && errorEl.id) {
+                inputEl.setAttribute("aria-describedby", errorEl.id);
+            }
+        }
+        if (errorEl) {
+            var span = errorEl.querySelector("span");
+            if (span) span.textContent = message;
+            errorEl.classList.remove("d-none");
+            errorEl.classList.add("d-block");
+        }
+    }
+
+    function clearFieldError(inputEl, errorEl) {
+        if (inputEl) {
+            inputEl.classList.remove("is-invalid");
+            inputEl.setAttribute("aria-invalid", "false");
+        }
+        if (errorEl) {
+            errorEl.classList.remove("d-block");
+            errorEl.classList.add("d-none");
+            var span = errorEl.querySelector("span");
+            if (span) span.textContent = "";
         }
     }
 
@@ -350,6 +496,12 @@ window.updatePolicyActiveSwitch = function(el) {
     function toggleExceptionWrapper() {
         if (!excCheck || !excWrapper) return;
         excWrapper.style.display = excCheck.checked ? "block" : "none";
+        if (!excCheck.checked) {
+            // Clear exception field errors when disabled
+            clearFieldError(document.getElementById("id_exception_approver_role"), document.getElementById("id_exception_approver_role-error"));
+            clearFieldError(document.getElementById("id_exception_amount_threshold"), document.getElementById("id_exception_amount_threshold-error"));
+            clearFieldError(document.getElementById("id_exception_escalation_time_hours"), document.getElementById("id_exception_escalation_time_hours-error"));
+        }
     }
     if (excCheck) {
         excCheck.addEventListener("change", toggleExceptionWrapper);
@@ -372,13 +524,13 @@ window.updatePolicyActiveSwitch = function(el) {
             reqPill.textContent = "Requester";
             pipeline.appendChild(reqPill);
 
-            rawSteps.forEach(function(s, idx) {
+            rawSteps.forEach(function (s, idx) {
                 var arr = document.createElement("i");
                 arr.className = "fa-solid fa-chevron-right text-muted flex-shrink-0";
                 arr.style.fontSize = "0.65rem";
                 pipeline.appendChild(arr);
 
-                var rObj = rolesData.find(function(r) { return String(r.id) === String(s.role_id); });
+                var rObj = rolesData.find(function (r) { return String(r.id) === String(s.role_id); });
                 var rName = rObj ? rObj.name : (s.role_name || "Approver");
 
                 var pill = document.createElement("div");
@@ -399,62 +551,66 @@ window.updatePolicyActiveSwitch = function(el) {
         }
 
         // Render step rows
-        rawSteps.forEach(function(step, idx) {
+        rawSteps.forEach(function (step, idx) {
             step.step_number = idx + 1;
             var card = document.createElement("div");
-            card.className = "card border rounded-3 p-3 bg-white shadow-xs";
+            card.className = "card border rounded-3 p-3 bg-white shadow-xs step-card";
+            card.setAttribute("data-idx", idx);
 
-            var roleOptionsHtml = rolesData.map(function(r) {
+            var roleOptionsHtml = '<option value="">-- Select Approver Role --</option>' + rolesData.map(function (r) {
                 var sel = String(r.id) === String(step.role_id) ? "selected" : "";
                 return '<option value="' + r.id + '" ' + sel + '>' + r.name + '</option>';
             }).join("");
 
-            var userOptionsHtml = '<option value="">-- Any User with Role --</option>' + usersData.map(function(u) {
+            var userOptionsHtml = '<option value="">-- Any User with Role --</option>' + usersData.map(function (u) {
                 var sel = String(u.id) === String(step.user_id) ? "selected" : "";
                 return '<option value="' + u.id + '" ' + sel + '>' + u.email + '</option>';
             }).join("");
 
-            card.innerHTML = 
+            card.innerHTML =
                 '<div class="d-flex justify-content-between align-items-center mb-2">' +
-                    '<div class="fw-bold text-dark small"><i class="fa-solid fa-arrow-down-short-wide text-primary me-1"></i> Level ' + (idx + 1) + ' Approval Step</div>' +
-                    '<div class="d-flex gap-1">' +
-                        (idx > 0 ? '<button type="button" class="btn btn-xs btn-outline-secondary btn-step-up" data-idx="' + idx + '" title="Move Up"><i class="fa-solid fa-arrow-up"></i></button>' : '') +
-                        (idx < rawSteps.length - 1 ? '<button type="button" class="btn btn-xs btn-outline-secondary btn-step-down" data-idx="' + idx + '" title="Move Down"><i class="fa-solid fa-arrow-down"></i></button>' : '') +
-                        (rawSteps.length > 1 ? '<button type="button" class="btn btn-xs btn-outline-danger btn-step-remove" data-idx="' + idx + '" title="Remove Step"><i class="fa-solid fa-trash"></i></button>' : '') +
-                    '</div>' +
+                '<div class="fw-bold text-dark small"><i class="fa-solid fa-arrow-down-short-wide text-primary me-1"></i> Level ' + (idx + 1) + ' Approval Step</div>' +
+                '<div class="d-flex gap-1">' +
+                (idx > 0 ? '<button type="button" class="btn btn-xs btn-outline-secondary btn-step-up" data-idx="' + idx + '" title="Move Up"><i class="fa-solid fa-arrow-up"></i></button>' : '') +
+                (idx < rawSteps.length - 1 ? '<button type="button" class="btn btn-xs btn-outline-secondary btn-step-down" data-idx="' + idx + '" title="Move Down"><i class="fa-solid fa-arrow-down"></i></button>' : '') +
+                (rawSteps.length > 1 ? '<button type="button" class="btn btn-xs btn-outline-danger btn-step-remove" data-idx="' + idx + '" title="Remove Step"><i class="fa-solid fa-trash"></i></button>' : '') +
+                '</div>' +
                 '</div>' +
                 '<div class="row g-2">' +
-                    '<div class="col-md-4">' +
-                        '<label class="form-label small text-muted mb-1">Approver Role <span class="text-danger">*</span></label>' +
-                        '<select class="form-select form-select-sm step-role-select" data-idx="' + idx + '">' + roleOptionsHtml + '</select>' +
-                    '</div>' +
-                    '<div class="col-md-4">' +
-                        '<label class="form-label small text-muted mb-1">Designated Specific User</label>' +
-                        '<select class="form-select form-select-sm step-user-select" data-idx="' + idx + '">' + userOptionsHtml + '</select>' +
-                    '</div>' +
-                    '<div class="col-md-4">' +
-                        '<label class="form-label small text-muted mb-1">Step Type</label>' +
-                        '<select class="form-select form-select-sm step-type-select" data-idx="' + idx + '">' +
-                            '<option value="SEQUENTIAL" ' + (step.step_type === "SEQUENTIAL" ? "selected" : "") + '>Sequential</option>' +
-                            '<option value="PARALLEL" ' + (step.step_type === "PARALLEL" ? "selected" : "") + '>Parallel</option>' +
-                        '</select>' +
-                    '</div>' +
-                    '<div class="col-md-4">' +
-                        '<label class="form-label small text-muted mb-1">Step Limit (Optional)</label>' +
-                        '<input type="number" step="0.01" class="form-control form-control-sm step-limit-input" data-idx="' + idx + '" value="' + (step.approval_limit || "") + '" placeholder="e.g. 50000.00">' +
-                    '</div>' +
-                    '<div class="col-md-4">' +
-                        '<label class="form-label small text-muted mb-1">Rejection Behavior</label>' +
-                        '<select class="form-select form-select-sm step-rejection-select" data-idx="' + idx + '">' +
-                            '<option value="STOP_WORKFLOW" ' + (step.rejection_behavior === "STOP_WORKFLOW" ? "selected" : "") + '>Stop & Reject</option>' +
-                            '<option value="RETURN_TO_REQUESTER" ' + (step.rejection_behavior === "RETURN_TO_REQUESTER" ? "selected" : "") + '>Return to Requester</option>' +
-                            '<option value="RETURN_TO_PREVIOUS" ' + (step.rejection_behavior === "RETURN_TO_PREVIOUS" ? "selected" : "") + '>Return to Previous Step</option>' +
-                        '</select>' +
-                    '</div>' +
-                    '<div class="col-md-4">' +
-                        '<label class="form-label small text-muted mb-1">Escalation SLA (Hours)</label>' +
-                        '<input type="number" min="1" class="form-control form-control-sm step-escalation-input" data-idx="' + idx + '" value="' + (step.escalation_hours || "") + '" placeholder="e.g. 48">' +
-                    '</div>' +
+                '<div class="col-md-4">' +
+                '<label for="step_role_' + idx + '" class="form-label small text-muted mb-1">Approver Role <span class="text-danger">*</span></label>' +
+                '<select class="form-select form-select-sm step-role-select" id="step_role_' + idx + '" data-idx="' + idx + '" aria-describedby="step_role_error_' + idx + '">' + roleOptionsHtml + '</select>' +
+                '<div class="invalid-feedback d-none mt-1 small fw-semibold step-role-error" id="step_role_error_' + idx + '" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger"></span></div>' +
+                '</div>' +
+                '<div class="col-md-4">' +
+                '<label for="step_user_' + idx + '" class="form-label small text-muted mb-1">Designated Specific User</label>' +
+                '<select class="form-select form-select-sm step-user-select" id="step_user_' + idx + '" data-idx="' + idx + '">' + userOptionsHtml + '</select>' +
+                '</div>' +
+                '<div class="col-md-4">' +
+                '<label for="step_type_' + idx + '" class="form-label small text-muted mb-1">Step Type</label>' +
+                '<select class="form-select form-select-sm step-type-select" id="step_type_' + idx + '" data-idx="' + idx + '">' +
+                '<option value="SEQUENTIAL" ' + (step.step_type === "SEQUENTIAL" ? "selected" : "") + '>Sequential</option>' +
+                '<option value="PARALLEL" ' + (step.step_type === "PARALLEL" ? "selected" : "") + '>Parallel</option>' +
+                '</select>' +
+                '</div>' +
+                '<div class="col-md-4">' +
+                '<label for="step_limit_' + idx + '" class="form-label small text-muted mb-1">Step Limit (Optional)</label>' +
+                '<input type="number" step="0.01" min="0" class="form-control form-control-sm step-limit-input" id="step_limit_' + idx + '" data-idx="' + idx + '" value="' + (step.approval_limit || "") + '" placeholder="e.g. 50000.00" aria-describedby="step_limit_error_' + idx + '">' +
+                '<div class="invalid-feedback d-none mt-1 small fw-semibold step-limit-error" id="step_limit_error_' + idx + '" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger"></span></div>' +
+                '</div>' +
+                '<div class="col-md-4">' +
+                '<label for="step_rejection_' + idx + '" class="form-label small text-muted mb-1">Rejection Behavior</label>' +
+                '<select class="form-select form-select-sm step-rejection-select" id="step_rejection_' + idx + '" data-idx="' + idx + '">' +
+                '<option value="STOP_WORKFLOW" ' + (step.rejection_behavior === "STOP_WORKFLOW" ? "selected" : "") + '>Stop & Reject</option>' +
+                '<option value="RETURN_TO_REQUESTER" ' + (step.rejection_behavior === "RETURN_TO_REQUESTER" ? "selected" : "") + '>Return to Requester</option>' +
+                '<option value="RETURN_TO_PREVIOUS" ' + (step.rejection_behavior === "RETURN_TO_PREVIOUS" ? "selected" : "") + '>Return to Previous Step</option>' +
+                '</select>' +
+                '</div>' +
+                '<div class="col-md-4">' +
+                '<label for="step_escalation_' + idx + '" class="form-label small text-muted mb-1">Escalation SLA (Hours)</label>' +
+                '<input type="number" min="1" class="form-control form-control-sm step-escalation-input" id="step_escalation_' + idx + '" data-idx="' + idx + '" value="' + (step.escalation_hours || "") + '" placeholder="e.g. 48" aria-describedby="step_escalation_error_' + idx + '">' +
+                '<div class="invalid-feedback d-none mt-1 small fw-semibold step-escalation-error" id="step_escalation_error_' + idx + '" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger"></span></div>' +
+                '</div>' +
                 '</div>';
 
             container.appendChild(card);
@@ -466,53 +622,101 @@ window.updatePolicyActiveSwitch = function(el) {
     }
 
     function attachStepListeners() {
-        document.querySelectorAll(".step-role-select").forEach(function(sel) {
-            sel.addEventListener("change", function() {
+        document.querySelectorAll(".step-role-select").forEach(function (sel) {
+            sel.addEventListener("change", function () {
                 var idx = parseInt(this.getAttribute("data-idx"));
                 rawSteps[idx].role_id = this.value;
-                var rObj = rolesData.find(function(r) { return String(r.id) === String(sel.value); });
+                var rObj = rolesData.find(function (r) { return String(r.id) === String(sel.value); });
                 rawSteps[idx].role_name = rObj ? rObj.name : "";
                 document.getElementById("id_steps_data").value = JSON.stringify(rawSteps);
+
+                var errorEl = document.getElementById("step_role_error_" + idx);
+                if (this.value) {
+                    clearFieldError(this, errorEl);
+                } else {
+                    setFieldError(this, errorEl, "Select an Approver Role for Level " + (idx + 1) + ".");
+                }
                 renderSteps();
             });
+            sel.addEventListener("blur", function () {
+                var idx = parseInt(this.getAttribute("data-idx"));
+                var errorEl = document.getElementById("step_role_error_" + idx);
+                if (!this.value) {
+                    setFieldError(this, errorEl, "Select an Approver Role for Level " + (idx + 1) + ".");
+                } else {
+                    clearFieldError(this, errorEl);
+                }
+            });
         });
-        document.querySelectorAll(".step-user-select").forEach(function(sel) {
-            sel.addEventListener("change", function() {
+
+        document.querySelectorAll(".step-user-select").forEach(function (sel) {
+            sel.addEventListener("change", function () {
                 var idx = parseInt(this.getAttribute("data-idx"));
                 rawSteps[idx].user_id = this.value;
                 document.getElementById("id_steps_data").value = JSON.stringify(rawSteps);
             });
         });
-        document.querySelectorAll(".step-type-select").forEach(function(sel) {
-            sel.addEventListener("change", function() {
+
+        document.querySelectorAll(".step-type-select").forEach(function (sel) {
+            sel.addEventListener("change", function () {
                 var idx = parseInt(this.getAttribute("data-idx"));
                 rawSteps[idx].step_type = this.value;
                 document.getElementById("id_steps_data").value = JSON.stringify(rawSteps);
             });
         });
-        document.querySelectorAll(".step-limit-input").forEach(function(inp) {
-            inp.addEventListener("input", function() {
-                var idx = parseInt(this.getAttribute("data-idx"));
-                rawSteps[idx].approval_limit = this.value;
+
+        document.querySelectorAll(".step-limit-input").forEach(function (inp) {
+            function validateLimit() {
+                var idx = parseInt(inp.getAttribute("data-idx"));
+                var val = inp.value.trim();
+                var errorEl = document.getElementById("step_limit_error_" + idx);
+                rawSteps[idx].approval_limit = val;
                 document.getElementById("id_steps_data").value = JSON.stringify(rawSteps);
-            });
+                if (val !== "") {
+                    var num = Number(val);
+                    if (isNaN(num) || num <= 0) {
+                        setFieldError(inp, errorEl, "Step Limit must be a positive amount.");
+                        return false;
+                    }
+                }
+                clearFieldError(inp, errorEl);
+                return true;
+            }
+            inp.addEventListener("input", validateLimit);
+            inp.addEventListener("blur", validateLimit);
         });
-        document.querySelectorAll(".step-rejection-select").forEach(function(sel) {
-            sel.addEventListener("change", function() {
+
+        document.querySelectorAll(".step-rejection-select").forEach(function (sel) {
+            sel.addEventListener("change", function () {
                 var idx = parseInt(this.getAttribute("data-idx"));
                 rawSteps[idx].rejection_behavior = this.value;
                 document.getElementById("id_steps_data").value = JSON.stringify(rawSteps);
             });
         });
-        document.querySelectorAll(".step-escalation-input").forEach(function(inp) {
-            inp.addEventListener("input", function() {
-                var idx = parseInt(this.getAttribute("data-idx"));
-                rawSteps[idx].escalation_hours = this.value;
+
+        document.querySelectorAll(".step-escalation-input").forEach(function (inp) {
+            function validateEscalation() {
+                var idx = parseInt(inp.getAttribute("data-idx"));
+                var val = inp.value.trim();
+                var errorEl = document.getElementById("step_escalation_error_" + idx);
+                rawSteps[idx].escalation_hours = val;
                 document.getElementById("id_steps_data").value = JSON.stringify(rawSteps);
-            });
+                if (val !== "") {
+                    var num = parseInt(val, 10);
+                    if (isNaN(num) || num < 1) {
+                        setFieldError(inp, errorEl, "Escalation SLA must be at least 1 hour.");
+                        return false;
+                    }
+                }
+                clearFieldError(inp, errorEl);
+                return true;
+            }
+            inp.addEventListener("input", validateEscalation);
+            inp.addEventListener("blur", validateEscalation);
         });
-        document.querySelectorAll(".btn-step-up").forEach(function(btn) {
-            btn.addEventListener("click", function() {
+
+        document.querySelectorAll(".btn-step-up").forEach(function (btn) {
+            btn.addEventListener("click", function () {
                 var idx = parseInt(this.getAttribute("data-idx"));
                 if (idx > 0) {
                     var tmp = rawSteps[idx];
@@ -522,8 +726,9 @@ window.updatePolicyActiveSwitch = function(el) {
                 }
             });
         });
-        document.querySelectorAll(".btn-step-down").forEach(function(btn) {
-            btn.addEventListener("click", function() {
+
+        document.querySelectorAll(".btn-step-down").forEach(function (btn) {
+            btn.addEventListener("click", function () {
                 var idx = parseInt(this.getAttribute("data-idx"));
                 if (idx < rawSteps.length - 1) {
                     var tmp = rawSteps[idx];
@@ -533,8 +738,9 @@ window.updatePolicyActiveSwitch = function(el) {
                 }
             });
         });
-        document.querySelectorAll(".btn-step-remove").forEach(function(btn) {
-            btn.addEventListener("click", function() {
+
+        document.querySelectorAll(".btn-step-remove").forEach(function (btn) {
+            btn.addEventListener("click", function () {
                 var idx = parseInt(this.getAttribute("data-idx"));
                 rawSteps.splice(idx, 1);
                 renderSteps();
@@ -544,7 +750,7 @@ window.updatePolicyActiveSwitch = function(el) {
 
     var addStepBtn = document.getElementById("addStepBtn");
     if (addStepBtn) {
-        addStepBtn.addEventListener("click", function() {
+        addStepBtn.addEventListener("click", function () {
             var defaultRole = rolesData.length > 0 ? rolesData[0] : { id: "", name: "Approver" };
             rawSteps.push({
                 step_number: rawSteps.length + 1,
@@ -559,12 +765,323 @@ window.updatePolicyActiveSwitch = function(el) {
                 rejection_behavior: "STOP_WORKFLOW",
                 escalation_hours: 48
             });
+            var seqErr = document.getElementById("steps-sequence-error");
+            if (seqErr) {
+                seqErr.classList.remove("d-block");
+                seqErr.classList.add("d-none");
+            }
             renderSteps();
         });
     }
 
     // Initial render
     renderSteps();
+
+    // Field-level validator functions
+    function validateName() {
+        var inp = document.getElementById("id_name");
+        var err = document.getElementById("id_name-error");
+        if (!inp) return true;
+        var val = (inp.value || "").trim();
+        if (!val) {
+            setFieldError(inp, err, "Enter the policy name.");
+            return false;
+        }
+        if (val.length < 2) {
+            setFieldError(inp, err, "Policy Name must be at least 2 characters.");
+            return false;
+        }
+        if (val.length > 150) {
+            setFieldError(inp, err, "Policy Name cannot exceed 150 characters.");
+            return false;
+        }
+        clearFieldError(inp, err);
+        return true;
+    }
+
+    function validateModule() {
+        var sel = document.getElementById("id_module");
+        var err = document.getElementById("id_module-error");
+        if (!sel) return true;
+        var val = (sel.value || "").trim();
+        if (!val || val === "-------") {
+            setFieldError(sel, err, "Select a Transaction Type / Module.");
+            return false;
+        }
+        clearFieldError(sel, err);
+        return true;
+    }
+
+    function validateMinAmount() {
+        var inp = document.getElementById("id_min_amount");
+        var err = document.getElementById("id_min_amount-error");
+        if (!inp) return true;
+        var val = (inp.value || "").trim();
+        if (!val) {
+            setFieldError(inp, err, "Enter the minimum amount.");
+            return false;
+        }
+        var num = Number(val);
+        if (isNaN(num) || num < 0) {
+            setFieldError(inp, err, "Minimum amount cannot be negative.");
+            return false;
+        }
+        clearFieldError(inp, err);
+        // Also revalidate max_amount in case max_amount had an error relative to min_amount
+        validateMaxAmount(false);
+        return true;
+    }
+
+    function validateMaxAmount(triggerBoth) {
+        var inp = document.getElementById("id_max_amount");
+        var err = document.getElementById("id_max_amount-error");
+        if (!inp) return true;
+        var val = (inp.value || "").trim();
+        if (val !== "") {
+            var num = Number(val);
+            if (isNaN(num) || num < 0) {
+                setFieldError(inp, err, "Maximum amount cannot be negative.");
+                return false;
+            }
+            var minInp = document.getElementById("id_min_amount");
+            if (minInp && minInp.value.trim() !== "" && !isNaN(Number(minInp.value.trim()))) {
+                var minNum = Number(minInp.value.trim());
+                if (num < minNum) {
+                    setFieldError(inp, err, "Maximum amount must be greater than or equal to minimum amount.");
+                    return false;
+                }
+            }
+        }
+        clearFieldError(inp, err);
+        return true;
+    }
+
+    // Step 1 full validation
+    function validateStep1() {
+        var isNameValid = validateName();
+        var isModuleValid = validateModule();
+        var isMinValid = validateMinAmount();
+        var isMaxValid = validateMaxAmount(true);
+
+        if (!isNameValid) {
+            var nameInp = document.getElementById("id_name");
+            if (nameInp) nameInp.focus();
+            return false;
+        }
+        if (!isModuleValid) {
+            var modSel = document.getElementById("id_module");
+            if (modSel) modSel.focus();
+            return false;
+        }
+        if (!isMinValid) {
+            var minInp = document.getElementById("id_min_amount");
+            if (minInp) minInp.focus();
+            return false;
+        }
+        if (!isMaxValid) {
+            var maxInp = document.getElementById("id_max_amount");
+            if (maxInp) maxInp.focus();
+            return false;
+        }
+        return true;
+    }
+
+    // Step 2 full validation
+    function validateStep2() {
+        var seqErr = document.getElementById("steps-sequence-error");
+        if (!rawSteps || rawSteps.length === 0) {
+            if (seqErr) {
+                var span = seqErr.querySelector(".error-text");
+                if (span) span.textContent = "At least one approval level is required in the sequence.";
+                seqErr.classList.remove("d-none");
+                seqErr.classList.add("d-block");
+            }
+            var addBtn = document.getElementById("addStepBtn");
+            if (addBtn) addBtn.focus();
+            return false;
+        }
+        if (seqErr) {
+            seqErr.classList.remove("d-block");
+            seqErr.classList.add("d-none");
+        }
+
+        var firstInvalid = null;
+        var valid = true;
+
+        rawSteps.forEach(function (s, idx) {
+            var roleSel = document.querySelector('.step-role-select[data-idx="' + idx + '"]');
+            var roleErr = document.getElementById("step_role_error_" + idx);
+            if (!s.role_id) {
+                setFieldError(roleSel, roleErr, "Select an Approver Role for Level " + (idx + 1) + ".");
+                valid = false;
+                if (!firstInvalid && roleSel) firstInvalid = roleSel;
+            } else {
+                clearFieldError(roleSel, roleErr);
+            }
+
+            var limitInp = document.querySelector('.step-limit-input[data-idx="' + idx + '"]');
+            var limitErr = document.getElementById("step_limit_error_" + idx);
+            if (s.approval_limit !== undefined && String(s.approval_limit).trim() !== "") {
+                var limNum = Number(s.approval_limit);
+                if (isNaN(limNum) || limNum <= 0) {
+                    setFieldError(limitInp, limitErr, "Step Limit must be a positive amount.");
+                    valid = false;
+                    if (!firstInvalid && limitInp) firstInvalid = limitInp;
+                } else {
+                    clearFieldError(limitInp, limitErr);
+                }
+            } else {
+                clearFieldError(limitInp, limitErr);
+            }
+
+            var escInp = document.querySelector('.step-escalation-input[data-idx="' + idx + '"]');
+            var escErr = document.getElementById("step_escalation_error_" + idx);
+            if (s.escalation_hours !== undefined && String(s.escalation_hours).trim() !== "") {
+                var escNum = parseInt(s.escalation_hours, 10);
+                if (isNaN(escNum) || escNum < 1) {
+                    setFieldError(escInp, escErr, "Escalation SLA must be at least 1 hour.");
+                    valid = false;
+                    if (!firstInvalid && escInp) firstInvalid = escInp;
+                } else {
+                    clearFieldError(escInp, escErr);
+                }
+            } else {
+                clearFieldError(escInp, escErr);
+            }
+        });
+
+        if (!valid && firstInvalid) {
+            firstInvalid.focus();
+        }
+        return valid;
+    }
+
+    // Step 3 full validation
+    function validateStep3() {
+        if (!excCheck || !excCheck.checked) return true;
+
+        var valid = true;
+        var firstInvalid = null;
+
+        var roleSel = document.getElementById("id_exception_approver_role");
+        var roleErr = document.getElementById("id_exception_approver_role-error");
+        if (roleSel) {
+            var roleVal = (roleSel.value || "").trim();
+            if (!roleVal) {
+                setFieldError(roleSel, roleErr, "Select an Exception Approver Role.");
+                valid = false;
+                if (!firstInvalid) firstInvalid = roleSel;
+            } else {
+                clearFieldError(roleSel, roleErr);
+            }
+        }
+
+        var threshInp = document.getElementById("id_exception_amount_threshold");
+        var threshErr = document.getElementById("id_exception_amount_threshold-error");
+        if (threshInp && threshInp.value.trim() !== "") {
+            var tVal = Number(threshInp.value.trim());
+            if (isNaN(tVal) || tVal < 0) {
+                setFieldError(threshInp, threshErr, "Exception Amount Threshold cannot be negative.");
+                valid = false;
+                if (!firstInvalid) firstInvalid = threshInp;
+            } else {
+                clearFieldError(threshInp, threshErr);
+            }
+        } else {
+            clearFieldError(threshInp, threshErr);
+        }
+
+        var escInp = document.getElementById("id_exception_escalation_time_hours");
+        var escErr = document.getElementById("id_exception_escalation_time_hours-error");
+        if (escInp && escInp.value.trim() !== "") {
+            var eVal = parseInt(escInp.value.trim(), 10);
+            if (isNaN(eVal) || eVal < 1) {
+                setFieldError(escInp, escErr, "Escalation Window must be at least 1 hour.");
+                valid = false;
+                if (!firstInvalid) firstInvalid = escInp;
+            } else {
+                clearFieldError(escInp, escErr);
+            }
+        } else {
+            clearFieldError(escInp, escErr);
+        }
+
+        if (!valid && firstInvalid) {
+            firstInvalid.focus();
+        }
+        return valid;
+    }
+
+    // Attach real-time validation listeners to Step 1 fields
+    var nameInp = document.getElementById("id_name");
+    if (nameInp) {
+        nameInp.addEventListener("input", validateName);
+        nameInp.addEventListener("blur", validateName);
+    }
+    var modSel = document.getElementById("id_module");
+    if (modSel) {
+        modSel.addEventListener("change", validateModule);
+        modSel.addEventListener("blur", validateModule);
+    }
+    var minInp = document.getElementById("id_min_amount");
+    if (minInp) {
+        minInp.addEventListener("input", validateMinAmount);
+        minInp.addEventListener("blur", validateMinAmount);
+    }
+    var maxInp = document.getElementById("id_max_amount");
+    if (maxInp) {
+        maxInp.addEventListener("input", function () { validateMaxAmount(false); });
+        maxInp.addEventListener("blur", function () { validateMaxAmount(false); });
+    }
+
+    // Attach real-time validation listeners to Step 3 fields
+    var excRole = document.getElementById("id_exception_approver_role");
+    if (excRole) {
+        excRole.addEventListener("change", function () {
+            if (excCheck && excCheck.checked) {
+                var roleErr = document.getElementById("id_exception_approver_role-error");
+                if (this.value) clearFieldError(this, roleErr);
+                else setFieldError(this, roleErr, "Select an Exception Approver Role.");
+            }
+        });
+        excRole.addEventListener("blur", function () {
+            if (excCheck && excCheck.checked) {
+                var roleErr = document.getElementById("id_exception_approver_role-error");
+                if (!this.value) setFieldError(this, roleErr, "Select an Exception Approver Role.");
+                else clearFieldError(this, roleErr);
+            }
+        });
+    }
+
+    var excThresh = document.getElementById("id_exception_amount_threshold");
+    if (excThresh) {
+        function checkThresh() {
+            var threshErr = document.getElementById("id_exception_amount_threshold-error");
+            var val = excThresh.value.trim();
+            if (val !== "" && (isNaN(Number(val)) || Number(val) < 0)) {
+                setFieldError(excThresh, threshErr, "Exception Amount Threshold cannot be negative.");
+            } else {
+                clearFieldError(excThresh, threshErr);
+            }
+        }
+        excThresh.addEventListener("input", checkThresh);
+        excThresh.addEventListener("blur", checkThresh);
+    }
+
+    var excEsc = document.getElementById("id_exception_escalation_time_hours");
+    if (excEsc) {
+        function checkExcEsc() {
+            var escErr = document.getElementById("id_exception_escalation_time_hours-error");
+            var val = excEsc.value.trim();
+            if (val !== "" && (isNaN(parseInt(val, 10)) || parseInt(val, 10) < 1)) {
+                setFieldError(excEsc, escErr, "Escalation Window must be at least 1 hour.");
+            } else {
+                clearFieldError(excEsc, escErr);
+            }
+        }
+        excEsc.addEventListener("input", checkExcEsc);
+        excEsc.addEventListener("blur", checkExcEsc);
+    }
 
     // Multi-step Wizard Navigation Controls (Next / Back / Save Policy)
     var nextBtn = document.getElementById("policyWizardNextBtn");
@@ -590,51 +1107,29 @@ window.updatePolicyActiveSwitch = function(el) {
         }
     }
 
-    document.querySelectorAll('#policyTabs button[data-bs-toggle="pill"]').forEach(function(tabBtn) {
-        tabBtn.addEventListener('shown.bs.tab', function(e) {
+    document.querySelectorAll('#policyTabs button[data-bs-toggle="pill"]').forEach(function (tabBtn) {
+        tabBtn.addEventListener('shown.bs.tab', function (e) {
             var targetId = e.target.getAttribute('data-bs-target').replace('#', '');
             updateWizardButtons(targetId);
         });
     });
 
-    ['id_name', 'id_module', 'id_min_amount'].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('input', function() {
-                this.classList.remove('is-invalid');
-            });
-            el.addEventListener('change', function() {
-                this.classList.remove('is-invalid');
-            });
-        }
-    });
-
     if (nextBtn) {
-        nextBtn.addEventListener("click", function() {
+        nextBtn.addEventListener("click", function () {
             var activeTab = document.querySelector('#policyTabs button.active');
             if (!activeTab) return;
             var currentId = activeTab.getAttribute('data-bs-target').replace('#', '');
+
             if (currentId === 'tab-scope') {
-                var nameInput = document.getElementById('id_name');
-                var minInput = document.getElementById('id_min_amount');
-                var hasError = false;
-                if (nameInput && !nameInput.value.trim()) {
-                    nameInput.classList.add('is-invalid');
-                    nameInput.focus();
-                    hasError = true;
-                }
-                if (minInput && !minInput.value.trim()) {
-                    minInput.classList.add('is-invalid');
-                    if (!hasError) minInput.focus();
-                    hasError = true;
-                }
-                if (hasError) return;
+                if (!validateStep1()) return;
 
                 var step2Btn = document.getElementById('tab-workflow-btn');
                 if (step2Btn && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
                     bootstrap.Tab.getOrCreateInstance(step2Btn).show();
                 }
             } else if (currentId === 'tab-workflow') {
+                if (!validateStep2()) return;
+
                 var step3Btn = document.getElementById('tab-exception-btn');
                 if (step3Btn && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
                     bootstrap.Tab.getOrCreateInstance(step3Btn).show();
@@ -644,7 +1139,7 @@ window.updatePolicyActiveSwitch = function(el) {
     }
 
     if (backBtn) {
-        backBtn.addEventListener("click", function() {
+        backBtn.addEventListener("click", function () {
             var activeTab = document.querySelector('#policyTabs button.active');
             if (!activeTab) return;
             var currentId = activeTab.getAttribute('data-bs-target').replace('#', '');
@@ -662,15 +1157,81 @@ window.updatePolicyActiveSwitch = function(el) {
         });
     }
 
-    // Initialize wizard buttons on initial load (Step 1 active)
-    updateWizardButtons("tab-scope");
+    // Initialize wizard buttons on initial load
+    var initialActive = document.querySelector('#policyTabs button.active');
+    var initialTabId = initialActive ? initialActive.getAttribute('data-bs-target').replace('#', '') : 'tab-scope';
+    updateWizardButtons(initialTabId);
 
-    // Ensure hidden steps_data is synced before form submission
+    // Form submission validation across all 3 steps
     var policyForm = document.getElementById("policyForm");
     if (policyForm) {
-        policyForm.addEventListener("submit", function() {
+        policyForm.addEventListener("submit", function (e) {
+            // Validate Step 1
+            if (!validateStep1()) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                var step1Btn = document.getElementById('tab-scope-btn');
+                if (step1Btn && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                    bootstrap.Tab.getOrCreateInstance(step1Btn).show();
+                }
+                var firstInvalid1 = policyForm.querySelector('#tab-scope .is-invalid');
+                if (firstInvalid1) firstInvalid1.focus();
+                return false;
+            }
+
+            // Validate Step 2
+            if (!validateStep2()) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                var step2Btn = document.getElementById('tab-workflow-btn');
+                if (step2Btn && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                    bootstrap.Tab.getOrCreateInstance(step2Btn).show();
+                }
+                var firstInvalid2 = policyForm.querySelector('#tab-workflow .is-invalid');
+                if (firstInvalid2) firstInvalid2.focus();
+                return false;
+            }
+
+            // Validate Step 3
+            if (!validateStep3()) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                var step3Btn = document.getElementById('tab-exception-btn');
+                if (step3Btn && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                    bootstrap.Tab.getOrCreateInstance(step3Btn).show();
+                }
+                var firstInvalid3 = policyForm.querySelector('#tab-exception .is-invalid');
+                if (firstInvalid3) firstInvalid3.focus();
+                return false;
+            }
+
+            // All steps valid: sync hidden steps_data
             document.getElementById("id_steps_data").value = JSON.stringify(rawSteps);
         });
     }
-})();
+
+    // If server returned form errors on reload/swap, automatically activate the tab with errors
+    {% if form.errors %}
+    var hasScopeErrors = {% if form.name.errors or form.module.errors or form.currency.errors or form.organization.errors or form.department.errors or form.cost_center.errors or form.min_amount.errors or form.max_amount.errors %}true{% else %} false{% endif %};
+    var hasWorkflowErrors = {% if form.steps_data.errors %}true{% else %} false{% endif %};
+    var hasExceptionErrors = {% if form.has_exception_routing.errors or form.exception_approver_role.errors or form.exception_amount_threshold.errors or form.exception_escalation_time_hours.errors or form.exception_routing_behavior.errors %}true{% else %} false{% endif %};
+
+    if (hasScopeErrors) {
+        var step1Btn = document.getElementById('tab-scope-btn');
+        if (step1Btn && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+            bootstrap.Tab.getOrCreateInstance(step1Btn).show();
+        }
+    } else if (hasWorkflowErrors) {
+        var step2Btn = document.getElementById('tab-workflow-btn');
+        if (step2Btn && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+            bootstrap.Tab.getOrCreateInstance(step2Btn).show();
+        }
+    } else if (hasExceptionErrors) {
+        var step3Btn = document.getElementById('tab-exception-btn');
+        if (step3Btn && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+            bootstrap.Tab.getOrCreateInstance(step3Btn).show();
+        }
+    }
+    {% endif %}
+}) ();
 </script>

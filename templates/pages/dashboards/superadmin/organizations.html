@@ -147,10 +147,15 @@
                 </div>
             </div>
             {% if orgs|length > 5 %}
-            <div class="card-footer bg-white border-top py-3 text-center" id="orgToggleFooter">
-                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-4 fw-semibold shadow-2xs" id="toggleOrgBtn" onclick="toggleSectionRows('org', {{ orgs|length|add:'-5' }})">
-                    <span id="toggleOrgText"><i class="fa-solid fa-chevron-down me-1"></i> Show More ({{ orgs|length|add:'-5' }} more)</span>
-                </button>
+            <div class="card-footer bg-white border-top py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3" id="orgToggleFooter">
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-4 fw-semibold shadow-2xs" id="toggleOrgBtn" onclick="toggleSectionRows('org', {{ orgs|length|add:'-5' }})">
+                        <span id="toggleOrgText"><i class="fa-solid fa-chevron-down me-1"></i> Show More ({{ orgs|length|add:'-5' }} more)</span>
+                    </button>
+                    <span class="text-muted small" id="orgShowingCount">
+                        Showing <strong>5</strong> of <strong>{{ orgs|length }}</strong> organizations
+                    </span>
+                </div>
             </div>
             {% endif %}
         </div>

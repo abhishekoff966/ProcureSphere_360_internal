@@ -2421,8 +2421,12 @@ class PolicyAdminForm(BootstrapValidationMixin, forms.ModelForm):
 
         self.fields["name"].required = True
         self.fields["module"].required = True
+        self.fields["min_amount"].required = True
+        self.fields["currency"].required = False
+        self.fields["status"].required = False
         self.fields["name"].error_messages["required"] = "Policy Name is required."
         self.fields["module"].error_messages["required"] = "Module is required."
+        self.fields["min_amount"].error_messages["required"] = "Minimum amount is required."
 
         scoped_org = _get_form_scoped_org(request)
         if not scoped_org and self.instance and getattr(self.instance, "organization_id", None):
@@ -2483,25 +2487,88 @@ class PolicyAdminForm(BootstrapValidationMixin, forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        name = cleaned_data.get("name")
+        module = cleaned_data.get("module")
         min_amount = cleaned_data.get("min_amount")
         max_amount = cleaned_data.get("max_amount")
         department = cleaned_data.get("department")
         cost_center = cleaned_data.get("cost_center")
         org = cleaned_data.get("organization") or _get_form_scoped_org(self.request)
-        module = cleaned_data.get("module")
         is_active = cleaned_data.get("is_active", True)
         status = cleaned_data.get("status", ApprovalPolicy.STATUS_ACTIVE)
 
-        if min_amount is not None and min_amount < Decimal("0.00"):
+        if not cleaned_data.get("currency"):
+            cleaned_data["currency"] = "INR"
+        if not cleaned_data.get("status"):
+            cleaned_data["status"] = ApprovalPolicy.STATUS_ACTIVE
+
+        if not name or not name.strip():
+            self.add_error("name", "Policy Name is required.")
+        elif len(name.strip()) < 2:
+            self.add_error("name", "Policy Name must be at least 2 characters.")
+        elif len(name.strip()) > 150:
+            self.add_error("name", "Policy Name cannot exceed 150 characters.")
+        else:
+            cleaned_data["name"] = name.strip()
+
+        if not module:
+            self.add_error("module", "Module is required.")
+
+        if min_amount is None:
+            self.add_error("min_amount", "Minimum amount is required.")
+        elif min_amount < Decimal("0.00"):
             self.add_error("min_amount", "Minimum amount cannot be negative.")
 
-        if min_amount is not None and max_amount is not None:
-            if min_amount > max_amount:
+        if max_amount is not None:
+            if max_amount < Decimal("0.00"):
+                self.add_error("max_amount", "Maximum amount cannot be negative.")
+            elif min_amount is not None and min_amount > max_amount:
                 self.add_error("min_amount", "Minimum amount cannot be greater than maximum amount.")
+                self.add_error("max_amount", "Maximum amount must be greater than or equal to minimum amount.")
 
         if department and cost_center:
             if cost_center.department_id != department.id:
                 self.add_error("cost_center", f"Cost Center '{cost_center.code}' does not belong to Department '{department.name}'.")
+
+        # Step 3: Exception routing validation
+        if cleaned_data.get("has_exception_routing"):
+            if not cleaned_data.get("exception_approver_role"):
+                self.add_error("exception_approver_role", "Exception Approver Role is required when exception routing is enabled.")
+            exc_threshold = cleaned_data.get("exception_amount_threshold")
+            if exc_threshold is not None and exc_threshold < Decimal("0.00"):
+                self.add_error("exception_amount_threshold", "Exception Amount Threshold cannot be negative.")
+            exc_hours = cleaned_data.get("exception_escalation_time_hours")
+            if exc_hours is not None and exc_hours < 1:
+                self.add_error("exception_escalation_time_hours", "Escalation Window must be at least 1 hour.")
+
+        # Step 2: Sequence steps validation (when steps_data is provided in submission)
+        raw_steps_data = self.data.get("steps_data")
+        if raw_steps_data is not None:
+            import json
+            try:
+                steps_list = json.loads(raw_steps_data)
+                if not isinstance(steps_list, list) or len(steps_list) == 0:
+                    self.add_error("steps_data", "At least one approval level is required in the sequence.")
+                else:
+                    for idx, s in enumerate(steps_list, start=1):
+                        if not s.get("role_id"):
+                            self.add_error("steps_data", f"Select an Approver Role for Level {idx}.")
+                        if s.get("approval_limit") is not None and str(s.get("approval_limit")).strip() != "":
+                            try:
+                                lim = Decimal(str(s["approval_limit"]))
+                                if lim <= Decimal("0.00"):
+                                    self.add_error("steps_data", f"Step Limit for Level {idx} must be a positive amount.")
+                            except Exception:
+                                self.add_error("steps_data", f"Invalid Step Limit for Level {idx}.")
+                        if s.get("escalation_hours") is not None and str(s.get("escalation_hours")).strip() != "":
+                            try:
+                                hrs = int(s["escalation_hours"])
+                                if hrs < 1:
+                                    self.add_error("steps_data", f"Escalation SLA for Level {idx} must be at least 1 hour.")
+                            except Exception:
+                                self.add_error("steps_data", f"Invalid Escalation SLA for Level {idx}.")
+            except Exception:
+                self.add_error("steps_data", "Invalid approval sequence configuration.")
 
         # Conflict & Overlap Detection for Active Policies
         if is_active and status == ApprovalPolicy.STATUS_ACTIVE and module:

@@ -138,7 +138,7 @@ def create_organization_with_admin_service(
                 organization=org,
                 is_staff=False,
                 is_superuser=False,
-                is_active=True,
+                is_active=is_active,
                 must_change_password=True,
             )
             admin_user.set_password(raw_password)
@@ -159,7 +159,7 @@ def create_organization_with_admin_service(
             admin_user.role = role
             admin_user.is_staff = False
             admin_user.is_superuser = False
-            admin_user.is_active = True
+            admin_user.is_active = is_active
             if admin_password and admin_password.strip():
                 raw_password = admin_password.strip()
                 admin_user.set_password(raw_password)
@@ -228,7 +228,7 @@ def create_organization_with_admin_service(
                 organization=org,
                 is_staff=False,
                 is_superuser=False,
-                is_active=True,
+                is_active=is_active,
                 must_change_password=True,
             )
             proc_mgr_user.set_password(raw_pm_pwd)
@@ -241,6 +241,7 @@ def create_organization_with_admin_service(
             proc_mgr_user.role = pm_role
             proc_mgr_user.is_staff = False
             proc_mgr_user.is_superuser = False
+            proc_mgr_user.is_active = is_active
             if proc_mgr_password and proc_mgr_password.strip():
                 raw_pm_pwd = proc_mgr_password.strip()
                 proc_mgr_user.set_password(raw_pm_pwd)
@@ -280,7 +281,7 @@ def create_organization_with_admin_service(
                 organization=org,
                 is_staff=False,
                 is_superuser=False,
-                is_active=True,
+                is_active=is_active,
                 must_change_password=True,
             )
             auditor_user.set_password(raw_aud_pwd)
@@ -293,6 +294,7 @@ def create_organization_with_admin_service(
             auditor_user.role = aud_role
             auditor_user.is_staff = False
             auditor_user.is_superuser = False
+            auditor_user.is_active = is_active
             if auditor_password and auditor_password.strip():
                 raw_aud_pwd = auditor_password.strip()
                 auditor_user.set_password(raw_aud_pwd)

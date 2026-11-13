@@ -986,12 +986,24 @@ def org_edit_view(request, org_id):
     if request.method == "POST":
 
         prior_admin_user = org.admin_user
+        prior_active = org.is_active
 
         form = OrganizationAdminForm(request.POST, instance=org)
 
         if form.is_valid():
 
             org = form.save()
+
+            if prior_active != org.is_active:
+                if org.admin_user and org.admin_user.organization_id == org.id:
+                    org.admin_user.is_active = org.is_active
+                    org.admin_user.save(update_fields=["is_active"])
+                if org.procurement_manager and org.procurement_manager.organization_id == org.id:
+                    org.procurement_manager.is_active = org.is_active
+                    org.procurement_manager.save(update_fields=["is_active"])
+                if org.compliance_auditor and org.compliance_auditor.organization_id == org.id:
+                    org.compliance_auditor.is_active = org.is_active
+                    org.compliance_auditor.save(update_fields=["is_active"])
 
             admin_email = form.cleaned_data.get("admin_email")
 
@@ -3038,6 +3050,9 @@ def policy_create_view(request):
     if scoped_org:
         user_qs = user_qs.filter(Q(organization=scoped_org) | Q(department__organization=scoped_org))
 
+    submitted_steps = request.POST.get("steps_data") if request.method == "POST" else None
+    steps_json = submitted_steps if submitted_steps else json.dumps(initial_steps)
+
     return render(
         request,
         "pages/dashboards/superadmin/policy_form.html",
@@ -3045,7 +3060,7 @@ def policy_create_view(request):
             "form": form,
             "is_edit": False,
             "policy": None,
-            "steps_json": json.dumps(initial_steps),
+            "steps_json": steps_json,
             "available_roles": available_roles,
             "available_users": user_qs,
         },
@@ -3118,6 +3133,9 @@ def policy_edit_view(request, policy_id):
     if scoped_org:
         user_qs = user_qs.filter(Q(organization=scoped_org) | Q(department__organization=scoped_org))
 
+    submitted_steps = request.POST.get("steps_data") if request.method == "POST" else None
+    steps_json = submitted_steps if submitted_steps else json.dumps(steps_list)
+
     return render(
         request,
         "pages/dashboards/superadmin/policy_form.html",
@@ -3125,7 +3143,7 @@ def policy_edit_view(request, policy_id):
             "form": form,
             "is_edit": True,
             "policy": policy,
-            "steps_json": json.dumps(steps_list),
+            "steps_json": steps_json,
             "available_roles": available_roles,
             "available_users": user_qs,
         },
@@ -3713,6 +3731,7 @@ def dept_delete_view(request, dept_id):
         dept_code = dept.code
         dept_id_str = str(dept.id)
         from django.db.models import ProtectedError
+
         from apps.audit.services import create_audit_log_service
         try:
             create_audit_log_service(
@@ -3745,6 +3764,7 @@ def cost_center_delete_view(request, cc_id):
         cc_code = cc.code
         cc_id_str = str(cc.id)
         from django.db.models import ProtectedError
+
         from apps.audit.services import create_audit_log_service
         try:
             create_audit_log_service(
@@ -3782,6 +3802,7 @@ def user_delete_view(request, user_id):
         user_email = target_user.email
         user_id_str = str(target_user.id)
         from django.db.models import ProtectedError
+
         from apps.audit.services import create_audit_log_service
         try:
             create_audit_log_service(

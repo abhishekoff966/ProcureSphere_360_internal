@@ -19,6 +19,8 @@ def validate_org_code(value: str) -> str:
     Validates organization code:
     - Bounded length: 2 to 50 characters.
     - Disallows arbitrary characters (must be uppercase alphanumeric, '-', or '_').
+    - Must contain at least one alphabetical letter.
+    - Rejects numbers-only codes.
     """
     code = (value or "").strip().upper()
     if not code:
@@ -27,6 +29,10 @@ def validate_org_code(value: str) -> str:
         raise ValidationError("Organization code must be at least 2 characters in length.")
     if len(code) > 50:
         raise ValidationError("Organization code cannot exceed 50 characters in length.")
+    if code.isdigit() or not re.search(r"[A-Z]", code):
+        raise ValidationError(
+            "Organization Code must contain at least one letter and cannot be numbers-only."
+        )
     if not ORG_CODE_REGEX.match(code):
         raise ValidationError(
             "Organization code contains invalid characters. Only uppercase letters, numbers, hyphens (-), and underscores (_) are allowed."
@@ -56,8 +62,10 @@ def validate_org_name(value: str) -> str:
         raise ValidationError(
             "Organization name contains invalid characters. Only letters, numbers, spaces, and standard punctuation (&, ., ,, -, ', /, ()) are allowed."
         )
-    if not re.search(r"[A-Za-z]", name):
-        raise ValidationError("Organization name cannot contain only numbers or special characters. It must contain at least one letter.")
+    if name.isdigit() or not re.search(r"[A-Za-z]", name):
+        raise ValidationError(
+            "Organization Name cannot contain only numbers or special characters. It must contain at least one letter."
+        )
     return name
 
 

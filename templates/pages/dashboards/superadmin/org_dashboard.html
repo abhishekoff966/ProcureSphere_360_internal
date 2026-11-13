@@ -1270,7 +1270,7 @@
 
                                         </button>
 
-                                        <form method="POST" action="/superadmin/locations/{{ loc.pk }}/delete/" onsubmit="return confirm('Delete location {{ loc.name }}?');" class="d-inline m-0">
+                                        <form method="POST" action="/superadmin/locations/{{ loc.pk }}/delete/" onsubmit="if (!confirm('Delete location {{ loc.name }}?')) { if (window.resetButtonLoading && this._ps360_clickedSubmitBtn) window.resetButtonLoading(this._ps360_clickedSubmitBtn); delete this.dataset.submitting; return false; }" class="d-inline m-0">
 
                                             {% csrf_token %}
 
