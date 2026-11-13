@@ -205,13 +205,13 @@
 <div class="modal fade" id="poDetailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content bg-white rounded-4 border-0 shadow-lg overflow-hidden">
-            <div class="modal-header bg-hpe-navy text-white px-4 py-3">
+            <div class="modal-header px-4 py-3" style="background-color: #F9FAFB !important; border-bottom: 1px solid #E5E7EB !important;">
                 <div class="d-flex align-items-center gap-2">
                     <span class="badge bg-emerald text-white fw-bold px-2 py-1 rounded" id="modalPoBadge">PO</span>
-                    <h5 class="modal-title fw-bold font-heading mb-0" id="modalPoNumber">Purchase Order Details</h5>
-                    <span class="badge bg-white-20 text-white ms-2" id="modalPoVersion">V1</span>
+                    <h5 class="modal-title fw-bold font-heading mb-0" id="modalPoNumber" style="color: #111827 !important; font-size: 1.15rem;">Purchase Order Details</h5>
+                    <span class="badge bg-secondary-subtle text-dark border ms-2" id="modalPoVersion">V1</span>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
                 <!-- Top Summary Ribbon -->
@@ -369,18 +369,48 @@
     </div>
 </div>
 
+<style>
+/* Fixed Viewport Modal Overlay to Prevent Layout Shift */
+#poCancelModal.modal,
+#poDetailModal.modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 1060 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+#poCancelModal .modal-dialog {
+    margin: 1.75rem auto !important;
+    display: flex !important;
+    align-items: center !important;
+    min-height: calc(100% - 3.5rem) !important;
+}
+#poCancelModal .modal-content {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+</style>
+
 <!-- Modal: Purchase Order Governance Cancellation -->
-<div class="modal fade" id="poCancelModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="poCancelModal" tabindex="-1" aria-labelledby="poCancelModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content bg-white rounded-4 border-0 shadow-lg overflow-hidden">
-            <div class="modal-header bg-danger text-white px-4 py-3">
-                <h6 class="modal-title fw-bold font-heading d-flex align-items-center gap-2 mb-0">
-                    <i class="fa-solid fa-ban"></i> Cancel Purchase Order &amp; Release Budget
+            <div class="modal-header px-4 py-3" style="background-color: #F9FAFB !important; border-bottom: 1px solid #E5E7EB !important;">
+                <h6 class="modal-title fw-bold font-heading d-flex align-items-center gap-2 mb-0" id="poCancelModalTitle" style="color: #111827 !important;">
+                    <i class="fa-solid fa-ban text-danger"></i> Cancel Purchase Order &amp; Release Budget
                 </h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
                 <input type="hidden" id="cancelPoId">
+
+                <!-- Inline Error Alert -->
+                <div id="poCancelErrorAlert" class="alert alert-danger py-2 px-3 mb-3 d-none align-items-center" role="alert" style="border-radius: 8px; font-size: 0.85rem;">
+                    <i class="fa-solid fa-circle-exclamation me-2 flex-shrink-0"></i>
+                    <span id="poCancelErrorAlertText">Please provide a mandatory justification reason for cancelling this purchase order.</span>
+                </div>
 
                 <div class="alert alert-warning border-0 rounded-3 small mb-3">
                     <i class="fa-solid fa-triangle-exclamation me-1"></i>
@@ -403,8 +433,12 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label small fw-bold text-dark">Cancellation Justification / Governance Reason <span class="text-danger">*</span></label>
-                    <textarea class="form-control form-control-sm" id="cancelPoReason" rows="3" placeholder="Provide clear procurement governance rationale for cancelling this purchase order..."></textarea>
+                    <label for="cancelPoReason" class="form-label small fw-bold text-dark d-flex justify-content-between align-items-center">
+                        <span>Reason for Cancellation <span class="text-danger">*</span></span>
+                        <span class="text-muted fw-normal small" style="font-size: 0.72rem;">(Mandatory)</span>
+                    </label>
+                    <textarea class="form-control form-control-sm rounded-3" id="cancelPoReason" rows="3" placeholder="Provide clear procurement governance rationale for cancelling this purchase order..."></textarea>
+                    <div id="poCancelReasonFeedback" class="invalid-feedback fw-medium" style="font-size: 0.8rem;">Reason for cancellation is mandatory.</div>
                 </div>
 
                 <div class="d-flex justify-content-end gap-2 pt-2">
@@ -426,6 +460,16 @@
     const PO_PAGE_SIZE = 15;
 
     document.addEventListener('DOMContentLoaded', () => {
+        // Relocate modals to document.body to ensure true fixed viewport stacking context
+        const cancelModal = document.getElementById('poCancelModal');
+        if (cancelModal && cancelModal.parentElement !== document.body) {
+            document.body.appendChild(cancelModal);
+        }
+        const detailModal = document.getElementById('poDetailModal');
+        if (detailModal && detailModal.parentElement !== document.body) {
+            document.body.appendChild(detailModal);
+        }
+
         loadPurchaseOrders();
     });
 
@@ -773,7 +817,7 @@
         document.getElementById('modalPoCostCenter').textContent = po.cost_center_code || 'General';
         document.getElementById('modalPoDepartment').textContent = po.department_name || 'Procurement';
         document.getElementById('modalPoTotalAmount').textContent = '₹' + Number(po.total_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        document.getElementById('modalPoTaxAmount').textContent = 'Tax: $' + Number(po.tax_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2});
+        document.getElementById('modalPoTaxAmount').textContent = 'Tax: ₹' + Number(po.tax_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2});
         document.getElementById('modalPoStatus').textContent = po.status_display || po.status;
         document.getElementById('modalPoAckStatus').textContent = po.is_acknowledged ? 'Ack: Confirmed' : 'Ack: Pending';
 
@@ -904,7 +948,22 @@
         document.getElementById('cancelPoNumber').textContent = poNumber;
         document.getElementById('cancelPoVendor').textContent = vendorName;
         document.getElementById('cancelPoAmount').textContent = '₹' + Number(totalAmount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        document.getElementById('cancelPoReason').value = '';
+        
+        const reasonInput = document.getElementById('cancelPoReason');
+        reasonInput.value = '';
+        reasonInput.classList.remove('is-invalid');
+
+        const errorAlert = document.getElementById('poCancelErrorAlert');
+        if (errorAlert) {
+            errorAlert.classList.add('d-none');
+            errorAlert.textContent = '';
+        }
+
+        const submitBtn = document.getElementById('cancelPoSubmitBtn');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-ban me-1"></i> Confirm Cancellation';
+        }
 
         const modalEl = document.getElementById('poCancelModal');
         if (modalEl && window.bootstrap) {
@@ -914,10 +973,25 @@
 
     async function submitPOCancellation() {
         const poId = document.getElementById('cancelPoId').value;
-        const reason = (document.getElementById('cancelPoReason').value || '').trim();
+        const reasonInput = document.getElementById('cancelPoReason');
+        const reason = (reasonInput.value || '').trim();
+        const reasonFeedback = document.getElementById('poCancelReasonFeedback');
+        const errorAlert = document.getElementById('poCancelErrorAlert');
+
+        reasonInput.classList.remove('is-invalid');
+        if (errorAlert) {
+            errorAlert.classList.add('d-none');
+            errorAlert.textContent = '';
+        }
 
         if (!reason) {
-            showManagerToast('Please provide a mandatory justification reason for cancelling this PO.', 'warning');
+            reasonInput.classList.add('is-invalid');
+            if (reasonFeedback) reasonFeedback.textContent = 'Reason for cancellation is mandatory.';
+            if (errorAlert) {
+                errorAlert.innerHTML = '<i class="fa-solid fa-circle-exclamation me-2 flex-shrink-0"></i><span>Please provide a mandatory justification reason for cancelling this purchase order.</span>';
+                errorAlert.classList.remove('d-none');
+            }
+            reasonInput.focus();
             return;
         }
 
@@ -941,7 +1015,13 @@
 
             loadPurchaseOrders();
         } catch (err) {
-            showManagerToast(err.message || 'Failed to cancel purchase order.', 'danger');
+            const rawMsg = err.message || (typeof err === 'string' ? err : 'Failed to cancel purchase order.');
+            const errorMsg = typeof cleanErrorString === 'function' ? cleanErrorString(rawMsg) : rawMsg;
+            if (errorAlert) {
+                errorAlert.innerHTML = `<i class="fa-solid fa-circle-exclamation me-2 flex-shrink-0"></i><span>${errorMsg}</span>`;
+                errorAlert.classList.remove('d-none');
+            }
+            showManagerToast(errorMsg, 'danger');
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<i class="fa-solid fa-ban me-1"></i> Confirm Cancellation';

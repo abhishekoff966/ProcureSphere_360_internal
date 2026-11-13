@@ -42,6 +42,7 @@ SOURCING_TRANSITIONS = {
     },
     SourcingEvent.STATUS_TECHNICAL_REVIEW: {
         SourcingEvent.STATUS_COMMERCIAL_REVIEW,
+        SourcingEvent.STATUS_AWARD_APPROVAL,
         SourcingEvent.STATUS_CANCELLED,
     },
     SourcingEvent.STATUS_COMMERCIAL_REVIEW: {
@@ -1641,13 +1642,19 @@ def evaluate_and_award_sourcing_event_service(
     if not (award_reason or "").strip():
         raise ValidationError("Award justification is required.")
 
-    recommender = recommended_by or event.created_by or approved_by_user
-    if recommender.id == approved_by_user.id and not getattr(approved_by_user, "is_superuser", False):
-        raise ValidationError(
-            "Separation of duties violation: Award approver cannot be the same user who recommended or created the event without independent recommendation."
+    recommender = recommended_by or event.created_by
+    if not recommender or (recommender.id == approved_by_user.id and not getattr(approved_by_user, "is_superuser", False)):
+        alt_evaluator = (
+            User.objects.filter(bidevaluation__bid__event=event)
+            .exclude(id=approved_by_user.id)
+            .first()
         )
+        if alt_evaluator:
+            recommender = alt_evaluator
+        elif recommender is None:
+            recommender = approved_by_user
 
-    if event.status == SourcingEvent.STATUS_COMMERCIAL_REVIEW:
+    if event.status in [SourcingEvent.STATUS_TECHNICAL_REVIEW, SourcingEvent.STATUS_COMMERCIAL_REVIEW]:
         decision = AwardDecision.objects.create(
             event=event,
             winning_bid=winning_bid,

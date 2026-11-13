@@ -26,21 +26,21 @@
     <div class="col-sm-6 col-xl-4">
         <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-cyan">
             <div class="text-muted small fw-bold text-uppercase">ACTIVE CONTRACTS</div>
-            <div class="fs-3 fw-bold text-dark font-heading mt-1">{{ summary.active_count|default:0 }}</div>
-            <div class="text-muted small mt-1">Live Executed Agreements</div>
+            <div class="fs-3 fw-bold text-dark font-heading mt-1">{{ summary.active_count|default:summary.active_contracts|default:0 }}</div>
+            <div class="text-muted small mt-1">Live Executed Agreements ({{ summary.total_contracts|default:0 }} Total Portfolio)</div>
         </div>
     </div>
     <div class="col-sm-6 col-xl-4">
         <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-indigo">
             <div class="text-muted small fw-bold text-uppercase">TOTAL CONTRACT VALUE</div>
-            <div class="fs-3 fw-bold text-indigo font-heading mt-1">₹{{ summary.total_contract_value|default:"0.00" }}</div>
-            <div class="text-muted small mt-1">Active Financial Portfolio</div>
+            <div class="fs-3 fw-bold text-indigo font-heading mt-1">₹{{ summary.total_contract_value|default:summary.active_contract_value|default:"0.00" }}</div>
+            <div class="text-muted small mt-1">Active Financial Portfolio (₹{{ summary.active_contract_value|default:"0.00" }} Active)</div>
         </div>
     </div>
     <div class="col-sm-6 col-xl-4">
         <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-rose">
             <div class="text-muted small fw-bold text-uppercase">OVERDUE OBLIGATIONS</div>
-            <div class="fs-3 fw-bold text-danger font-heading mt-1">{{ summary.overdue_obligations_count|default:0 }}</div>
+            <div class="fs-3 fw-bold text-danger font-heading mt-1">{{ summary.overdue_obligations_count|default:summary.total_overdue_obligations|default:0 }}</div>
             <div class="text-muted small mt-1">SLA Compliance Risk Alerts</div>
         </div>
     </div>
