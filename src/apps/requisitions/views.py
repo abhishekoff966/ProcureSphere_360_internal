@@ -764,8 +764,15 @@ def detail_view(request, pk):
         elif not chain and role_code in [Role.DEPT_APPROVER, Role.SUPER_ADMIN]:
             can_approve = not user_has_approved
     elif pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW:
-        if role_code in [Role.FINANCE_AP, Role.PROC_MGR, Role.SUPER_ADMIN] or user.is_superuser:
+        if role_code in [Role.FINANCE_AP, Role.SUPER_ADMIN] or user.is_superuser:
             can_approve = True
+
+    can_reject = False
+    if role_code in [Role.PROC_MGR, "PROC_MGR"] and not user.is_superuser:
+        can_approve = False
+        can_reject = bool(is_budget_exceeded or pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW)
+    else:
+        can_reject = can_approve
 
     latest_po = pr.purchase_orders.order_by("-created_at").first()
     latest_sourcing = pr.sourcing_events.order_by("-created_at").first()
@@ -783,6 +790,7 @@ def detail_view(request, pk):
             "is_budget_exceeded": is_budget_exceeded,
             "base_layout": base_layout,
             "can_approve": can_approve,
+            "can_reject": can_reject,
             "user_has_approved": user_has_approved,
             "current_step_info": current_step_info,
             "latest_po": latest_po,
@@ -860,8 +868,15 @@ def approve_view(request, pk):
             messages.error(request, "Permission Denied: You cannot approve requisitions from another organization.")
             return redirect("requisition_detail", pk=pr.pk)
 
+        if role_code in [Role.PROC_MGR, "PROC_MGR"] and not user.is_superuser:
+            messages.error(
+                request,
+                "Permission Denied: Procurement Managers maintain approval oversight only and do not have authority to approve Purchase Requisitions.",
+            )
+            return redirect("requisition_detail", pk=pr.pk)
+
         if pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW and not (
-            user.is_superuser or role_code in [Role.FINANCE_AP, Role.PROC_MGR, Role.SUPER_ADMIN]
+            user.is_superuser or role_code in [Role.FINANCE_AP, Role.SUPER_ADMIN]
         ):
             messages.error(
                 request,
@@ -873,7 +888,7 @@ def approve_view(request, pk):
             PurchaseRequisition.STATUS_SUBMITTED,
         ] and not (
             user.is_superuser
-            or role_code in [Role.DEPT_APPROVER, Role.PROC_MGR, Role.FINANCE_AP, Role.SUPER_ADMIN]
+            or role_code in [Role.DEPT_APPROVER, Role.FINANCE_AP, Role.SUPER_ADMIN]
         ):
             messages.error(
                 request,
@@ -929,6 +944,19 @@ def reject_view(request, pk):
         ):
             messages.error(request, "Permission Denied: You cannot reject requisitions from another organization.")
             return redirect("requisition_detail", pk=pr.pk)
+
+        if role_code in [Role.PROC_MGR, "PROC_MGR"] and not user.is_superuser:
+            available_budget = pr.cost_center.available_budget if pr.cost_center else None
+            is_budget_exceeded = bool(
+                pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW
+                or (available_budget is not None and (available_budget <= Decimal("0.00") or pr.total_amount > available_budget))
+            )
+            if not is_budget_exceeded and pr.status != PurchaseRequisition.STATUS_BUDGET_REVIEW:
+                messages.error(
+                    request,
+                    "Permission Denied: Procurement Managers may only reject requisitions that exceed budget limits. Within-budget requisitions are reviewed by Procurement Executives.",
+                )
+                return redirect("requisition_detail", pk=pr.pk)
 
         if pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW and not (
             user.is_superuser or role_code in [Role.FINANCE_AP, Role.PROC_MGR, Role.SUPER_ADMIN]

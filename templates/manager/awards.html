@@ -124,14 +124,39 @@
 </div>
 
 <!-- Modal: Award Decision Action (Approve / Reject / Return) -->
-<div class="modal fade" id="awardActionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+<style>
+    #awardActionModal {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 1060 !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+    }
+    #awardActionModal .modal-dialog {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: calc(100% - 3.5rem) !important;
+        margin: 1.75rem auto !important;
+        max-width: 540px !important;
+    }
+    #awardModalTitle {
+        color: #111827 !important;
+        font-weight: 700 !important;
+    }
+</style>
+<div class="modal fade" id="awardActionModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 540px; margin: 1.75rem auto;">
         <div class="modal-content bg-white rounded-4 border-0 shadow-lg overflow-hidden">
-            <div class="modal-header bg-hpe-navy text-white px-4 py-3">
-                <h6 class="modal-title fw-bold font-heading d-flex align-items-center gap-2 mb-0">
-                    <i class="fa-solid fa-award text-amber" id="modalHeaderIcon"></i> <span id="awardModalTitle">Confirm Award Decision</span>
+            <div class="modal-header border-bottom px-4 py-3" style="background-color: #F9FAFB !important; border-bottom: 1px solid #E5E7EB !important;">
+                <h6 class="modal-title fw-bold font-heading d-flex align-items-center gap-2 mb-0" id="awardModalHeaderHeading" style="color: #111827 !important; font-size: 1.05rem; line-height: 1.4;">
+                    <i class="fa-solid fa-award text-amber" id="modalHeaderIcon"></i>
+                    <span id="awardModalTitle" style="color: #111827 !important; display: inline-block;">Confirm Award Decision</span>
                 </h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
                 <input type="hidden" id="modalEventId">
@@ -140,8 +165,11 @@
 
                 <!-- Summary Info Box -->
                 <div class="mb-3 p-3 bg-slate-50 border rounded-3" id="modalSummaryBox">
-                    <div class="small text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Selected Event & Vendor</div>
-                    <div class="fw-bold text-dark fs-6 mt-1" id="modalEventSummary">-</div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Selected Event &amp; Vendor</span>
+                        <span id="modalStatusBadge" class="badge bg-secondary rounded-pill px-2.5 py-0.5" style="font-size: 0.7rem;">Status</span>
+                    </div>
+                    <div class="fw-bold text-dark fs-6" id="modalEventSummary">-</div>
                     <div class="text-primary fw-semibold small mt-1" id="modalBidSummary">-</div>
                     <div class="text-muted small mt-1" id="modalScoreSummary" style="font-size: 0.75rem;">-</div>
                 </div>
@@ -149,23 +177,34 @@
                 <!-- Guidance Note -->
                 <div class="alert alert-info rounded-3 py-2 px-3 small mb-3 border-0 d-flex align-items-start gap-2" id="modalGuidanceAlert">
                     <i class="fa-solid fa-circle-info mt-1"></i>
-                    <span id="modalGuidanceText">Review the proposal details before committing this decision.</span>
+                    <span id="modalGuidanceText">Review the proposal details before authorizing this decision.</span>
+                </div>
+
+                <!-- Inline Error Alert (Red Pop-up directly on the form) -->
+                <div class="alert alert-danger rounded-3 py-2 px-3 small mb-3 border border-danger-subtle d-flex align-items-start gap-2 d-none" id="modalErrorAlert" role="alert">
+                    <i class="fa-solid fa-circle-exclamation text-danger mt-1 fs-6"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-danger mb-0" id="modalErrorAlertTitle">Action Blocked</div>
+                        <div class="text-danger small mt-0.5" id="modalErrorAlertText"></div>
+                    </div>
+                    <button type="button" class="btn-close small ms-auto" onclick="document.getElementById('modalErrorAlert').classList.add('d-none')" aria-label="Dismiss"></button>
                 </div>
 
                 <!-- Comments Field -->
                 <div class="mb-3">
-                    <label class="form-label small fw-bold text-dark d-flex justify-content-between">
-                        <span>Governance Comments / Rationale</span>
+                    <label class="form-label small fw-bold text-dark d-flex justify-content-between align-items-center">
+                        <span id="modalCommentsLabel">Governance Comments / Rationale</span>
                         <span class="text-muted fw-normal" id="commentRequirementLabel">(Optional for approval)</span>
                     </label>
-                    <textarea class="form-control form-control-sm" id="modalAwardComments" rows="3" placeholder="Provide notes or justification..."></textarea>
+                    <textarea class="form-control form-control-sm rounded-3" id="modalAwardComments" rows="3" placeholder="Provide notes or justification..."></textarea>
+                    <div id="modalAwardCommentsFeedback" class="invalid-feedback fw-medium" style="font-size: 0.8rem;">Reason is mandatory.</div>
                 </div>
 
                 <!-- Modal Actions -->
                 <div class="d-flex justify-content-end gap-2 pt-2 border-top">
                     <button type="button" class="btn btn-light btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-warning btn-sm rounded-pill px-4 fw-bold shadow-sm" id="modalSubmitBtn" onclick="submitAwardDecision()">
-                        <span id="modalSubmitBtnText">Confirm Action</span>
+                        <span id="modalSubmitBtnText">Confirm & Submit Award</span>
                     </button>
                 </div>
             </div>
@@ -177,6 +216,10 @@
     let allPendingAwardEvents = [];
 
     document.addEventListener('DOMContentLoaded', () => {
+        const modalEl = document.getElementById('awardActionModal');
+        if (modalEl && modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
         loadPendingAwards();
     });
 
@@ -267,6 +310,21 @@
         renderPendingAwards(filtered);
     }
 
+    function getAwardStatusBadge(status) {
+        if (status === 'AWARD_APPROVAL') {
+            return `<span class="badge bg-warning text-dark border border-warning-subtle fw-bold rounded-pill px-2.5 py-1" style="font-size: 0.72rem;"><i class="fa-solid fa-clock-rotate-left me-1"></i>Award Approval</span>`;
+        } else if (status === 'COMMERCIAL_REVIEW') {
+            return `<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold rounded-pill px-2.5 py-1" style="font-size: 0.72rem;"><i class="fa-solid fa-calculator me-1"></i>Commercial Review</span>`;
+        } else if (status === 'TECHNICAL_REVIEW') {
+            return `<span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-semibold rounded-pill px-2.5 py-1" style="font-size: 0.72rem;"><i class="fa-solid fa-microchip me-1"></i>Technical Review</span>`;
+        } else if (status === 'AWARDED') {
+            return `<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle fw-semibold rounded-pill px-2.5 py-1" style="font-size: 0.72rem;"><i class="fa-solid fa-award me-1"></i>Awarded</span>`;
+        } else if (status === 'CANCELLED') {
+            return `<span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle fw-semibold rounded-pill px-2.5 py-1" style="font-size: 0.72rem;"><i class="fa-solid fa-ban me-1"></i>Cancelled</span>`;
+        }
+        return `<span class="badge bg-secondary-subtle text-secondary-emphasis border rounded-pill px-2.5 py-1" style="font-size: 0.72rem;">${status || 'Pending'}</span>`;
+    }
+
     function renderPendingAwards(events) {
         const listContainer = document.getElementById('pendingAwardsListContainer');
         const countBadge = document.getElementById('awardsCountBadge');
@@ -322,19 +380,20 @@
                             <table class="table table-hover align-middle mb-0">
                                 <thead class="table-light small text-uppercase">
                                     <tr>
-                                        <th class="ps-4">Rank & Vendor</th>
-                                        <th>Bid # & Version</th>
+                                        <th class="ps-4">Rank &amp; Vendor</th>
+                                        <th>Bid # &amp; Version</th>
                                         <th>Total Bid Amount</th>
                                         <th>Technical Score</th>
                                         <th>Commercial Score</th>
                                         <th>Weighted Total</th>
+                                        <th>Award Status</th>
                                         <th>Evaluator Notes</th>
                                         <th class="pe-4 text-end">Manager Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${bids.length === 0 ? `
-                                        <tr><td colspan="8" class="text-center py-4 text-muted">No evaluated bids submitted for this event yet.</td></tr>
+                                        <tr><td colspan="9" class="text-center py-4 text-muted">No evaluated bids submitted for this event yet.</td></tr>
                                     ` : bids.map((b, idx) => {
                                         const isRank1 = idx === 0;
                                         return `
@@ -359,18 +418,21 @@
                                                         ${Number(b.weighted_total_score || 0).toFixed(1)} pts
                                                     </span>
                                                 </td>
+                                                <td>
+                                                    ${getAwardStatusBadge(ev.status)}
+                                                </td>
                                                 <td class="small text-muted text-truncate" style="max-width: 180px;" title="${b.evaluation_comments || 'No comments'}">
                                                     ${b.evaluation_comments || '<span class="text-muted fst-italic">None</span>'}
                                                 </td>
                                                 <td class="pe-4 text-end">
                                                     <div class="btn-group btn-group-sm shadow-2xs">
-                                                        <button onclick="openAwardModal('${ev.id}', '${ev.event_number}', '${b.bid_id}', '${b.vendor_name}', '$${Number(b.total_bid_amount).toLocaleString(undefined, {minimumFractionDigits:2})}', '${b.weighted_total_score}', 'APPROVE')" class="btn btn-warning fw-semibold px-3" title="Award Contract to Vendor">
+                                                        <button onclick="openAwardModal('${ev.id}', '${ev.event_number}', '${b.bid_id}', '${b.vendor_name}', '$${Number(b.total_bid_amount).toLocaleString(undefined, {minimumFractionDigits:2})}', '${b.weighted_total_score}', 'APPROVE', '${ev.status}')" class="btn btn-warning fw-semibold px-3" title="Award Contract to Vendor">
                                                             <i class="fa-solid fa-check me-1"></i> Award
                                                         </button>
-                                                        <button onclick="openAwardModal('${ev.id}', '${ev.event_number}', '${b.bid_id}', '${b.vendor_name}', '', '${b.weighted_total_score}', 'RETURN')" class="btn btn-outline-secondary" title="Return to Commercial Review for Re-evaluation">
+                                                        <button onclick="openAwardModal('${ev.id}', '${ev.event_number}', '${b.bid_id}', '${b.vendor_name}', '', '${b.weighted_total_score}', 'RETURN', '${ev.status}')" class="btn btn-outline-secondary" title="Return to Commercial Review for Re-evaluation">
                                                             <i class="fa-solid fa-rotate-left"></i>
                                                         </button>
-                                                        <button onclick="openAwardModal('${ev.id}', '${ev.event_number}', '${b.bid_id}', '${b.vendor_name}', '', '${b.weighted_total_score}', 'REJECT')" class="btn btn-outline-danger" title="Reject Event">
+                                                        <button onclick="openAwardModal('${ev.id}', '${ev.event_number}', '${b.bid_id}', '${b.vendor_name}', '', '${b.weighted_total_score}', 'REJECT', '${ev.status}')" class="btn btn-outline-danger" title="Reject Event">
                                                             <i class="fa-solid fa-xmark"></i>
                                                         </button>
                                                     </div>
@@ -387,47 +449,79 @@
         }).join('');
     }
 
-    function openAwardModal(eventId, eventNumber, bidId, vendorName, amount, score, actionType) {
+    function openAwardModal(eventId, eventNumber, bidId, vendorName, amount, score, actionType, eventStatus = '') {
         document.getElementById('modalEventId').value = eventId;
         document.getElementById('modalWinningBidId').value = bidId;
         document.getElementById('modalActionType').value = actionType;
         document.getElementById('modalAwardComments').value = '';
 
+        // Hide any previous error alert on the form
+        const errAlert = document.getElementById('modalErrorAlert');
+        if (errAlert) errAlert.classList.add('d-none');
+
         document.getElementById('modalEventSummary').textContent = `Sourcing Event: ${eventNumber}`;
         document.getElementById('modalBidSummary').textContent = amount ? `Winning Vendor: ${vendorName} (${amount})` : `Target Vendor: ${vendorName}`;
         document.getElementById('modalScoreSummary').textContent = score ? `Weighted Evaluation Score: ${Number(score).toFixed(1)} pts` : '';
+
+        const statusBadge = document.getElementById('modalStatusBadge');
+        if (statusBadge && eventStatus) {
+            statusBadge.innerHTML = getAwardStatusBadge(eventStatus);
+        }
 
         const submitBtn = document.getElementById('modalSubmitBtn');
         const submitBtnText = document.getElementById('modalSubmitBtnText');
         const title = document.getElementById('awardModalTitle');
         const headerIcon = document.getElementById('modalHeaderIcon');
         const reqLabel = document.getElementById('commentRequirementLabel');
+        const commentsLabel = document.getElementById('modalCommentsLabel');
+        const commentsInput = document.getElementById('modalAwardComments');
+        const commentsFeedback = document.getElementById('modalAwardCommentsFeedback');
         const guidanceAlert = document.getElementById('modalGuidanceAlert');
         const guidanceText = document.getElementById('modalGuidanceText');
+        const errAlert = document.getElementById('modalErrorAlert');
+
+        if (commentsInput) {
+            commentsInput.value = '';
+            commentsInput.classList.remove('is-invalid');
+        }
+        if (errAlert) {
+            errAlert.classList.add('d-none');
+        }
 
         if (actionType === 'APPROVE') {
             title.textContent = 'Authorize Final Contract Award';
+            title.style.color = '#111827';
             headerIcon.className = 'fa-solid fa-award text-amber';
             submitBtn.className = 'btn btn-warning btn-sm rounded-pill px-4 fw-bold shadow-sm';
-            submitBtnText.textContent = 'Confirm & Commit Award';
+            submitBtnText.textContent = 'Confirm & Submit Award';
+            if (commentsLabel) commentsLabel.textContent = 'Governance Comments / Rationale';
+            if (commentsInput) commentsInput.placeholder = 'Provide optional notes or justification...';
             reqLabel.textContent = '(Optional for approval)';
             reqLabel.className = 'text-muted fw-normal';
             guidanceAlert.className = 'alert alert-warning rounded-3 py-2 px-3 small mb-3 border-0 d-flex align-items-start gap-2';
-            guidanceText.textContent = 'Committing this award will finalize the sourcing event and authorize contract creation.';
+            guidanceText.textContent = eventStatus === 'TECHNICAL_REVIEW'
+                ? 'Notice: Event is in Technical Review. Bids must complete Technical and Commercial evaluation before final award.'
+                : 'Authorizing this award will finalize the sourcing event and authorize contract creation.';
         } else if (actionType === 'RETURN') {
             title.textContent = 'Return Event for Re-Evaluation';
+            title.style.color = '#111827';
             headerIcon.className = 'fa-solid fa-rotate-left text-info';
             submitBtn.className = 'btn btn-secondary btn-sm rounded-pill px-4 fw-bold shadow-sm';
             submitBtnText.textContent = 'Return to Review Desk';
+            if (commentsLabel) commentsLabel.textContent = 'Reason for Return';
+            if (commentsInput) commentsInput.placeholder = 'Provide a specific reason for returning this sourcing event for re-evaluation...';
             reqLabel.textContent = '(Mandatory for return)';
             reqLabel.className = 'text-danger fw-bold';
             guidanceAlert.className = 'alert alert-secondary rounded-3 py-2 px-3 small mb-3 border-0 d-flex align-items-start gap-2';
             guidanceText.textContent = 'The event will be returned to Commercial Review for scoring adjustments or vendor clarification.';
         } else if (actionType === 'REJECT') {
             title.textContent = 'Reject Sourcing Event';
+            title.style.color = '#111827';
             headerIcon.className = 'fa-solid fa-xmark text-danger';
             submitBtn.className = 'btn btn-danger btn-sm rounded-pill px-4 fw-bold shadow-sm';
             submitBtnText.textContent = 'Confirm Event Cancellation';
+            if (commentsLabel) commentsLabel.textContent = 'Reason for Rejection';
+            if (commentsInput) commentsInput.placeholder = 'Provide a specific reason for rejecting this sourcing event...';
             reqLabel.textContent = '(Mandatory for rejection)';
             reqLabel.className = 'text-danger fw-bold';
             guidanceAlert.className = 'alert alert-danger rounded-3 py-2 px-3 small mb-3 border-0 d-flex align-items-start gap-2';
@@ -435,8 +529,14 @@
         }
 
         const modalEl = document.getElementById('awardActionModal');
-        if (modalEl && window.bootstrap) {
-            new bootstrap.Modal(modalEl).show();
+        if (modalEl) {
+            if (modalEl.parentElement !== document.body) {
+                document.body.appendChild(modalEl);
+            }
+            if (window.bootstrap) {
+                const modalInst = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modalInst.show();
+            }
         }
     }
 
@@ -444,11 +544,25 @@
         const eventId = document.getElementById('modalEventId').value;
         const bidId = document.getElementById('modalWinningBidId').value;
         const actionType = document.getElementById('modalActionType').value;
-        const comments = (document.getElementById('modalAwardComments').value || '').trim();
+        const commentsInput = document.getElementById('modalAwardComments');
+        const comments = (commentsInput.value || '').trim();
+        const errAlert = document.getElementById('modalErrorAlert');
+        const errAlertText = document.getElementById('modalErrorAlertText');
+        const commentsFeedback = document.getElementById('modalAwardCommentsFeedback');
+
+        commentsInput.classList.remove('is-invalid');
+        if (errAlert) errAlert.classList.add('d-none');
 
         if ((actionType === 'REJECT' || actionType === 'RETURN') && !comments) {
-            showManagerToast(`Mandatory justification comments are required for ${actionType.toLowerCase()} action.`, 'warning');
-            document.getElementById('modalAwardComments').focus();
+            commentsInput.classList.add('is-invalid');
+            const actionLabel = actionType === 'REJECT' ? 'rejection' : 'return';
+            if (commentsFeedback) commentsFeedback.textContent = `Reason for ${actionLabel} is mandatory.`;
+            if (errAlert && errAlertText) {
+                errAlertText.textContent = `Reason for ${actionLabel} is mandatory. Please provide a clear justification.`;
+                errAlert.classList.remove('d-none');
+            }
+            showManagerToast(`Mandatory justification reason is required for ${actionLabel}.`, 'warning');
+            commentsInput.focus();
             return;
         }
 
@@ -479,7 +593,21 @@
             // Reload pending awards
             loadPendingAwards();
         } catch (err) {
-            showManagerToast(err.message || 'Failed to process award decision.', 'error');
+            let rawMsg = (typeof safeExtractErrorMessage === 'function')
+                ? safeExtractErrorMessage(err, 'Failed to process award decision. Please review required justification or permissions.')
+                : (err && err.message ? err.message : 'Failed to process award decision.');
+            const errorMsg = (typeof cleanErrorString === 'function') ? cleanErrorString(rawMsg) : rawMsg;
+
+            // Display error alert directly on the form
+            const errAlert = document.getElementById('modalErrorAlert');
+            const errAlertText = document.getElementById('modalErrorAlertText');
+            if (errAlert && errAlertText) {
+                errAlertText.textContent = errorMsg;
+                errAlert.classList.remove('d-none');
+                errAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                showManagerToast(errorMsg, 'error');
+            }
         } finally {
             submitBtn.disabled = false;
         }

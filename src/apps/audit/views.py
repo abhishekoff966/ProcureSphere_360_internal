@@ -38,8 +38,22 @@ def _enforce_auditor_access(request):
 
 def _get_auditor_org(request):
     user = request.user
-    if user.is_superuser:
+    # Explicit query parameter filter takes precedence
+    req_org = request.GET.get("org") or request.GET.get("organization")
+    if req_org:
+        from apps.organization.models import Organization
+        try:
+            return Organization.objects.filter(Q(id=req_org) | Q(code=req_org)).first()
+        except Exception:
+            pass
+
+    # Super Admin and Compliance Auditors have global read-only enterprise visibility across all organizations
+    role_code = getattr(user, "role_code", None) or (
+        user.role.code if getattr(user, "role", None) else None
+    )
+    if user.is_superuser or role_code in [Role.AUDITOR, Role.SUPER_ADMIN, "AUDITOR", "SUPER_ADMIN"]:
         return None
+
     return getattr(user, "effective_organization", None) or getattr(user, "organization", None)
 
 

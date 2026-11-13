@@ -249,8 +249,15 @@ class AwardApproveAPIView(APIView):
                     status=status.HTTP_200_OK,
                 )
             except Exception as e:
+                err_msg = (
+                    e.messages[0]
+                    if hasattr(e, "messages") and e.messages
+                    else (e.message if hasattr(e, "message") else str(e))
+                )
+                if isinstance(err_msg, str) and err_msg.startswith("['") and err_msg.endswith("']"):
+                    err_msg = err_msg[2:-2]
                 return Response(
-                    {"error": {"code": "VALIDATION_ERROR", "message": str(e)}},
+                    {"error": {"code": "VALIDATION_ERROR", "message": str(err_msg)}},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 

@@ -91,6 +91,14 @@
                 </button>
             </form>
             {% endif %}
+        {% elif can_reject %}
+            <form method="POST" action="{% url 'requisition_reject' pr.pk %}" class="d-inline-flex gap-2 flex-grow-1 flex-md-grow-0" onsubmit="this.querySelector('input[name=comments]').value = (document.getElementById('decisionCommentsSidebar')?.value || 'Budget Overrun Rejected').trim()">
+                {% csrf_token %}
+                <input type="hidden" name="comments" value="Budget Overrun Rejected">
+                <button type="submit" class="btn btn-outline-danger rounded-pill shadow-sm px-4 fw-bold w-100">
+                    <i class="fa-solid fa-times me-2"></i>Reject Out-of-Budget PR
+                </button>
+            </form>
         {% elif user_has_approved and pr.status in 'SUBMITTED,MANAGER_REVIEW' %}
             <div class="d-inline-flex align-items-center bg-success bg-opacity-10 border border-success border-opacity-25 rounded-pill px-3 py-1">
                 <i class="fa-solid fa-circle-check text-success me-2"></i>
@@ -653,6 +661,24 @@
                 </div>
             </div>
             {% endif %}
+        {% elif can_reject %}
+            <div id="approvalActionDecision" class="card border-danger border-2 shadow-sm rounded-4 mb-4 bg-danger bg-opacity-10">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold text-dark mb-2">
+                        <i class="fa-solid fa-ban text-danger me-2"></i>Budget Governance Rejection
+                    </h6>
+                    <p class="small text-muted mb-3">This purchase requisition exceeds available cost center budget limits. As Procurement Manager, you may inspect the transaction and reject the request.</p>
+
+                    <div class="mb-0">
+                        <label for="decisionCommentsSidebar" class="form-label small fw-semibold text-dark">Rejection Justification (Mandatory)</label>
+                        <textarea id="decisionCommentsSidebar" name="comments" class="form-control form-control-sm bg-white" rows="3"
+                            placeholder="Provide reason for rejecting this out-of-budget PR..."></textarea>
+                        <div class="form-text small text-muted mt-1">
+                            <i class="fa-solid fa-info-circle me-1"></i>Remarks will be recorded in the audit trail when you click Reject Out-of-Budget PR above.
+                        </div>
+                    </div>
+                </div>
+            </div>
         {% elif user_has_approved and pr.status in 'SUBMITTED,MANAGER_REVIEW' %}
             <div class="card border-success border-opacity-25 shadow-sm rounded-4 mb-4 bg-success bg-opacity-10">
                 <div class="card-body p-4 text-center">

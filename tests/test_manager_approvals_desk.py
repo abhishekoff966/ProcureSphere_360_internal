@@ -205,3 +205,62 @@ def test_requisitions_list_uses_manager_base_layout(client, org_and_users):
 
     assert response.status_code == status.HTTP_200_OK
     assert response.context["base_layout"] == "manager/base_manager.html"
+
+
+@pytest.mark.django_db
+def test_manager_out_of_budget_pr_can_reject_cannot_approve(client, org_and_users):
+    """
+    Business Rule Verification:
+    - If PR is out of budget, Procurement Manager inspects and rejects.
+    - Zero option to approve under any circumstance.
+    - Within-budget PRs cannot be rejected by Manager (oversight only).
+    """
+    client.force_login(org_and_users["manager"])
+    url = reverse("manager-approval-action-api")
+    pr = org_and_users["pr"]
+
+    # 1. Within-budget PR: Rejection by manager is blocked
+    resp_within = client.post(url, data={
+        "item_type": "PR",
+        "item_id": str(pr.id),
+        "action": "REJECT",
+        "comments": "Should fail for within budget PR",
+    }, content_type="application/json")
+    assert resp_within.status_code == status.HTTP_403_FORBIDDEN
+
+    # 2. Transition PR to STATUS_BUDGET_REVIEW (Out of Budget)
+    pr.status = PurchaseRequisition.STATUS_BUDGET_REVIEW
+    pr.save()
+
+    # Verify GET /api/v1/manager/approvals/ reports can_approve=False, can_reject=True, is_out_of_budget=True
+    get_resp = client.get(reverse("manager-approvals-api"))
+    assert get_resp.status_code == status.HTTP_200_OK
+    pr_items = [it for it in get_resp.json()["results"] if it["reference_number"] == pr.pr_number]
+    assert len(pr_items) == 1
+    assert pr_items[0]["can_approve"] is False
+    assert pr_items[0]["can_reject"] is True
+    assert pr_items[0]["is_out_of_budget"] is True
+
+    # 3. Manager tries to APPROVE out-of-budget PR -> Strictly 403 Forbidden
+    resp_approve = client.post(url, data={
+        "item_type": "PR",
+        "item_id": str(pr.id),
+        "action": "APPROVE",
+        "comments": "Manager trying to approve out of budget PR",
+    }, content_type="application/json")
+    assert resp_approve.status_code == status.HTTP_403_FORBIDDEN
+    assert "do not have authority to approve Purchase Requisitions" in resp_approve.json()["error"]
+
+    # 4. Manager REJECTS out-of-budget PR -> 200 OK and status updated
+    resp_reject = client.post(url, data={
+        "item_type": "PR",
+        "item_id": str(pr.id),
+        "action": "REJECT",
+        "comments": "Requisition exceeds departmental budget allocation.",
+    }, content_type="application/json")
+    assert resp_reject.status_code == status.HTTP_200_OK
+    assert resp_reject.json()["new_status"] == PurchaseRequisition.STATUS_REJECTED
+
+    pr.refresh_from_db()
+    assert pr.status == PurchaseRequisition.STATUS_REJECTED
+

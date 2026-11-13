@@ -286,17 +286,119 @@
         });
     });
 
+    // Helper to strip Python list stringification artifacts like ['...']
+    function cleanErrorString(str) {
+        if (!str || typeof str !== 'string') return '';
+        let cleaned = str.trim();
+        const lower = cleaned.toLowerCase();
+        if (lower === '[object object]' || lower === 'object object' || lower === 'object:object') {
+            return '';
+        }
+        if ((cleaned.startsWith("['") && cleaned.endsWith("']")) ||
+            (cleaned.startsWith('["') && cleaned.endsWith('"]'))) {
+            cleaned = cleaned.slice(2, -2).trim();
+        }
+        if (cleaned.startsWith('[') && cleaned.endsWith(']')) {
+            const inner = cleaned.slice(1, -1).trim();
+            if (inner.toLowerCase() !== 'object object' && inner.toLowerCase() !== 'object:object') {
+                cleaned = inner;
+                if ((cleaned.startsWith("'") && cleaned.endsWith("'")) ||
+                    (cleaned.startsWith('"') && cleaned.endsWith('"'))) {
+                    cleaned = cleaned.slice(1, -1).trim();
+                }
+            }
+        }
+        const lowerAfter = cleaned.toLowerCase();
+        if (lowerAfter === '[object object]' || lowerAfter === 'object object' || lowerAfter === 'object:object') {
+            return '';
+        }
+        return cleaned;
+    }
+
+    // Standardized Safe Error Extractor to Prevent [object Object]
+    function safeExtractErrorMessage(input, defaultFallback = 'An unexpected error occurred. Please try again.') {
+        if (!input) return defaultFallback;
+        if (typeof input === 'string') {
+            const cleaned = cleanErrorString(input);
+            return (cleaned && cleaned.toLowerCase() !== 'object object' && cleaned.toLowerCase() !== 'object:object' && cleaned !== '[object Object]') ? cleaned : defaultFallback;
+        }
+        if (typeof input === 'object') {
+            // Check if it's an Error instance with attached .data from fetchManagerAPI
+            const obj = input.data || input;
+            if (obj && typeof obj === 'object') {
+                if (obj.error && typeof obj.error === 'object') {
+                    if (typeof obj.error.message === 'string' && obj.error.message.trim()) {
+                        const m = cleanErrorString(obj.error.message);
+                        if (m) return m;
+                    }
+                    if (typeof obj.error.details === 'string' && obj.error.details.trim()) {
+                        const d = cleanErrorString(obj.error.details);
+                        if (d) return d;
+                    }
+                    if (typeof obj.error.detail === 'string' && obj.error.detail.trim()) {
+                        const d = cleanErrorString(obj.error.detail);
+                        if (d) return d;
+                    }
+                }
+                if (typeof obj.error === 'string' && obj.error.trim()) {
+                    const m = cleanErrorString(obj.error);
+                    if (m) return m;
+                }
+                if (typeof obj.detail === 'string' && obj.detail.trim()) {
+                    const m = cleanErrorString(obj.detail);
+                    if (m) return m;
+                }
+                if (Array.isArray(obj.detail) && obj.detail.length > 0) {
+                    const m = cleanErrorString(obj.detail.join(' '));
+                    if (m) return m;
+                }
+                if (typeof obj.message === 'string' && obj.message.trim()) {
+                    const m = cleanErrorString(obj.message);
+                    if (m) return m;
+                }
+                if (Array.isArray(obj.non_field_errors) && obj.non_field_errors.length > 0) {
+                    const m = cleanErrorString(obj.non_field_errors.join(' '));
+                    if (m) return m;
+                }
+                // Check if it is a field errors dict, e.g. { comments: ["This field is required."] }
+                const fieldEntries = Object.entries(obj).filter(([k]) => k !== 'status_code' && k !== 'code');
+                if (fieldEntries.length > 0) {
+                    const firstVal = fieldEntries[0][1];
+                    if (Array.isArray(firstVal) && firstVal.length > 0) {
+                        const m = cleanErrorString(`${fieldEntries[0][0]}: ${firstVal.join(', ')}`);
+                        if (m) return m;
+                    }
+                    if (typeof firstVal === 'string' && firstVal.trim()) {
+                        const m = cleanErrorString(`${fieldEntries[0][0]}: ${firstVal.trim()}`);
+                        if (m) return m;
+                    }
+                }
+            }
+            if (typeof input.message === 'string' && input.message.trim()) {
+                const m = cleanErrorString(input.message);
+                if (m && m.toLowerCase() !== 'object object' && m.toLowerCase() !== 'object:object') return m;
+            }
+            try {
+                const jsonStr = JSON.stringify(obj);
+                if (jsonStr && jsonStr !== '{}' && jsonStr !== '[]' && !jsonStr.includes('object Object')) return jsonStr;
+            } catch (e) {}
+        }
+        return defaultFallback;
+    }
+
     // Standardized Manager Toast Notification Helper
     function showManagerToast(message, type = 'info') {
         const container = document.getElementById('managerToastContainer');
         if (!container) return;
 
+        const displayMsg = safeExtractErrorMessage(message, 'An unexpected error occurred. Please try again.');
+
         const bgClass = type === 'success' ? 'bg-success text-white' :
-                        type === 'error' ? 'bg-danger text-white' :
+                        type === 'error' || type === 'danger' ? 'bg-danger text-white' :
                         type === 'warning' ? 'bg-warning text-dark' : 'bg-primary text-white';
         
         const iconClass = type === 'success' ? 'fa-circle-check' :
-                          type === 'error' ? 'fa-circle-exclamation' :
+                          type === 'error' || type === 'danger' ? 'fa-circle-exclamation' :
                           type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-info';
 
         const toastId = 'toast_' + Date.now();
@@ -305,7 +407,7 @@
                 <div class="d-flex">
                     <div class="toast-body d-flex align-items-center gap-2">
                         <i class="fa-solid ${iconClass}"></i>
-                        <span>${message}</span>
+                        <span>${displayMsg}</span>
                     </div>
                     <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
@@ -341,8 +443,38 @@
             }
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));
-                const errMsg = errData.detail || errData.error || `HTTP ${response.status}: Request failed`;
-                throw new Error(errMsg);
+                let errMsg = `HTTP ${response.status}: Request failed`;
+                if (typeof errData === 'string' && errData.trim()) {
+                    errMsg = errData;
+                } else if (Array.isArray(errData) && errData.length > 0) {
+                    errMsg = errData.join(' ');
+                } else if (errData && typeof errData === 'object') {
+                    if (typeof errData.detail === 'string' && errData.detail.trim()) {
+                        errMsg = errData.detail;
+                    } else if (Array.isArray(errData.detail) && errData.detail.length > 0) {
+                        errMsg = errData.detail.join(' ');
+                    } else if (errData.error && typeof errData.error === 'object') {
+                        errMsg = errData.error.message || errData.error.details || errData.error.detail || JSON.stringify(errData.error);
+                    } else if (typeof errData.error === 'string' && errData.error.trim()) {
+                        errMsg = errData.error;
+                    } else if (typeof errData.message === 'string' && errData.message.trim()) {
+                        errMsg = errData.message;
+                    } else if (Array.isArray(errData.non_field_errors) && errData.non_field_errors.length > 0) {
+                        errMsg = errData.non_field_errors.join(' ');
+                    } else {
+                        const entries = Object.entries(errData).filter(([k]) => k !== 'status_code' && k !== 'code');
+                        if (entries.length > 0) {
+                            const [k, v] = entries[0];
+                            errMsg = Array.isArray(v) ? `${k}: ${v.join(', ')}` : `${k}: ${v}`;
+                        } else {
+                            errMsg = `HTTP ${response.status}: Request failed`;
+                        }
+                    }
+                }
+                const err = new Error(errMsg);
+                err.data = errData;
+                err.status = response.status;
+                throw err;
             }
             return await response.json();
         } catch (err) {

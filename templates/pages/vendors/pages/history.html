@@ -23,10 +23,10 @@
                         <td class="text-nowrap">{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
                         <td>{{ log.actor_email }}</td>
                         <td>{{ log.actor.role.name|default:"—" }}</td>
-                        <td><span class="badge bg-light text-dark border">{{ log.get_action_display }}</span></td>
+                        <td><span class="badge bg-light text-dark border">{{ log|format_audit_action }}</span></td>
                         <td>{{ log.target_model }}</td>
-                        <td><code class="small text-wrap">{{ log.previous_state|default:"—" }}</code></td>
-                        <td><code class="small text-wrap">{{ log.new_state|default:"—" }}</code></td>
+                        <td>{{ log.previous_state|format_audit_state:log }}</td>
+                        <td>{{ log|format_audit_updated_state }}</td>
                     </tr>
                 {% empty %}
                     <tr><td colspan="7" class="text-muted text-center py-3">No history recorded.</td></tr>

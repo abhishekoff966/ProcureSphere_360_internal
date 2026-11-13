@@ -1998,6 +1998,37 @@ class ManagerVendorWatchlistAPIView(APIView):
         )
 
 
+def check_pr_out_of_budget(pr, active_budgets=None):
+    """
+    Checks whether a Purchase Requisition is out of budget / exceeds budget limits.
+    True if:
+    1. Status is explicitly BUDGET_REVIEW.
+    2. Or attached cost center's available budget is <= 0 or less than PR total_amount.
+    """
+    from apps.budgets.models import Budget
+    from apps.requisitions.models import PurchaseRequisition
+
+    if pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW:
+        return True
+    if getattr(pr, "is_over_budget", False):
+        return True
+    if pr.cost_center_id:
+        b = None
+        if active_budgets is not None:
+            b = active_budgets.get(pr.cost_center_id)
+        if b is None:
+            b = (
+                Budget.objects.filter(
+                    cost_center_id=pr.cost_center_id, fiscal_period__is_closed=False
+                )
+                .order_by("-fiscal_period__start_date")
+                .first()
+            )
+        if b and (b.available_amount <= Decimal("0.00") or pr.total_amount > b.available_amount):
+            return True
+    return False
+
+
 class ManagerApprovalsAPIView(APIView):
     """
     Returns real database-backed pending and evaluated approval records
@@ -2146,32 +2177,29 @@ class ManagerApprovalsAPIView(APIView):
                     .values_list("target_object_id", "cnt")
                 }
 
+            # Prefetch active budgets for PR cost centers
+            cc_ids = [p.cost_center_id for p in pr_list if p.cost_center_id]
+            active_budgets = {}
+            if cc_ids:
+                from apps.budgets.models import Budget
+                b_qs = Budget.objects.filter(
+                    cost_center_id__in=cc_ids,
+                    fiscal_period__is_closed=False,
+                ).order_by("-fiscal_period__start_date")
+                for b in b_qs:
+                    active_budgets.setdefault(b.cost_center_id, b)
+
             for pr in pr_list:
-                urgency = 'HIGH' if pr.status == PurchaseRequisition.STATUS_BUDGET_REVIEW or pr.total_amount > Decimal('50000.00') else 'NORMAL'
+                is_out_of_budget = check_pr_out_of_budget(pr, active_budgets)
+                urgency = 'HIGH' if is_out_of_budget or pr.total_amount > Decimal('50000.00') else 'NORMAL'
                 req_name = f"{pr.requester.first_name} {pr.requester.last_name}".strip() if pr.requester else "Unknown"
                 if not req_name and pr.requester:
                     req_name = pr.requester.email
 
+                # Procurement Managers maintain approval oversight only (cannot approve PRs)
+                # But IF the PR is out of budget, Procure Manager will inspect and reject the request (no option to approve)
                 can_approve_pr = False
-                if pr.status in [PurchaseRequisition.STATUS_SUBMITTED, PurchaseRequisition.STATUS_MANAGER_REVIEW]:
-                    pr_org = (
-                        getattr(getattr(pr, "department", None), "organization", None)
-                        or getattr(getattr(getattr(pr, "cost_center", None), "department", None), "organization", None)
-                        or getattr(pr.requester, "effective_organization", None)
-                    )
-                    chain = evaluate_approval_chain(
-                        module=ApprovalPolicy.MODULE_PR,
-                        amount=pr.total_amount,
-                        department=pr.department,
-                        cost_center=pr.cost_center,
-                        organization=pr_org,
-                    )
-                    step_idx = pr_step_counts.get(str(pr.id), 0)
-                    if chain and step_idx < len(chain):
-                        can_approve_pr = (
-                            request.user.is_superuser
-                            or chain[step_idx]["approver_role"].code == Role.PROC_MGR
-                        )
+                can_reject_pr = is_out_of_budget
 
                 items.append({
                     'id': str(pr.id),
@@ -2197,6 +2225,8 @@ class ManagerApprovalsAPIView(APIView):
                     'updated_at': pr.updated_at.isoformat(),
                     'detail_url': f'/requisitions/{pr.id}/',
                     'can_approve': can_approve_pr,
+                    'can_reject': can_reject_pr,
+                    'is_out_of_budget': is_out_of_budget,
                 })
 
         # Process PO Amendments
@@ -2360,11 +2390,33 @@ class ManagerApprovalActionAPIView(APIView):
             role_code = getattr(request.user, "role_code", None) or (
                 request.user.role.code if getattr(request.user, "role", None) else None
             )
-            if role_code in [Role.PROC_MGR, "PROC_MGR"] and item_type not in ['PR', 'PO_AMENDMENT', 'PO']:
-                return Response(
-                    {'error': 'Permission Denied: Procurement Managers maintain approval oversight only and cannot approve or reject.'},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+            if role_code in [Role.PROC_MGR, "PROC_MGR"]:
+                if item_type == 'PR':
+                    if action == 'APPROVE':
+                        return Response(
+                            {'error': 'Permission Denied: Procurement Managers maintain approval oversight only and do not have authority to approve Purchase Requisitions.'},
+                            status=status.HTTP_403_FORBIDDEN,
+                        )
+                    # For rejection of PR: Procure Manager can inspect and reject out-of-budget PRs
+                    from apps.requisitions.models import PurchaseRequisition
+                    target_pr = PurchaseRequisition.objects.filter(id=item_id).first()
+                    if not target_pr:
+                        return Response({'error': 'Purchase Requisition not found.'}, status=status.HTTP_404_NOT_FOUND)
+                    if not check_pr_out_of_budget(target_pr):
+                        return Response(
+                            {'error': 'Permission Denied: Within-budget requisitions are reviewed by Procurement Executives. Procurement Managers may only inspect and reject out-of-budget requisitions.'},
+                            status=status.HTTP_403_FORBIDDEN,
+                        )
+                elif item_type == 'PO_AMENDMENT':
+                    return Response(
+                        {'error': 'Permission Denied: Procurement Managers maintain approval oversight only for PO amendments.'},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
+                elif item_type not in ['PO']:
+                    return Response(
+                        {'error': 'Permission Denied: Procurement Managers maintain approval oversight only and cannot approve or reject this item.'},
+                        status=status.HTTP_403_FORBIDDEN,
+                    )
 
         try:
             if item_type == 'PR':
@@ -2396,41 +2448,17 @@ class ManagerApprovalActionAPIView(APIView):
                             status=status.HTTP_403_FORBIDDEN,
                         )
 
-                pr_org = (
-                    getattr(getattr(pr, "department", None), "organization", None)
-                    or getattr(getattr(getattr(pr, "cost_center", None), "department", None), "organization", None)
-                    or getattr(pr.requester, "effective_organization", None)
-                )
-                chain = evaluate_approval_chain(
-                    module=ApprovalPolicy.MODULE_PR,
-                    amount=pr.total_amount,
-                    department=pr.department,
-                    cost_center=pr.cost_center,
-                    organization=pr_org,
-                )
-                step_idx = ApprovalAction.objects.filter(
-                    target_object_id=str(pr.id),
-                    target_model_name="PurchaseRequisition",
-                    action=ApprovalAction.ACTION_APPROVE,
-                ).count()
-                is_mgr_step = (
-                    pr.status in [PurchaseRequisition.STATUS_SUBMITTED, PurchaseRequisition.STATUS_MANAGER_REVIEW]
-                    and bool(chain)
-                    and step_idx < len(chain)
-                    and chain[step_idx]["approver_role"].code == Role.PROC_MGR
-                )
-                if not request.user.is_superuser and not is_mgr_step:
-                    return Response(
-                        {'error': 'Permission Denied: Procurement Managers hold approval oversight only until this requisition reaches Procurement Manager step or Finance AP clears any budget overrun.'},
-                        status=status.HTTP_403_FORBIDDEN,
-                    )
-
                 try:
                     if action == 'APPROVE':
+                        if not request.user.is_superuser:
+                            return Response(
+                                {'error': 'Permission Denied: Procurement Managers maintain approval oversight only and do not have authority to approve Purchase Requisitions.'},
+                                status=status.HTTP_403_FORBIDDEN,
+                            )
                         updated_pr = approve_purchase_requisition_service(
                             requisition=pr,
                             approver=request.user,
-                            comments=comments or 'Approved by Procurement Manager.',
+                            comments=comments or 'Approved by Administrator.',
                         )
                         return Response({
                             'success': True,
@@ -2451,7 +2479,7 @@ class ManagerApprovalActionAPIView(APIView):
                         )
                         return Response({
                             'success': True,
-                            'message': f"Purchase Requisition {updated_pr.pr_number} rejected.",
+                            'message': f"Purchase Requisition {updated_pr.pr_number} successfully rejected.",
                             'item_id': str(pr.id),
                             'new_status': updated_pr.status,
                         }, status=status.HTTP_200_OK)

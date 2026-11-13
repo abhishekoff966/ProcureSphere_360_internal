@@ -154,15 +154,15 @@
             <div class="card border-0 shadow-sm rounded-4 bg-white p-3 mb-4">
                 <div class="row g-2 align-items-center">
                     <!-- Search Bar -->
-                    <div class="col-12 col-md-3">
+                    <div class="col-12 col-md-4 col-xl-4">
                         <div class="input-group input-group-sm">
                             <span class="input-group-text bg-slate-50 border"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                            <input type="text" id="vendorSearchInput" class="form-control" placeholder="Search supplier, TIN, code, email..." oninput="onVendorSearchInput()">
+                            <input type="text" id="vendorSearchInput" class="form-control" placeholder="Search by supplier name, TIN, or code" oninput="onVendorSearchInput()">
                         </div>
                     </div>
 
                     <!-- Risk Level Filter -->
-                    <div class="col-6 col-md-2">
+                    <div class="col-6 col-md-2 col-xl-2">
                         <select id="vendorRiskFilter" class="form-select form-select-sm" onchange="onVendorFilterChange()">
                             <option value="">All Risk Levels</option>
                             <option value="HIGH">High Risk</option>
@@ -172,7 +172,7 @@
                     </div>
 
                     <!-- Governance Status Filter -->
-                    <div class="col-6 col-md-2">
+                    <div class="col-6 col-md-2 col-xl-2">
                         <select id="vendorStatusFilter" class="form-select form-select-sm" onchange="onVendorFilterChange()">
                             <option value="">All Governance Statuses</option>
                             <option value="ACTIVE">Active (Authorized)</option>
@@ -186,7 +186,7 @@
                     </div>
 
                     <!-- Document Compliance Filter -->
-                    <div class="col-6 col-md-2">
+                    <div class="col-6 col-md-2 col-xl-2">
                         <select id="vendorComplianceFilter" class="form-select form-select-sm" onchange="onVendorFilterChange()">
                             <option value="">All Compliance States</option>
                             <option value="expiring_soon">Expiring Soon (30 Days)</option>
@@ -196,7 +196,7 @@
                     </div>
 
                     <!-- Sort Filter -->
-                    <div class="col-6 col-md-3">
+                    <div class="col-6 col-md-2 col-xl-2">
                         <select id="vendorSortFilter" class="form-select form-select-sm" onchange="onVendorFilterChange()">
                             <option value="-created_at">Sort: Newest First</option>
                             <option value="legal_name">Sort: Name (A-Z)</option>
@@ -855,7 +855,7 @@
 
         try {
             const [vendorsRes, summaryRes] = await Promise.all([
-                fetchManagerAPI('/api/v1/vendors/?page_size=250'),
+                fetchManagerAPI('/api/v1/vendors/?page_size=500'),
                 fetchManagerAPI('/api/v1/vendors/summary/').catch(() => null)
             ]);
 
@@ -1355,7 +1355,10 @@
             document.getElementById('govVendorSelect').value = vendorId;
             await onVendorSelectionChanged();
         } catch (err) {
-            showManagerToast(err.message || 'Failed to apply governance action.', 'danger');
+            const errorMsg = (typeof safeExtractErrorMessage === 'function')
+                ? safeExtractErrorMessage(err, 'Failed to apply governance action.')
+                : (err && err.message ? err.message : 'Failed to apply governance action.');
+            showManagerToast(errorMsg, 'danger');
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalHtml;

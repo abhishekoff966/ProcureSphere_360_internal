@@ -341,7 +341,17 @@ def get_auditor_dashboard_data(period_days: int = 30, user=None, organization=No
     KPI cards, compliance exceptions, recent audit feed, approval feed, and charts.
     When ``org`` is passed, everything is scoped to that organization only.
     """
-    scoped_org = organization or (getattr(user, "effective_organization", None) or getattr(user, "organization", None) if user and not user.is_superuser else None)
+    role_code = getattr(user, "role_code", None) or (
+        user.role.code if getattr(user, "role", None) else None
+    )
+    is_auditor_or_admin = (
+        user.is_superuser
+        or role_code in [Role.AUDITOR, Role.SUPER_ADMIN, "AUDITOR", "SUPER_ADMIN"]
+    ) if user else False
+
+    scoped_org = organization
+    if not scoped_org and user and not is_auditor_or_admin:
+        scoped_org = getattr(user, "effective_organization", None) or getattr(user, "organization", None)
     metrics = get_audit_metrics(period_days=period_days, organization=scoped_org)
 
     # 1. High-Priority Compliance Warnings
@@ -874,7 +884,9 @@ def get_sourcing_activity_audit(
                 "bid_end_date": e.bid_end_date.isoformat(),
                 "is_window_open": is_window_open,
                 "pr_number": e.requisition.pr_number if e.requisition else None,
+                "requisition_number": e.requisition.pr_number if e.requisition else None,
                 "total_bids": total_bids,
+                "bids_count": total_bids,
                 "awarded_vendor": (
                     awarded_bid.vendor.legal_name if awarded_bid and awarded_bid.vendor else None
                 ),
@@ -898,9 +910,14 @@ def get_sourcing_activity_audit(
     return {
         "summary": {
             "total_events": se_stats["total"] or 0,
+            "total_count": se_stats["total"] or 0,
             "awarded_events": se_stats["awarded"] or 0,
+            "awarded_count": se_stats["awarded"] or 0,
             "active_bidding": se_stats["active_bidding"] or 0,
+            "active_bidding_count": se_stats["active_bidding"] or 0,
             "total_bids_submitted": total_bids_submitted,
+            "bids_submitted_count": total_bids_submitted,
+            "bids_count": total_bids_submitted,
         },
         "count": total_count,
         "next": None,
@@ -1293,17 +1310,29 @@ def get_contract_changes_audit(
         total=Count("id"),
         active=Count("id", filter=Q(status=Contract.STATUS_ACTIVE)),
         amended=Count("id", filter=Q(version__gt=1)),
+        total_val=Sum("contract_value"),
+        active_val=Sum("contract_value", filter=Q(status=Contract.STATUS_ACTIVE)),
     )
     overdue_ob_count = base_ob_qs.filter(
         is_fulfilled=False, due_date__lt=today
     ).count()
 
+    total_val = con_stats["total_val"] or Decimal("0.00")
+    active_val = con_stats["active_val"] or Decimal("0.00")
+
     return {
         "summary": {
             "total_contracts": con_stats["total"] or 0,
+            "total_count": con_stats["total"] or 0,
             "active_contracts": con_stats["active"] or 0,
+            "active_count": con_stats["active"] or 0,
             "amended_contracts": con_stats["amended"] or 0,
+            "total_contract_value": f"{total_val:,.2f}",
+            "active_contract_value": f"{active_val:,.2f}",
+            "contract_value": float(total_val),
             "total_overdue_obligations": overdue_ob_count,
+            "overdue_obligations_count": overdue_ob_count,
+            "overdue_count": overdue_ob_count,
         },
         "count": total_count,
         "next": None,

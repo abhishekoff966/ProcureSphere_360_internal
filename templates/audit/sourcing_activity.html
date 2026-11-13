@@ -21,6 +21,38 @@
     </div>
 </div>
 
+<!-- Summary Cards Row -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-cyan">
+            <div class="text-muted small fw-bold text-uppercase">TOTAL SOURCING EVENTS</div>
+            <div class="fs-3 fw-bold text-dark font-heading mt-1">{{ summary.total_events|default:summary.total_count|default:0 }}</div>
+            <div class="text-muted small mt-1">RFQ &amp; RFP Events Created</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-indigo">
+            <div class="text-muted small fw-bold text-uppercase">ACTIVE BIDDING WINDOWS</div>
+            <div class="fs-3 fw-bold text-indigo font-heading mt-1">{{ summary.active_bidding|default:summary.active_bidding_count|default:0 }}</div>
+            <div class="text-muted small mt-1">Open for Supplier Submissions</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-emerald">
+            <div class="text-muted small fw-bold text-uppercase">AWARDED EVENTS</div>
+            <div class="fs-3 fw-bold text-success font-heading mt-1">{{ summary.awarded_events|default:summary.awarded_count|default:0 }}</div>
+            <div class="text-muted small mt-1">Fully Evaluated &amp; Awarded</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="auditor-kpi-card bg-white rounded-4 p-3 border shadow-xs h-100 position-relative border-top-accent-rose">
+            <div class="text-muted small fw-bold text-uppercase">TOTAL SEALED BIDS</div>
+            <div class="fs-3 fw-bold text-dark font-heading mt-1">{{ summary.total_bids_submitted|default:summary.bids_count|default:0 }}</div>
+            <div class="text-muted small mt-1">Sealed Supplier Bids Lodged</div>
+        </div>
+    </div>
+</div>
+
 <div class="card bg-white border rounded-4 shadow-xs overflow-hidden mb-4">
     <!-- Filter Bar -->
     <div class="card-header bg-white border-bottom p-3">
@@ -86,9 +118,15 @@
                         <td>
                             <span class="badge bg-info-subtle text-info border">{{ src.status|default:"ACTIVE" }}</span>
                         </td>
-                        <td><code>{{ src.requisition_number|default:"PR-LINKED" }}</code></td>
+                        <td>
+                            {% if src.pr_number or src.requisition_number %}
+                                <code>{{ src.pr_number|default:src.requisition_number }}</code>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
                         <td class="text-end pe-4">
-                            <strong class="text-dark">{{ src.bids_count|default:1 }} Sealed Bids</strong>
+                            <strong class="text-dark">{{ src.total_bids|default:src.bids_count|default:0 }} Sealed Bids</strong>
                         </td>
                     </tr>
                 {% empty %}

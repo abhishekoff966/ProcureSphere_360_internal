@@ -526,7 +526,10 @@
             await loadKpiSummary();
             await loadAuditHistory();
         } catch (err) {
-            showManagerToast(err.message || 'Failed to apply governance action.', 'danger');
+            const errorMsg = (typeof safeExtractErrorMessage === 'function')
+                ? safeExtractErrorMessage(err, 'Failed to apply governance action.')
+                : (err && err.message ? err.message : 'Failed to apply governance action.');
+            showManagerToast(errorMsg, 'danger');
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalHtml;

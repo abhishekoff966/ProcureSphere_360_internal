@@ -31,6 +31,7 @@ from apps.vendors.models import (
 from apps.vendors.permissions import (
     GovernanceOperatePermission,
     VendorAccessPermission,
+    can_view_governance,
 )
 from apps.vendors.selectors import get_vendor_change_history
 from apps.vendors.services import (
@@ -491,9 +492,23 @@ class VendorViewSet(viewsets.ModelViewSet):
         )
         qs = annotate_governance(base_qs)
 
-        # Scoping aligned with master vendor governance policy
-        from apps.vendors.selectors import scope_vendors_queryset
-        qs = scope_vendors_queryset(qs, user)
+        # Vendor user scoping: external vendor users only see their own vendor record
+        if getattr(user, "is_vendor", False) or getattr(user, "vendor_id", None):
+            if getattr(user, "vendor_id", None):
+                qs = qs.filter(id=user.vendor_id)
+            elif getattr(user, "vendor", None):
+                qs = qs.filter(id=user.vendor.id)
+            else:
+                return qs.none()
+        elif not user.is_superuser and not can_view_governance(user):
+            scoped_org = getattr(user, "effective_organization", None)
+            if scoped_org:
+                qs = qs.filter(
+                    Q(organization=scoped_org)
+                    | Q(organization__isnull=True)
+                    | Q(created_by__organization=scoped_org)
+                    | Q(created_by__department__organization=scoped_org)
+                )
 
         filterset = VendorFilter(self.request.query_params, queryset=qs)
         if not filterset.is_valid():
@@ -1029,7 +1044,16 @@ class VendorGovernanceStatusAPIView(APIView):
                 status=status.HTTP_200_OK,
             )
         except Exception as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            msg = e.messages[0] if hasattr(e, "messages") and e.messages else str(e)
+            if msg.startswith("['") and msg.endswith("']"):
+                msg = msg[2:-2]
+            return Response(
+                {
+                    "error": {"code": "GOVERNANCE_ERROR", "message": msg, "details": {}},
+                    "detail": msg,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 router = DefaultRouter()

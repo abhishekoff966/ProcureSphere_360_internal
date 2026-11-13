@@ -393,9 +393,9 @@
                 ? `<span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1 fw-bold"><i class="fa-solid fa-file-lines me-1"></i>Requisition</span>`
                 : `<span class="badge bg-emerald-subtle text-emerald rounded-pill px-2 py-1 fw-bold"><i class="fa-solid fa-cart-shopping me-1"></i>PO Amendment</span>`;
 
-            const urgencyBadge = it.urgency === 'HIGH'
-                ? `<span class="badge bg-danger rounded-pill ms-1" style="font-size: 0.65rem;">Priority</span>`
-                : '';
+            const urgencyBadge = it.is_out_of_budget
+                ? `<span class="badge bg-danger rounded-pill ms-1" style="font-size: 0.65rem;"><i class="fa-solid fa-triangle-exclamation me-1"></i>Over Budget</span>`
+                : (it.urgency === 'HIGH' ? `<span class="badge bg-danger rounded-pill ms-1" style="font-size: 0.65rem;">Priority</span>` : '');
 
             const statusClass = it.status === 'APPROVED' ? 'bg-success' :
                                 it.status === 'REJECTED' ? 'bg-danger' :
@@ -414,25 +414,47 @@
                 ? `<div class="fw-semibold text-dark">${it.department}</div><div class="text-muted small" style="font-size: 0.75rem;"><i class="fa-regular fa-user me-1"></i>${it.requester_name}</div>`
                 : `<div class="fw-semibold text-dark">${it.vendor_name}</div><div class="text-muted small" style="font-size: 0.75rem;">Dept: ${it.department}</div>`;
 
-            const actionButtons = (isPR && it.can_approve && currentTab === 'pending')
-                ? `
-                    <div class="d-inline-flex gap-1 align-items-center justify-content-end flex-wrap">
-                        <button type="button" onclick="openDecisionModal('PR', '${it.id}', 'APPROVE')" class="btn btn-success btn-sm rounded-pill px-3 fw-semibold shadow-2xs" title="Approve Requisition">
-                            <i class="fa-solid fa-check me-1"></i>Approve
-                        </button>
-                        <button type="button" onclick="openDecisionModal('PR', '${it.id}', 'REJECT')" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold shadow-2xs" title="Reject Requisition">
-                            <i class="fa-solid fa-xmark me-1"></i>Reject
-                        </button>
+            let actionButtons = `
+                <a href="${it.detail_url}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-2xs fw-semibold" title="Inspect Full Requisition & Approval Audit">
+                    Inspect <i class="fa-solid fa-arrow-right ms-1"></i>
+                </a>
+            `;
+
+            if (isPR && currentTab === 'pending') {
+                if (it.is_out_of_budget || it.can_reject) {
+                    // If PR is out of budget: Procure Manager will inspect and reject the request (NO option to approve)
+                    actionButtons = `
+                        <div class="d-inline-flex gap-1 align-items-center justify-content-end flex-wrap">
+                            <button type="button" onclick="openDecisionModal('PR', '${it.id}', 'REJECT')" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold shadow-2xs" title="Reject Out-of-Budget Requisition">
+                                <i class="fa-solid fa-xmark me-1"></i>Reject
+                            </button>
+                            <a href="${it.detail_url}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-2xs fw-semibold" title="Inspect Full Requisition & Approval Audit">
+                                Inspect <i class="fa-solid fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    `;
+                } else {
+                    actionButtons = `
                         <a href="${it.detail_url}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-2xs fw-semibold" title="Inspect Full Requisition & Approval Audit">
                             Inspect <i class="fa-solid fa-arrow-right ms-1"></i>
                         </a>
+                    `;
+                }
+            } else if (it.type === 'PO_APPROVAL' && it.can_approve && currentTab === 'pending') {
+                actionButtons = `
+                    <div class="d-inline-flex gap-1 align-items-center justify-content-end flex-wrap">
+                        <button type="button" onclick="openDecisionModal('PO_APPROVAL', '${it.id}', 'APPROVE')" class="btn btn-success btn-sm rounded-pill px-3 fw-semibold shadow-2xs" title="Approve Purchase Order">
+                            <i class="fa-solid fa-check me-1"></i>Approve
+                        </button>
+                        <button type="button" onclick="openDecisionModal('PO_APPROVAL', '${it.id}', 'REJECT')" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold shadow-2xs" title="Reject Purchase Order">
+                            <i class="fa-solid fa-xmark me-1"></i>Reject
+                        </button>
+                        <a href="${it.detail_url}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-2xs fw-semibold">
+                            Inspect <i class="fa-solid fa-arrow-right ms-1"></i>
+                        </a>
                     </div>
-                `
-                : `
-                    <a href="${it.detail_url}" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-2xs fw-semibold" title="Inspect Full Requisition & Approval Audit">
-                        Inspect <i class="fa-solid fa-arrow-right ms-1"></i>
-                    </a>
                 `;
+            }
 
             html += `
                 <tr>
@@ -515,6 +537,11 @@
 
         commentsInput.value = '';
 
+        if (itemType === 'PR' && action === 'APPROVE') {
+            showManagerToast('Procurement Managers maintain approval oversight only and have no authority to approve PRs.', 'warning');
+            return;
+        }
+
         if (action === 'APPROVE') {
             titleEl.textContent = `Authorize Approval — ${item.reference_number}`;
             titleEl.style.color = '#111827';
@@ -529,7 +556,9 @@
             reqText.className = 'text-muted fw-normal small';
             commentsInput.placeholder = 'Provide optional approval rationale, policy notes, or conditions...';
         } else {
-            titleEl.textContent = `Reject Transaction — ${item.reference_number}`;
+            titleEl.textContent = itemType === 'PR' && item.is_out_of_budget
+                ? `Reject Out-of-Budget Requisition — ${item.reference_number}`
+                : `Reject Transaction — ${item.reference_number}`;
             titleEl.style.color = '#111827';
             if (headerIcon) headerIcon.className = 'fa-solid fa-circle-xmark text-danger';
             submitBtn.className = 'btn btn-danger btn-sm rounded-pill px-4 fw-bold shadow-sm';
@@ -561,7 +590,12 @@
         const comments = (document.getElementById('modalApprovalComments')?.value || '').trim();
 
         if (action === 'REJECT' && !comments) {
-            alert('Reason for rejection is mandatory.');
+            const commentsInput = document.getElementById('modalApprovalComments');
+            if (commentsInput) {
+                commentsInput.classList.add('is-invalid');
+                commentsInput.focus();
+            }
+            showToast('Reason for rejection is mandatory.', 'danger');
             return;
         }
 
@@ -587,7 +621,9 @@
             showToast(res.message || `Transaction ${action.toLowerCase()}ed successfully.`, 'success');
             loadApprovals();
         } catch (err) {
-            alert(`Error submitting approval decision: ${err.message || 'Server error'}`);
+            const rawMsg = err.message || (typeof err === 'string' ? err : 'Server error');
+            const errorMsg = typeof cleanErrorString === 'function' ? cleanErrorString(rawMsg) : rawMsg;
+            showToast(`Error submitting decision: ${errorMsg}`, 'danger');
         } finally {
             submitBtn.disabled = false;
             submitBtnText.textContent = 'Confirm Action';
@@ -595,15 +631,20 @@
     }
 
     function showToast(message, type = 'info') {
+        if (typeof showManagerToast === 'function') {
+            showManagerToast(message, type);
+            return;
+        }
         const container = document.getElementById('managerToastContainer');
         if (!container) return;
+        const safeMsg = typeof cleanErrorString === 'function' ? cleanErrorString(message) : message;
         const toast = document.createElement('div');
         toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0 show shadow`;
         toast.setAttribute('role', 'alert');
         toast.innerHTML = `
             <div class="d-flex">
                 <div class="toast-body small fw-semibold">
-                    <i class="fa-solid fa-${type === 'success' ? 'circle-check' : 'circle-exclamation'} me-2"></i> ${message}
+                    <i class="fa-solid fa-${type === 'success' ? 'circle-check' : 'circle-exclamation'} me-2"></i> ${safeMsg}
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>

@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.http import HttpResponse
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status, viewsets
@@ -6,6 +7,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.accounts.models import Role
 from apps.audit.models import AuditLog
 from apps.audit.permissions import AuditorReadOnlyPermission, IsAuditorOrSuperAdmin
 from apps.audit.selectors import (
@@ -67,6 +69,25 @@ def _get_auditor_org(request):
     user = getattr(request, "user", None) if request else None
     if not user or getattr(user, "is_superuser", False):
         return None
+
+    req_org = None
+    if hasattr(request, "query_params"):
+        req_org = request.query_params.get("org") or request.query_params.get("organization")
+    if not req_org and hasattr(request, "GET"):
+        req_org = request.GET.get("org") or request.GET.get("organization")
+    if req_org:
+        from apps.organization.models import Organization
+        try:
+            return Organization.objects.filter(Q(id=req_org) | Q(code=req_org)).first()
+        except Exception:
+            pass
+
+    role_code = getattr(user, "role_code", None) or (
+        user.role.code if getattr(user, "role", None) else None
+    )
+    if role_code in [Role.AUDITOR, Role.SUPER_ADMIN, "AUDITOR", "SUPER_ADMIN"]:
+        return None
+
     return getattr(user, "effective_organization", None) or getattr(user, "organization", None)
 
 
