@@ -31,6 +31,7 @@ urlpatterns = [
     path("users/", superadmin_views.user_list_view, name="users"),
     path("users/create/", superadmin_views.user_create_view, name="user_create"),
     path("users/<uuid:user_id>/edit/", superadmin_views.user_edit_view, name="user_edit"),
+    path("users/<uuid:user_id>/delete/", superadmin_views.user_delete_view, name="user_delete"),
     path("users/<uuid:user_id>/resend-welcome/", superadmin_views.user_resend_welcome_email_view, name="user_resend_welcome"),
     path("users/<uuid:user_id>/toggle-status/", superadmin_views.user_toggle_status_view, name="user_toggle_status"),
 
@@ -52,8 +53,10 @@ urlpatterns = [
     # Department and cost center management
     path("departments/create/", superadmin_views.dept_create_view, name="dept_create"),
     path("departments/<uuid:dept_id>/edit/", superadmin_views.dept_edit_view, name="dept_edit"),
+    path("departments/<uuid:dept_id>/delete/", superadmin_views.dept_delete_view, name="dept_delete"),
     path("cost-centers/create/", superadmin_views.cost_center_create_view, name="cost_center_create"),
     path("cost-centers/<uuid:cc_id>/edit/", superadmin_views.cost_center_edit_view, name="cost_center_edit"),
+    path("cost-centers/<uuid:cc_id>/delete/", superadmin_views.cost_center_delete_view, name="cost_center_delete"),
     path("cost-centers/options/", superadmin_views.cost_center_options_view, name="cost_center_options"),
 
     # Budget management

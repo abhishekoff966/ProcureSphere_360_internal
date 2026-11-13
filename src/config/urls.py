@@ -187,6 +187,7 @@ urlpatterns = [
     path("api/v1/reports/", include("apps.reports.api_urls")),
     path("api/v1/audit/", include("apps.audit.api_urls")),
     path("api/v1/manager/", include("apps.core.manager_api_urls")),
+    path("api/v1/", include("apps.core.dashboard_api_urls")),
     # OpenAPI Schema & Documentation
     path("api/schema", SpectacularAPIView.as_view()),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

@@ -10,12 +10,12 @@
         {% endif %}
         <div class="row g-3">
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Cost Center</label>
+                <label class="form-label fw-semibold text-secondary small">Cost Center <span class="text-danger">*</span></label>
                 {{ form.cost_center }}
                 {% if form.cost_center.errors %}<div class="text-danger small">{{ form.cost_center.errors }}</div>{% endif %}
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Fiscal Period</label>
+                <label class="form-label fw-semibold text-secondary small">Fiscal Period <span class="text-danger">*</span></label>
                 {{ form.fiscal_period }}
                 {% if not form.fiscal_period.field.queryset.exists %}
                 <div class="form-text text-warning">No fiscal period exists yet. Close this dialog and use Add Fiscal Period to set the name and dates.</div>
@@ -23,7 +23,7 @@
                 {% if form.fiscal_period.errors %}<div class="text-danger small">{{ form.fiscal_period.errors }}</div>{% endif %}
             </div>
             <div class="col-md-12">
-                <label class="form-label fw-semibold text-secondary small">Allocated Amount</label>
+                <label class="form-label fw-semibold text-secondary small">Allocated Amount <span class="text-danger">*</span></label>
                 {{ form.allocated_amount }}
                 {% if form.allocated_amount.errors %}<div class="text-danger small">{{ form.allocated_amount.errors }}</div>{% endif %}
             </div>
