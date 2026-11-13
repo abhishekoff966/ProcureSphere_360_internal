@@ -12,29 +12,29 @@
         {% endif %}
         <div class="row g-3">
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Location Name <span class="text-danger">*</span></label>
+                <label for="id_name" class="form-label fw-semibold text-secondary small">Location Name <span class="text-danger">*</span></label>
                 {{ form.name }}
-                {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors }}</div>{% endif %}
+                {% if form.name.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_name-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.name.errors.0 }}</span></div>{% endif %}
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Location Code <span class="text-danger">*</span></label>
+                <label for="id_code" class="form-label fw-semibold text-secondary small">Location Code <span class="text-danger">*</span></label>
                 {{ form.code }}
-                {% if form.code.errors %}<div class="text-danger small mt-1">{{ form.code.errors }}</div>{% endif %}
+                {% if form.code.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_code-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.code.errors.0 }}</span></div>{% endif %}
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Parent Organization <span class="text-danger">*</span></label>
+                <label for="id_organization" class="form-label fw-semibold text-secondary small">Parent Organization <span class="text-danger">*</span></label>
                 {{ form.organization }}
-                {% if form.organization.errors %}<div class="text-danger small mt-1">{{ form.organization.errors }}</div>{% endif %}
+                {% if form.organization.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_organization-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.organization.errors.0 }}</span></div>{% endif %}
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">City <span class="text-danger">*</span></label>
+                <label for="id_city" class="form-label fw-semibold text-secondary small">City <span class="text-danger">*</span></label>
                 {{ form.city }}
-                {% if form.city.errors %}<div class="text-danger small mt-1">{{ form.city.errors }}</div>{% endif %}
+                {% if form.city.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_city-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.city.errors.0 }}</span></div>{% endif %}
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Country</label>
+                <label for="id_country" class="form-label fw-semibold text-secondary small">Country</label>
                 {{ form.country }}
-                {% if form.country.errors %}<div class="text-danger small mt-1">{{ form.country.errors }}</div>{% endif %}
+                {% if form.country.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_country-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.country.errors.0 }}</span></div>{% endif %}
             </div>
             <div class="col-md-6">
                 <label class="form-label fw-semibold text-secondary small">Status</label>
@@ -44,9 +44,9 @@
                 </div>
             </div>
             <div class="col-12">
-                <label class="form-label fw-semibold text-secondary small">Facility Address / Campus Notes</label>
+                <label for="id_address" class="form-label fw-semibold text-secondary small">Facility Address / Campus Notes</label>
                 {{ form.address }}
-                {% if form.address.errors %}<div class="text-danger small mt-1">{{ form.address.errors }}</div>{% endif %}
+                {% if form.address.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_address-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.address.errors.0 }}</span></div>{% endif %}
             </div>
         </div>
     </div>

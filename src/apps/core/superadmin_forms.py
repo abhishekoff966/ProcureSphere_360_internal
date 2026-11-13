@@ -58,7 +58,26 @@ def _get_form_scoped_org(request):
 
 
 
-class UserAdminForm(forms.ModelForm):
+class BootstrapValidationMixin:
+    """
+    Ensures any field with validation errors receives the .is-invalid CSS class
+    and ARIA accessibility attributes (aria-invalid, aria-describedby) so
+    Bootstrap and screen readers immediately highlight the error.
+    """
+    def clean(self):
+        cleaned_data = super().clean()
+        for field_name in list(self.errors.keys()):
+            if field_name and field_name in self.fields:
+                widget = self.fields[field_name].widget
+                current_classes = widget.attrs.get("class", "form-control")
+                if "is-invalid" not in current_classes:
+                    widget.attrs["class"] = f"{current_classes} is-invalid"
+                widget.attrs["aria-invalid"] = "true"
+                widget.attrs["aria-describedby"] = f"id_{field_name}-error"
+        return cleaned_data
+
+
+class UserAdminForm(BootstrapValidationMixin, forms.ModelForm):
 
 
 
@@ -227,8 +246,9 @@ class UserAdminForm(forms.ModelForm):
 
 
         self.fields["email"].required = True
-
-
+        self.fields["email"].error_messages["required"] = "Email Address is required."
+        self.fields["role"].required = True
+        self.fields["role"].error_messages["required"] = "Role is required."
 
         scoped_org = _get_form_scoped_org(request)
         if not scoped_org and self.instance and getattr(self.instance, "organization_id", None):
@@ -275,20 +295,8 @@ class UserAdminForm(forms.ModelForm):
 
 
         if scoped_org:
-
-
-
             dept_qs = dept_qs.filter(organization=scoped_org)
-
-
-
             cc_qs = cc_qs.filter(department__organization=scoped_org)
-
-
-
-
-
-
 
         self.fields["department"].queryset = dept_qs
         if not self.instance.pk or getattr(self.instance, "_state", None) and self.instance._state.adding:
@@ -374,19 +382,24 @@ class UserAdminForm(forms.ModelForm):
 
 
 
+    def clean_phone_number(self):
+        phone = (self.cleaned_data.get("phone_number") or "").strip()
+        if not phone:
+            return phone
+        import re
+        if not re.match(r"^\+?[0-9\s\-()]{7,20}$", phone):
+            raise forms.ValidationError("Enter a valid phone number.")
+        return phone
+
     def clean_email(self):
-
-
-
         email = self.cleaned_data.get("email", "").strip().lower()
-
-
-
         if not email:
-
-
-
-            raise forms.ValidationError("Email address is required.")
+            raise forms.ValidationError("Email Address is required.")
+        from django.core.validators import validate_email
+        try:
+            validate_email(email)
+        except forms.ValidationError:
+            raise forms.ValidationError("Enter a valid email address.")
 
 
 
@@ -796,7 +809,7 @@ class UserAdminForm(forms.ModelForm):
 
 
 
-class OrganizationAdminForm(forms.ModelForm):
+class OrganizationAdminForm(BootstrapValidationMixin, forms.ModelForm):
     # 1. Organization Administrator
     admin_email = forms.EmailField(
 
@@ -1350,7 +1363,7 @@ class OrganizationAdminForm(forms.ModelForm):
 
 
 
-class DepartmentAdminForm(forms.ModelForm):
+class DepartmentAdminForm(BootstrapValidationMixin, forms.ModelForm):
 
 
 
@@ -1414,62 +1427,29 @@ class DepartmentAdminForm(forms.ModelForm):
 
 
 
+        self.fields["name"].required = True
+        self.fields["code"].required = True
+        self.fields["organization"].required = True
+        self.fields["name"].error_messages["required"] = "Department Name is required."
+        self.fields["code"].error_messages["required"] = "Department Code is required."
+        self.fields["organization"].error_messages["required"] = "Parent Organization is required."
+
         scoped_org = _get_form_scoped_org(request)
-
-
-
         if scoped_org:
-
-
-
             self.fields["organization"].queryset = Organization.objects.filter(id=scoped_org.id)
-
-
-
             self.fields["organization"].initial = scoped_org
-
-
-
             self.fields["organization"].empty_label = None
-
-
-
         else:
-
-
-
             self.fields["organization"].queryset = Organization.objects.filter(is_active=True).order_by("name")
-
-
-
             self.fields["organization"].empty_label = "-- Select Organization --"
 
-
-
-
-
-
-
     def clean_organization(self):
-
-
-
         org = self.cleaned_data.get("organization")
-
-
-
+        if not org:
+            raise forms.ValidationError("Parent Organization is required.")
         scoped_org = _get_form_scoped_org(self.request)
-
-
-
         if scoped_org and org and org.id != scoped_org.id:
-
-
-
             raise forms.ValidationError("You cannot assign a department to another organization.")
-
-
-
         return org
 
 
@@ -1503,7 +1483,7 @@ class DepartmentAdminForm(forms.ModelForm):
 
 
 
-class CostCenterAdminForm(forms.ModelForm):
+class CostCenterAdminForm(BootstrapValidationMixin, forms.ModelForm):
 
 
 
@@ -1608,12 +1588,14 @@ class CostCenterAdminForm(forms.ModelForm):
 
 
         if scoped_org:
-
-
-
             dept_qs = dept_qs.filter(organization=scoped_org)
 
-
+        self.fields["code"].required = True
+        self.fields["name"].required = True
+        self.fields["department"].required = True
+        self.fields["code"].error_messages["required"] = "Cost Center Code is required."
+        self.fields["name"].error_messages["required"] = "Cost Center Name is required."
+        self.fields["department"].error_messages["required"] = "Department is required."
 
         self.fields["department"].queryset = dept_qs
 
@@ -1651,10 +1633,9 @@ class CostCenterAdminForm(forms.ModelForm):
         return code
 
     def clean_department(self):
-
-
-
         dept = self.cleaned_data.get("department")
+        if not dept:
+            raise forms.ValidationError("Department is required.")
 
 
 
@@ -1679,18 +1660,14 @@ class CostCenterAdminForm(forms.ModelForm):
 
 
     def clean_manager(self):
-
-
-
         raw = (self.cleaned_data.get("manager") or "").strip()
-
-
-
         if not raw:
-
-
-
             return None
+        from django.core.validators import validate_email
+        try:
+            validate_email(raw)
+        except forms.ValidationError:
+            raise forms.ValidationError("Enter a valid email address.")
 
 
 
@@ -1850,7 +1827,7 @@ class CostCenterAdminForm(forms.ModelForm):
 
 
 
-class BudgetAdminForm(forms.ModelForm):
+class BudgetAdminForm(BootstrapValidationMixin, forms.ModelForm):
 
 
 
@@ -1962,6 +1939,13 @@ class BudgetAdminForm(forms.ModelForm):
 
 
 
+        self.fields["cost_center"].required = True
+        self.fields["fiscal_period"].required = True
+        self.fields["allocated_amount"].required = True
+        self.fields["cost_center"].error_messages["required"] = "Cost Center is required."
+        self.fields["fiscal_period"].error_messages["required"] = "Fiscal Period is required."
+        self.fields["allocated_amount"].error_messages["required"] = "Allocated Amount is required."
+
         self.fields["cost_center"].queryset = cc_qs
         self.fields["cost_center"].empty_label = "-- Select Cost Center --"
 
@@ -1993,67 +1977,30 @@ class BudgetAdminForm(forms.ModelForm):
 
 
     def clean_allocated_amount(self):
-
-
-
         amount = self.cleaned_data.get("allocated_amount")
-
-
-
-        if amount is None:
-
-
-
-            return amount
-
-
-
+        if amount is None or str(amount).strip() == "":
+            raise forms.ValidationError("Allocated Amount is required.")
         try:
-
-
-
-            amount = Decimal(amount)
-
-
-
+            amount = Decimal(str(amount))
         except (InvalidOperation, TypeError, ValueError):
-
-
-
             raise forms.ValidationError("Enter a valid budget amount.")
-
-
-
-        if amount < 0:
-
-
-
-            raise forms.ValidationError("Allocated amount cannot be negative.")
-
-
-
-        # DecimalField max_digits=14, decimal_places=2 → 12 integer digits.
-
-
-
+        if amount <= 0:
+            raise forms.ValidationError("Allocated Amount must be greater than zero.")
         if amount.quantize(Decimal("0.01")) >= Decimal("1000000000000"):
-
-
-
-            raise forms.ValidationError(
-
-
-
-                "Allocated amount is too large. Use at most 12 digits before the decimal."
-
-
-
-            )
-
-
-
+            raise forms.ValidationError("Allocated amount is too large. Use at most 12 digits before the decimal.")
         return amount.quantize(Decimal("0.01"))
 
+    def clean(self):
+        cleaned_data = super().clean()
+        cc = cleaned_data.get("cost_center")
+        fp = cleaned_data.get("fiscal_period")
+        if cc and fp:
+            qs = Budget.objects.filter(cost_center=cc, fiscal_period=fp)
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                self.add_error("cost_center", "A budget allocation for this Cost Center and Fiscal Period already exists.")
+        return cleaned_data
 
 
 
@@ -2064,7 +2011,8 @@ class BudgetAdminForm(forms.ModelForm):
 
 
 
-class FiscalPeriodAdminForm(forms.ModelForm):
+
+class FiscalPeriodAdminForm(BootstrapValidationMixin, forms.ModelForm):
 
 
 
@@ -2148,6 +2096,19 @@ class FiscalPeriodAdminForm(forms.ModelForm):
     def __init__(self, *args, request=None, **kwargs):
         self.request = request
         super().__init__(*args, **kwargs)
+        self.fields["organization"].required = True
+        self.fields["name"].required = True
+        self.fields["year"].required = True
+        self.fields["period_number"].required = True
+        self.fields["start_date"].required = True
+        self.fields["end_date"].required = True
+        self.fields["organization"].error_messages["required"] = "Parent Organization is required."
+        self.fields["name"].error_messages["required"] = "Fiscal Period Name is required."
+        self.fields["year"].error_messages["required"] = "Year is required."
+        self.fields["period_number"].error_messages["required"] = "Period Number is required."
+        self.fields["start_date"].error_messages["required"] = "Start Date is required."
+        self.fields["end_date"].error_messages["required"] = "End Date is required."
+
         self.fields["start_date"].input_formats = ["%Y-%m-%d"]
         self.fields["end_date"].input_formats = ["%Y-%m-%d"]
         current_year = timezone.localdate().year
@@ -2219,6 +2180,15 @@ class FiscalPeriodAdminForm(forms.ModelForm):
 
 
             self.add_error("end_date", "End date must be on or after the start date.")
+        org = cleaned.get("organization") or _get_form_scoped_org(self.request)
+        year = cleaned.get("year")
+        pn = cleaned.get("period_number")
+        if org and year is not None and pn is not None:
+            qs = FiscalPeriod.objects.filter(organization=org, year=year, period_number=pn)
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                self.add_error("period_number", f"Fiscal period {pn} for year {year} already exists in this organization.")
 
 
 
@@ -2386,7 +2356,7 @@ class FiscalPeriodAdminForm(forms.ModelForm):
 
 
 
-class PolicyAdminForm(forms.ModelForm):
+class PolicyAdminForm(BootstrapValidationMixin, forms.ModelForm):
     steps_data = forms.CharField(widget=forms.HiddenInput(), required=False)
 
     class Meta:
@@ -2449,6 +2419,11 @@ class PolicyAdminForm(forms.ModelForm):
     def __init__(self, *args, request=None, **kwargs):
         self.request = request
         super().__init__(*args, **kwargs)
+
+        self.fields["name"].required = True
+        self.fields["module"].required = True
+        self.fields["name"].error_messages["required"] = "Policy Name is required."
+        self.fields["module"].error_messages["required"] = "Module is required."
 
         scoped_org = _get_form_scoped_org(request)
         if not scoped_org and self.instance and getattr(self.instance, "organization_id", None):
@@ -2670,7 +2645,7 @@ class PolicyAdminForm(forms.ModelForm):
 
 
 
-class LocationAdminForm(forms.ModelForm):
+class LocationAdminForm(BootstrapValidationMixin, forms.ModelForm):
 
     class Meta:
 
@@ -2730,7 +2705,11 @@ class LocationAdminForm(forms.ModelForm):
         self.fields["name"].required = True
         self.fields["code"].required = True
         self.fields["city"].required = True
-        self.fields["city"].error_messages["required"] = "City is mandatory for location."
+        self.fields["organization"].required = True
+        self.fields["name"].error_messages["required"] = "Location Name is required."
+        self.fields["code"].error_messages["required"] = "Location Code is required."
+        self.fields["city"].error_messages["required"] = "City is required."
+        self.fields["organization"].error_messages["required"] = "Parent Organization is required."
         scoped_org = _get_form_scoped_org(request)
         if scoped_org:
             self.fields["organization"].queryset = Organization.objects.filter(id=scoped_org.id)
@@ -2743,6 +2722,15 @@ class LocationAdminForm(forms.ModelForm):
         if not self.instance.pk:
             self.fields["country"].initial = "India"
             self.fields["is_active"].initial = True
+
+    def clean_organization(self):
+        org = self.cleaned_data.get("organization")
+        if not org:
+            raise forms.ValidationError("Parent Organization is required.")
+        scoped_org = _get_form_scoped_org(self.request)
+        if scoped_org and org and org.id != scoped_org.id:
+            raise forms.ValidationError("You cannot assign a location to another organization.")
+        return org
 
     def clean_name(self):
         name = (self.cleaned_data.get("name") or "").strip()

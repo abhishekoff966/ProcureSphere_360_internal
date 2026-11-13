@@ -814,3 +814,378 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     })();
 });
+
+// =============================================================================
+// Universal Accessible Form Validation Engine (ProcureSphere 360)
+// =============================================================================
+(function () {
+    'use strict';
+
+    function escapeHtml(str) {
+        return String(str == null ? '' : str)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function getFieldLabel(input) {
+        if (!input) return 'Field';
+        if (input.getAttribute('data-label')) {
+            return input.getAttribute('data-label').trim();
+        }
+        if (input.getAttribute('aria-label')) {
+            return input.getAttribute('aria-label').replace(/[\*]/g, '').trim();
+        }
+        if (input.id) {
+            var forLabel = document.querySelector('label[for="' + input.id + '"]');
+            if (forLabel) {
+                var clone = forLabel.cloneNode(true);
+                var smalls = clone.querySelectorAll('.small, .text-muted, .badge, i, span.text-muted');
+                smalls.forEach(function (s) { s.remove(); });
+                var txt = clone.textContent.replace(/[\*\(\)]/g, '').replace(/optional/gi, '').trim();
+                if (txt) return txt;
+            }
+        }
+        var parent = input.closest('.col, .col-md-6, .col-md-4, .col-md-8, .col-12, .mb-3, .mb-4, .form-group');
+        if (parent) {
+            var parentLabel = parent.querySelector('label.form-label, label');
+            if (parentLabel && !parentLabel.classList.contains('form-check-label')) {
+                var cloneP = parentLabel.cloneNode(true);
+                var smallsP = cloneP.querySelectorAll('.small, .text-muted, .badge, i, span.text-muted');
+                smallsP.forEach(function (s) { s.remove(); });
+                var txtP = cloneP.textContent.replace(/[\*\(\)]/g, '').replace(/optional/gi, '').trim();
+                if (txtP) return txtP;
+            }
+        }
+        var ph = input.getAttribute('placeholder');
+        if (ph && ph.length > 2 && !ph.toLowerCase().includes('enter') && !ph.toLowerCase().includes('e.g.')) {
+            return ph.trim();
+        }
+        var name = input.getAttribute('name') || '';
+        if (name) {
+            return name.replace(/_/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); }).trim();
+        }
+        return 'Field';
+    }
+
+    function showError(input, message) {
+        if (!input || !message) return;
+        input.classList.add('is-invalid');
+        input.setAttribute('aria-invalid', 'true');
+
+        var errorId = (input.id || input.name || 'field') + '-error';
+        input.setAttribute('aria-describedby', errorId);
+
+        var targetContainer = input.closest('.input-group') || input;
+        var existingError = document.getElementById(errorId);
+        if (!existingError) {
+            existingError = document.createElement('div');
+            existingError.id = errorId;
+            existingError.className = 'invalid-feedback d-block mt-1 small fw-semibold';
+            existingError.setAttribute('role', 'alert');
+            targetContainer.parentNode.insertBefore(existingError, targetContainer.nextSibling);
+        }
+        existingError.innerHTML = '<i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">' + escapeHtml(message) + '</span>';
+        existingError.style.display = 'block';
+
+        var col = input.closest('.col, .col-md-6, .col-md-4, .col-md-8, .col-12, .mb-3, .mb-4');
+        if (col) {
+            var legacyErrors = col.querySelectorAll('.text-danger:not(span.text-danger):not(label):not(i)');
+            legacyErrors.forEach(function (el) {
+                if (el !== existingError && !existingError.contains(el)) {
+                    el.style.display = 'none';
+                }
+            });
+        }
+    }
+
+    function clearError(input) {
+        if (!input) return;
+        input.classList.remove('is-invalid');
+        input.removeAttribute('aria-invalid');
+
+        var errorId = (input.id || input.name || 'field') + '-error';
+        var errorEl = document.getElementById(errorId);
+        if (errorEl) {
+            errorEl.style.display = 'none';
+            errorEl.remove();
+        }
+        if (input.getAttribute('aria-describedby') === errorId) {
+            input.removeAttribute('aria-describedby');
+        }
+    }
+
+    function isFieldRequired(input) {
+        if (input.hasAttribute('required')) return true;
+        var label = input.id ? document.querySelector('label[for="' + input.id + '"]') : null;
+        if (label && label.innerHTML.includes('*')) return true;
+        var parent = input.closest('.col, .col-md-6, .col-md-4, .col-md-8, .col-12, .mb-3, .mb-4');
+        if (parent) {
+            var pLabel = parent.querySelector('label');
+            if (pLabel && pLabel.innerHTML.includes('*')) return true;
+        }
+        var name = (input.name || '').toLowerCase();
+        var knownRequired = ['code', 'name', 'city', 'organization', 'department', 'year', 'period_number', 'start_date', 'end_date', 'allocated_amount', 'role', 'module', 'price_tolerance_pct', 'qty_tolerance_pct', 'delegate_id'];
+        if (knownRequired.indexOf(name) !== -1) return true;
+        return false;
+    }
+
+    function validateField(input) {
+        if (!input || input.type === 'hidden' || input.disabled || input.style.display === 'none') {
+            return null;
+        }
+        var hiddenParent = input.closest('[style*="display: none"], [style*="display:none"], .d-none');
+        if (hiddenParent) {
+            return null;
+        }
+
+        var label = getFieldLabel(input);
+        var val = (input.value || '').trim();
+        var isRequired = isFieldRequired(input);
+        var inputName = (input.name || '').toLowerCase();
+        var inputType = (input.type || '').toLowerCase();
+
+        if (isRequired && (!val || val.length === 0)) {
+            if (input.tagName.toLowerCase() === 'select') {
+                return 'Select a ' + label.replace(/--.*--/g, '').trim() + '.';
+            }
+            return label + ' is required.';
+        }
+
+        if (!val) {
+            return null;
+        }
+
+        if (inputType === 'email' || inputName.includes('email')) {
+            var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(val)) {
+                return 'Enter a valid email address.';
+            }
+        }
+
+        if (inputType === 'tel' || inputName.includes('phone')) {
+            var phonePattern = /^\+?[0-9\s\-()]{7,20}$/;
+            if (!phonePattern.test(val)) {
+                return 'Enter a valid phone number.';
+            }
+        }
+
+        if (inputName === 'code' || inputName.endsWith('_code')) {
+            if (/^[0-9]+$/.test(val)) {
+                return label + ' must contain at least one letter and cannot be numbers-only.';
+            }
+            if (!/[a-zA-Z]/.test(val)) {
+                return label + ' must contain at least one letter.';
+            }
+            if (!/^[a-zA-Z0-9_\-\s\.\/]+$/.test(val)) {
+                return label + ' contains invalid characters. Use letters, numbers, hyphens, dots, and underscores.';
+            }
+        }
+
+        if (inputName === 'name' || inputName === 'city' || inputName.endsWith('_name')) {
+            if (/^[0-9]+$/.test(val)) {
+                return label + ' must contain letters and cannot be numbers-only.';
+            }
+            if (!/[a-zA-Z]/.test(val)) {
+                return label + ' must contain letters.';
+            }
+        }
+
+        if (inputName === 'year') {
+            var yearInt = parseInt(val, 10);
+            var currentYear = new Date().getFullYear();
+            if (isNaN(yearInt) || yearInt < 2000 || yearInt > 2100) {
+                return 'Please enter a valid 4-digit year between 2000 and 2100.';
+            }
+            if (yearInt < currentYear) {
+                return 'Fiscal year cannot be earlier than the current year (' + currentYear + ').';
+            }
+        }
+
+        if (inputName === 'period_number') {
+            var periodInt = parseInt(val, 10);
+            if (isNaN(periodInt) || periodInt < 1 || periodInt > 52) {
+                return 'Period number must be between 1 and 52.';
+            }
+        }
+
+        if (inputName === 'allocated_amount') {
+            var amt = parseFloat(val);
+            if (isNaN(amt) || amt <= 0) {
+                return 'Allocated Amount must be greater than zero.';
+            }
+            if (amt >= 1000000000000) {
+                return 'Allocated amount is too large. Use at most 12 digits before the decimal.';
+            }
+        }
+        if (inputName === 'min_amount') {
+            var minAmt = parseFloat(val);
+            if (isNaN(minAmt) || minAmt < 0) {
+                return 'Minimum amount cannot be negative.';
+            }
+        }
+
+        if (inputName === 'price_tolerance_pct' || inputName === 'qty_tolerance_pct') {
+            if (!/^\d+$/.test(val)) {
+                return label + ' must be a whole number between 0 and 100.';
+            }
+            var pct = parseInt(val, 10);
+            if (pct < 0 || pct > 100) {
+                return label + ' must be between 0 and 100.';
+            }
+        }
+
+        if (inputName === 'end_date') {
+            var form = input.closest('form');
+            if (form) {
+                var startInput = form.querySelector('[name="start_date"]');
+                if (startInput && startInput.value) {
+                    if (val < startInput.value) {
+                        return 'End date must be on or after the start date.';
+                    }
+                }
+            }
+        }
+
+        if (inputName === 'max_amount') {
+            var formP = input.closest('form');
+            if (formP) {
+                var minInput = formP.querySelector('[name="min_amount"]');
+                if (minInput && minInput.value) {
+                    var minVal = parseFloat(minInput.value);
+                    var maxVal = parseFloat(val);
+                    if (!isNaN(minVal) && !isNaN(maxVal) && maxVal < minVal) {
+                        return 'Maximum amount cannot be less than minimum amount.';
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    function initForm(form) {
+        if (!form || form.dataset.psValidatorInitialized === 'true') return;
+        form.dataset.psValidatorInitialized = 'true';
+
+        var fields = form.querySelectorAll('input, select, textarea');
+        fields.forEach(function (field) {
+            if (field.type === 'hidden' || field.type === 'submit' || field.type === 'button') return;
+
+            field.addEventListener('blur', function () {
+                var err = validateField(field);
+                if (err) {
+                    showError(field, err);
+                }
+            });
+
+            field.addEventListener('input', function () {
+                if (field.classList.contains('is-invalid')) {
+                    var err = validateField(field);
+                    if (!err) {
+                        clearError(field);
+                    }
+                }
+            });
+
+            field.addEventListener('change', function () {
+                if (field.classList.contains('is-invalid')) {
+                    var err = validateField(field);
+                    if (!err) {
+                        clearError(field);
+                    }
+                }
+            });
+        });
+
+        form.addEventListener('submit', function (e) {
+            var submitter = e.submitter || document.activeElement;
+            if (submitter && submitter.getAttribute('name') === 'action') {
+                var actionVal = (submitter.getAttribute('value') || '').toUpperCase();
+                if (actionVal === 'REJECT' || actionVal === 'REJECTED') {
+                    var commentsField = form.querySelector('[name="comments"]');
+                    if (commentsField && !commentsField.value.trim()) {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        showError(commentsField, 'Reason for rejection is required.');
+                        commentsField.focus();
+                        return false;
+                    }
+                }
+            }
+
+            var hasError = false;
+            var firstInvalid = null;
+
+            fields.forEach(function (field) {
+                if (field.type === 'hidden' || field.type === 'submit' || field.type === 'button') return;
+                var err = validateField(field);
+                if (err) {
+                    showError(field, err);
+                    if (!firstInvalid) {
+                        firstInvalid = field;
+                    }
+                    hasError = true;
+                }
+            });
+
+            if (hasError) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                    if (firstInvalid.scrollIntoView) {
+                        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+                return false;
+            }
+        }, true);
+    }
+
+    function initAll(root) {
+        var container = root || document;
+        var forms = container.querySelectorAll('form');
+        forms.forEach(function (form) {
+            initForm(form);
+        });
+
+        var invalidFields = container.querySelectorAll('.is-invalid, input[aria-invalid="true"]');
+        invalidFields.forEach(function (field) {
+            field.addEventListener('input', function () {
+                var err = validateField(field);
+                if (!err) {
+                    clearError(field);
+                }
+            });
+            field.addEventListener('change', function () {
+                var err = validateField(field);
+                if (!err) {
+                    clearError(field);
+                }
+            });
+        });
+    }
+
+    window.PSFormValidator = {
+        init: initForm,
+        initAll: initAll,
+        showError: showError,
+        clearError: clearError,
+        validateField: validateField,
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            initAll(document.body);
+        });
+    } else {
+        initAll(document.body);
+    }
+
+    document.addEventListener('htmx:afterSwap', function (e) {
+        initAll(e.detail.target || document.body);
+    });
+    document.addEventListener('htmx:load', function (e) {
+        initAll(e.detail.elt || document.body);
+    });
+})();
