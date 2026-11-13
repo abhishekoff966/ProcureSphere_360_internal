@@ -718,11 +718,9 @@
 
     <!-- GLOBAL ENTERPRISE STANDARDIZED NAVBAR -->
     {% if is_global_superadmin and not scoped_org %}
-    {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/admin/'
-    profile_dropdown_id='adminIndexProfileDropdown' notification_url='/admin/notifications/' %}
+    {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/admin/' profile_dropdown_id='adminIndexProfileDropdown' notification_url='/admin/notifications/' %}
     {% else %}
-    {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/'
-    profile_dropdown_id='adminIndexProfileDropdown' notification_url='/superadmin/notifications/' %}
+    {% include 'partials/global_navbar.html' with sidebar_id='saSidebar' dashboard_url='/superadmin/' profile_dropdown_id='adminIndexProfileDropdown' notification_url='/superadmin/notifications/' %}
     {% endif %}
 
     <!-- MAIN DASHBOARD CONTENT AREA -->
@@ -757,8 +755,7 @@
                             {% else %}
                             <span class="badge rounded-pill fw-bold px-3 py-1.5"
                                 style="background: #DCEBFE; color: #0369A1; font-size: 0.72rem; letter-spacing: 0.04em;">
-                                <i class="fa-solid fa-building me-1"></i> ORG ADMIN &bull; {{
-                                scoped_org.name|default:"HEWLETT PACKARD ENTERPRISE"|upper }}
+                                <i class="fa-solid fa-building me-1"></i> ORG ADMIN &bull; {{ scoped_org.name|default:"HEWLETT PACKARD ENTERPRISE"|upper }}
                             </span>
                             {% endif %}
                             <span class="badge rounded-pill fw-semibold px-3 py-1.5"
@@ -768,13 +765,11 @@
                             </span>
                         </div>
                         <h1 class="h3 fw-bold mb-1" style="color: #1B2A4A; letter-spacing: -0.02em;">
-                            {% if is_global_superadmin and not scoped_org %}Super Admin Control Center{% else
-                            %}Organization Admin Dashboard{% endif %}
+                            {% if is_global_superadmin and not scoped_org %}Super Admin Control Center{% else %}Organization Admin Dashboard{% endif %}
                         </h1>
                         <p class="mb-0 small" style="color: #526789; font-size: 0.88rem;">
                             Welcome, {{ request.user.email|default:"admin@hpe.com" }} &bull; Manage departments, cost
-                            centers, staff users &amp; roles, and operational policies for {{
-                            scoped_org.name|default:"Hewlett Packard Enterprise" }}.
+                            centers, staff users &amp; roles, and operational policies for {{ scoped_org.name|default:"Hewlett Packard Enterprise" }}.
                         </p>
                     </div>
                     <div class="d-flex flex-wrap align-items-center gap-2">
@@ -805,8 +800,7 @@
                                 <span class="text-muted small fw-semibold text-uppercase">Total Organizations</span>
                                 <span class="badge rounded-pill text-bg-info">Tenants</span>
                             </div>
-                            <div class="metric-value" style="color:#00B0B9; font-size: 2.2rem; font-weight: 700;">{{
-                                total_organizations|default:dashboard_organizations.count }}</div>
+                            <div class="metric-value" style="color:#00B0B9; font-size: 2.2rem; font-weight: 700;">{{ total_organizations|default:dashboard_organizations.count }}</div>
                             <div class="mt-2 pt-2 border-top small text-secondary d-flex justify-content-between">
                                 <span>Managed entities</span>
                                 <span class="fw-semibold" style="color:#00B0B9;">View Orgs <i
@@ -825,8 +819,7 @@
                                 <span class="text-muted small fw-semibold text-uppercase">Active Tenants</span>
                                 <span class="badge rounded-pill text-bg-success">Live</span>
                             </div>
-                            <div class="metric-value" style="color:#10B981; font-size: 2.2rem; font-weight: 700;">{{
-                                active_organizations|default:dashboard_organizations.count }}</div>
+                            <div class="metric-value" style="color:#10B981; font-size: 2.2rem; font-weight: 700;">{{ active_organizations|default:dashboard_organizations.count }}</div>
                             <div class="mt-2 pt-2 border-top small text-secondary d-flex justify-content-between">
                                 <span>Active organizations</span>
                                 <span class="fw-semibold" style="color:#10B981;">Active <i
@@ -897,8 +890,7 @@
                                             data-bs-target="#modal-container"
                                             class="btn btn-link p-0 text-decoration-none fw-semibold text-dark text-start"
                                             onclick="event.stopPropagation();">
-                                            <i class="fa-solid fa-user-check text-success me-1"></i> {{
-                                            org.admin_user.email }}
+                                            <i class="fa-solid fa-user-check text-success me-1"></i> {{ org.admin_user.email }}
                                         </button>
                                         {% else %}
                                         <span class="text-muted small">Not Assigned</span>
@@ -953,8 +945,7 @@
                     <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-4 fw-semibold"
                         id="toggleAdminOrgsBtn"
                         onclick="toggleAdminOrgsRows({{ dashboard_organizations|length|add:'-5' }})">
-                        <span id="toggleAdminOrgsText"><i class="fa-solid fa-chevron-down me-1"></i> Show More ({{
-                            dashboard_organizations|length|add:'-5' }} more)</span>
+                        <span id="toggleAdminOrgsText"><i class="fa-solid fa-chevron-down me-1"></i> Show More ({{ dashboard_organizations|length|add:'-5' }} more)</span>
                     </button>
                 </div>
                 {% endif %}
@@ -980,8 +971,7 @@
                                 <span class="badge rounded-pill"
                                     style="background: #E0F2FE; color: #0284C7; font-size: 0.7rem; font-weight: 600; padding: 4px 10px;">Active</span>
                             </div>
-                            <div class="fw-bold my-2" style="color: #00B0B9; font-size: 2.2rem; line-height: 1;">{{
-                                metrics.total_users|default:"11" }}</div>
+                            <div class="fw-bold my-2" style="color: #00B0B9; font-size: 2.2rem; line-height: 1;">{{ metrics.total_users|default:"11" }}</div>
                             <div class="mt-2 pt-2 border-top small d-flex justify-content-between align-items-center"
                                 style="border-color: #E2E8F0 !important; color: #64748B;">
                                 <span>Active sessions</span>
@@ -1006,8 +996,7 @@
                                 <span class="badge rounded-pill"
                                     style="background: #DCFCE7; color: #15803D; font-size: 0.7rem; font-weight: 600; padding: 4px 10px;">Allocated</span>
                             </div>
-                            <div class="fw-bold my-2" style="color: #10B981; font-size: 2.2rem; line-height: 1;">₹{{
-                                metrics.allocated_budget|floatformat:2|default:"750000.00" }}</div>
+                            <div class="fw-bold my-2" style="color: #10B981; font-size: 2.2rem; line-height: 1;">₹{{ metrics.allocated_budget|floatformat:2|default:"750000.00" }}</div>
                             <div class="mt-2 pt-2 border-top small d-flex justify-content-between align-items-center"
                                 style="border-color: #E2E8F0 !important; color: #64748B;">
                                 <span>Across all cost centers</span>
@@ -1033,8 +1022,7 @@
                                     style="background: #FEE2E2; color: #B91C1C; font-size: 0.7rem; font-weight: 600; padding: 4px 10px;">Action
                                     Required</span>
                             </div>
-                            <div class="fw-bold my-2" style="color: #F43F5E; font-size: 2.2rem; line-height: 1;">{{
-                                metrics.pending_pr_count|default:"1" }} PRs</div>
+                            <div class="fw-bold my-2" style="color: #F43F5E; font-size: 2.2rem; line-height: 1;">{{ metrics.pending_pr_count|default:"1" }} PRs</div>
                             <div class="mt-2 pt-2 border-top small d-flex justify-content-between align-items-center"
                                 style="border-color: #E2E8F0 !important; color: #64748B;">
                                 <span>{{ metrics.pending_exceptions|default:"3" }} Match Exceptions</span>
@@ -1059,8 +1047,7 @@
                                 <span class="badge rounded-pill"
                                     style="background: #DBEAFE; color: #1D4ED8; font-size: 0.7rem; font-weight: 600; padding: 4px 10px;">Recorded</span>
                             </div>
-                            <div class="fw-bold my-2" style="color: #2563EB; font-size: 2.2rem; line-height: 1;">{{
-                                metrics.audits_today|default:"128" }}</div>
+                            <div class="fw-bold my-2" style="color: #2563EB; font-size: 2.2rem; line-height: 1;">{{ metrics.audits_today|default:"128" }}</div>
                             <div class="mt-2 pt-2 border-top small d-flex justify-content-between align-items-center"
                                 style="border-color: #E2E8F0 !important; color: #64748B;">
                                 <span>All actions recorded</span>
@@ -1281,8 +1268,7 @@
                                             style="background: #F1F5F9; border-bottom: 1px solid #E2E8F0;">
                                             <span class="fw-bold text-uppercase small"
                                                 style="color: #1B2A4A; letter-spacing: 0.04em;">{{ app.name }}</span>
-                                            <span class="badge bg-white text-secondary border rounded-pill">{{
-                                                app.models|length }}</span>
+                                            <span class="badge bg-white text-secondary border rounded-pill">{{ app.models|length }}</span>
                                         </div>
                                         <div class="list-group list-group-flush">
                                             {% for model in app.models %}
@@ -1296,9 +1282,7 @@
                                                         {{ model.name }}
                                                     </a>
                                                     {% else %}
-                                                    <span
-                                                        class="fw-semibold text-secondary small d-block text-truncate">{{
-                                                        model.name }}</span>
+                                                    <span class="fw-semibold text-secondary small d-block text-truncate">{{ model.name }}</span>
                                                     {% endif %}
                                                 </div>
                                                 <div class="d-inline-flex align-items-center gap-1 flex-shrink-0">
