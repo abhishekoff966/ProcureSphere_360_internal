@@ -1,25 +1,30 @@
 import datetime
 from decimal import Decimal
+
 import pytest
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.accounts.models import Role, User
-from apps.organization.models import Organization, Department, CostCenter, FiscalPeriod
-from apps.budgets.models import Budget
 from apps.approvals.models import ApprovalAction, ApprovalPolicy, ApprovalStep
-from apps.requisitions.models import PurchaseRequisition, PRLine
-from apps.orders.models import PurchaseOrder, POLine
+from apps.audit.models import AuditLog
+from apps.budgets.models import Budget
+from apps.invoices.models import MatchException, PaymentStatus, SupplierInvoice
+from apps.invoices.services import (
+    create_supplier_invoice_service,
+    mark_invoice_paid_service,
+    resolve_match_exception_service,
+)
+from apps.notifications.models import Notification
+from apps.orders.models import POLine, PurchaseOrder
 from apps.orders.services import approve_purchase_order_service
+from apps.organization.models import CostCenter, Department, FiscalPeriod, Organization
 from apps.receipts.models import GoodsReceipt, ReceiptLine
 from apps.receipts.services import create_goods_receipt_service
-from django.core.exceptions import ValidationError
-from apps.invoices.models import SupplierInvoice, MatchException, PaymentStatus
-from apps.invoices.services import resolve_match_exception_service, mark_invoice_paid_service, create_supplier_invoice_service
-from apps.audit.models import AuditLog
-from apps.notifications.models import Notification
+from apps.requisitions.models import PRLine, PurchaseRequisition
 from apps.vendors.models import Vendor, VendorCategory, VendorDocument
 from apps.vendors.services import approve_vendor_service
 
@@ -107,7 +112,7 @@ def test_def_001_brute_force_lockout_enforced(base_test_data):
     client = APIClient()
     for _ in range(5):
         resp = client.post("/api/v1/auth/login/", {"email": "req_report@example.com", "password": "WrongPassword!"}, format="json")
-    
+
     resp = client.post("/api/v1/auth/login/", {"email": "req_report@example.com", "password": "Pass123!Secure"}, format="json")
     assert resp.status_code == status.HTTP_429_TOO_MANY_REQUESTS
     assert resp.data["error"]["code"] == "ACCOUNT_LOCKED"
@@ -166,7 +171,7 @@ def test_def_005_vendor_kyc_approval_audited(base_test_data):
     VendorDocument.objects.create(vendor=vendor, document_type=VendorDocument.DOC_TYPE_TAX, file=dummy_pdf, status=VendorDocument.STATUS_VERIFIED)
     VendorDocument.objects.create(vendor=vendor, document_type=VendorDocument.DOC_TYPE_BANK, file=dummy_pdf, status=VendorDocument.STATUS_VERIFIED)
     VendorDocument.objects.create(vendor=vendor, document_type=VendorDocument.DOC_TYPE_CERT, file=dummy_pdf, status=VendorDocument.STATUS_VERIFIED)
-    
+
     approve_vendor_service(vendor=vendor, manager=base_test_data["proc_mgr"], notes="KYC Approved")
     vendor.refresh_from_db()
     assert vendor.status == Vendor.STATUS_ACTIVE
@@ -312,7 +317,7 @@ def test_def_012_goods_receipt_creates_notification(base_test_data):
         submitted_by=base_test_data["proc_exec"],
     )
     line = POLine.objects.create(po=po, item_description="Gadget", quantity=1, unit_price=Decimal("100.00"))
-    
+
     count_before = Notification.objects.filter(notification_type=Notification.TYPE_GOODS_RECEIVED).count()
     create_goods_receipt_service(
         po=po,
@@ -389,9 +394,9 @@ def test_def_015_failed_login_creates_audit_log_visible_to_auditor(base_test_dat
     """DEF-015: Failed login creates LOGIN_FAILED AuditLog entry visible to auditor."""
     client = APIClient()
     client.post("/api/v1/auth/login/", {"email": "req_report@example.com", "password": "WrongPassword!"}, format="json")
-    
+
     assert AuditLog.objects.filter(action=AuditLog.ACTION_LOGIN_FAILED).exists()
-    
+
     client.force_authenticate(user=base_test_data["auditor"])
     resp = client.get("/api/v1/audit/logs/?action=LOGIN_FAILED")
     assert resp.status_code == status.HTTP_200_OK
@@ -669,6 +674,163 @@ def test_def_020_invoice_number_format_validation(client, base_test_data):
             }],
         )
     assert "alphanumeric" in str(excinfo.value).lower() or "special characters" in str(excinfo.value).lower()
+
+
+@pytest.mark.django_db
+def test_bug_008_finance_dashboard_filtering_dept_and_cost_center(client, base_test_data):
+    """
+    BUG-008: Verify that filtering by specific department or cost center in the Finance & AP Workspace
+    correctly queries and retains open match exceptions linked to Purchase Orders via cost center,
+    even when POs were created directly without an explicit requisition link.
+    """
+    finance_user = base_test_data["finance"]
+    vendor = base_test_data["active_vendor"]
+    dept1 = base_test_data["dept"]
+    cc1 = base_test_data["cc"]
+    dept2 = base_test_data["dept2"]
+    cc2 = base_test_data["cc2"]
+
+    # PO 1: Belongs to Dept 1 / CC 1 directly (no PR)
+    po1 = PurchaseOrder.objects.create(
+        po_number="PO-BUG008-01",
+        vendor=vendor,
+        cost_center=cc1,
+        status=PurchaseOrder.STATUS_ISSUED,
+        total_amount=Decimal("5000.00"),
+    )
+    inv1 = SupplierInvoice.objects.create(
+        invoice_number="INV-BUG008-01",
+        vendor=vendor,
+        po=po1,
+        invoice_date=timezone.now().date(),
+        due_date=timezone.now().date() + datetime.timedelta(days=30),
+        subtotal=Decimal("5000.00"),
+        total_amount=Decimal("5000.00"),
+        status=SupplierInvoice.STATUS_EXCEPTION,
+    )
+    exc1 = MatchException.objects.create(
+        invoice=inv1,
+        exception_type=MatchException.TYPE_PRICE_VARIANCE,
+        status=MatchException.STATUS_OPEN,
+        description="Price variance detected",
+        variance_amount=Decimal("500.00"),
+    )
+
+    # PO 2: Belongs to Dept 2 / CC 2 directly
+    po2 = PurchaseOrder.objects.create(
+        po_number="PO-BUG008-02",
+        vendor=vendor,
+        cost_center=cc2,
+        status=PurchaseOrder.STATUS_ISSUED,
+        total_amount=Decimal("3000.00"),
+    )
+    inv2 = SupplierInvoice.objects.create(
+        invoice_number="INV-BUG008-02",
+        vendor=vendor,
+        po=po2,
+        invoice_date=timezone.now().date(),
+        due_date=timezone.now().date() + datetime.timedelta(days=30),
+        subtotal=Decimal("3000.00"),
+        total_amount=Decimal("3000.00"),
+        status=SupplierInvoice.STATUS_EXCEPTION,
+    )
+    exc2 = MatchException.objects.create(
+        invoice=inv2,
+        exception_type=MatchException.TYPE_PRICE_VARIANCE,
+        status=MatchException.STATUS_OPEN,
+        description="Price variance detected",
+        variance_amount=Decimal("500.00"),
+    )
+
+    client.force_login(finance_user)
+
+    # 1. Unfiltered request should display all open match exceptions
+    resp_unfiltered = client.get("/finance/?dept=&cost_center=")
+    assert resp_unfiltered.status_code == 200
+    exceptions_all = list(resp_unfiltered.context["open_match_exceptions"])
+    assert exc1 in exceptions_all
+    assert exc2 in exceptions_all
+
+    # 2. Filter by Dept 1 should only include exc1
+    resp_dept1 = client.get(f"/finance/?dept={dept1.id}&cost_center=")
+    assert resp_dept1.status_code == 200
+    exceptions_dept1 = list(resp_dept1.context["open_match_exceptions"])
+    assert exc1 in exceptions_dept1
+    assert exc2 not in exceptions_dept1
+
+    # 3. Filter by CC 1 should only include exc1
+    resp_cc1 = client.get(f"/finance/?dept={dept1.id}&cost_center={cc1.id}")
+    assert resp_cc1.status_code == 200
+    exceptions_cc1 = list(resp_cc1.context["open_match_exceptions"])
+    assert exc1 in exceptions_cc1
+    assert exc2 not in exceptions_cc1
+
+    # 4. Filter by Dept 2 should only include exc2
+    resp_dept2 = client.get(f"/finance/?dept={dept2.id}&cost_center=")
+    assert resp_dept2.status_code == 200
+    exceptions_dept2 = list(resp_dept2.context["open_match_exceptions"])
+    assert exc2 in exceptions_dept2
+    assert exc1 not in exceptions_dept2
+
+
+@pytest.mark.django_db
+def test_bug_009_requisition_detail_authorized_access(client, base_test_data):
+    """
+    BUG-009: Verify that authorized users (requester and department approvers) viewing requisitions
+    in their department can access View Details without false 'Access Denied' / 403 errors,
+    while strict multi-tenant isolation continues to block cross-organization access.
+    """
+    requester = base_test_data["requester"]
+    dept_appr = base_test_data["dept_appr"]
+    dept = base_test_data["dept"]
+    cc = base_test_data["cc"]
+
+    pr = PurchaseRequisition.objects.create(
+        pr_number="PR-2026-00706",
+        title="Engineering Laptops & Equipment",
+        requester=requester,
+        department=dept,
+        cost_center=cc,
+        status=PurchaseRequisition.STATUS_SUBMITTED,
+        total_amount=Decimal("150000.00"),
+        justification="Mandatory engineering hardware upgrades",
+        requested_delivery_date=timezone.now().date() + datetime.timedelta(days=7),
+    )
+    PRLine.objects.create(
+        requisition=pr,
+        item_description="High Performance Workstation",
+        quantity=Decimal("5"),
+        unit_of_measure="EA",
+        estimated_unit_price=Decimal("30000.00"),
+    )
+
+    # 1. Requester accesses their own PR
+    client.force_login(requester)
+    resp_req = client.get(f"/requisitions/{pr.id}/")
+    assert resp_req.status_code == 200
+    assert "PR-2026-00706" in resp_req.content.decode()
+
+    # 2. Department Approver in the same department accesses the PR
+    client.force_login(dept_appr)
+    resp_appr = client.get(f"/requisitions/{pr.id}/")
+    assert resp_appr.status_code == 200
+    assert "PR-2026-00706" in resp_appr.content.decode()
+
+    # 3. Cross-organization user should still be denied access (strict multi-tenant boundary)
+    org_other = Organization.objects.create(name="External Competitor Corp", code="EXT-CORP")
+    dept_other = Department.objects.create(name="External Dept", code="EXT-DPT", organization=org_other)
+    req_role = Role.objects.get(code=Role.DEPT_APPROVER)
+    external_user = User.objects.create_user(
+        email="external_lead@extcorp.com",
+        password="Pass123!Secure",
+        role=req_role,
+        department=dept_other,
+        organization=org_other,
+    )
+    client.force_login(external_user)
+    resp_ext = client.get(f"/requisitions/{pr.id}/")
+    assert resp_ext.status_code in [403, 404]
+
 
 
 
