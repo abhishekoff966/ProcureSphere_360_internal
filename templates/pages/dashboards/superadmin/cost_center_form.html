@@ -12,25 +12,25 @@
         {% endif %}
         <div class="row g-3">
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Cost Center Code <span class="text-danger">*</span></label>
+                <label for="id_code" class="form-label fw-semibold text-secondary small">Cost Center Code <span class="text-danger">*</span></label>
                 {{ form.code }}
-                {% if form.code.errors %}<div class="text-danger small mt-1">{{ form.code.errors }}</div>{% endif %}
+                {% if form.code.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_code-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.code.errors.0 }}</span></div>{% endif %}
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Cost Center Name <span class="text-danger">*</span></label>
+                <label for="id_name" class="form-label fw-semibold text-secondary small">Cost Center Name <span class="text-danger">*</span></label>
                 {{ form.name }}
-                {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors }}</div>{% endif %}
+                {% if form.name.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_name-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.name.errors.0 }}</span></div>{% endif %}
             </div>
             <div class="col-12">
-                <label class="form-label fw-semibold text-secondary small">Department <span class="text-danger">*</span></label>
+                <label for="id_department" class="form-label fw-semibold text-secondary small">Department <span class="text-danger">*</span></label>
                 {{ form.department }}
-                {% if form.department.errors %}<div class="text-danger small mt-1">{{ form.department.errors }}</div>{% endif %}
+                {% if form.department.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_department-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.department.errors.0 }}</span></div>{% endif %}
             </div>
             <div class="col-12">
-                <label class="form-label fw-semibold text-secondary small">Manager <span class="text-muted">(Optional)</span></label>
+                <label for="id_manager" class="form-label fw-semibold text-secondary small">Manager <span class="text-muted">(Optional)</span></label>
                 {{ form.manager }}
                 <div class="form-text small text-muted">Enter the email of an existing user or a new manager. Leave blank to keep this cost center unassigned.</div>
-                {% if form.manager.errors %}<div class="text-danger small mt-1">{{ form.manager.errors }}</div>{% endif %}
+                {% if form.manager.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_manager-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.manager.errors.0 }}</span></div>{% endif %}
             </div>
         </div>
     </div>

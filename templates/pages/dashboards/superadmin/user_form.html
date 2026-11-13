@@ -11,14 +11,14 @@
         <div class="row g-3">
             <!-- Row 1: Email & Phone -->
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Email Address <span class="text-danger">*</span></label>
+                <label for="id_email" class="form-label fw-semibold text-secondary small">Email Address <span class="text-danger">*</span></label>
                 {{ form.email }}
-                {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors }}</div>{% endif %}
+                {% if form.email.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_email-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.email.errors.0 }}</span></div>{% endif %}
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Phone Number</label>
+                <label for="id_phone_number" class="form-label fw-semibold text-secondary small">Phone Number</label>
                 {{ form.phone_number }}
-                {% if form.phone_number.errors %}<div class="text-danger small mt-1">{{ form.phone_number.errors }}</div>{% endif %}
+                {% if form.phone_number.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_phone_number-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.phone_number.errors.0 }}</span></div>{% endif %}
             </div>
 
             <!-- Organization (Hidden if Scoped, Dropdown if Global Superadmin) -->
@@ -26,22 +26,22 @@
                 {{ form.organization }}
             {% else %}
             <div class="col-12">
-                <label class="form-label fw-semibold text-secondary small">Organization</label>
+                <label for="id_organization" class="form-label fw-semibold text-secondary small">Organization</label>
                 {{ form.organization }}
-                {% if form.organization.errors %}<div class="text-danger small mt-1">{{ form.organization.errors }}</div>{% endif %}
+                {% if form.organization.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_organization-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.organization.errors.0 }}</span></div>{% endif %}
             </div>
             {% endif %}
 
             <!-- Row 2: Role & Department -->
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Role <span class="text-danger">*</span></label>
+                <label for="id_role" class="form-label fw-semibold text-secondary small">Role <span class="text-danger">*</span></label>
                 {{ form.role }}
-                {% if form.role.errors %}<div class="text-danger small mt-1">{{ form.role.errors }}</div>{% endif %}
+                {% if form.role.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_role-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.role.errors.0 }}</span></div>{% endif %}
             </div>
             <div class="col-md-6" id="department-col">
-                <label class="form-label fw-semibold text-secondary small">Department</label>
+                <label for="id_department" class="form-label fw-semibold text-secondary small">Department</label>
                 {{ form.department }}
-                {% if form.department.errors %}<div class="text-danger small mt-1">{{ form.department.errors }}</div>{% endif %}
+                {% if form.department.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_department-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.department.errors.0 }}</span></div>{% endif %}
             </div>
 
             <!-- Organization-Wide Access Notice (displayed for all Non-Requester Roles) -->
@@ -63,10 +63,10 @@
                     </div>
                     <div class="row g-2">
                         <div class="col-12" id="cost-center-wrapper">
-                            <label class="form-label fw-semibold text-secondary small">Cost Center <span class="text-danger">*</span></label>
+                            <label for="id_cost_center" class="form-label fw-semibold text-secondary small">Cost Center <span class="text-danger">*</span></label>
                             {{ form.cost_center }}
                             <div class="form-text small text-muted">Mandatory for Requesters. Must belong to the selected Department.</div>
-                            {% if form.cost_center.errors %}<div class="text-danger small mt-1">{{ form.cost_center.errors }}</div>{% endif %}
+                            {% if form.cost_center.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_cost_center-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.cost_center.errors.0 }}</span></div>{% endif %}
                         </div>
                     </div>
                 </div>
@@ -93,7 +93,7 @@
                 <div id="copyFeedback" class="text-success small mt-1" style="display:none;">
                     <i class="fa-solid fa-circle-check me-1"></i>Password copied to clipboard!
                 </div>
-                {% if form.password.errors %}<div class="text-danger small mt-1">{{ form.password.errors }}</div>{% endif %}
+                {% if form.password.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_password-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.password.errors.0 }}</span></div>{% endif %}
             </div>
 
             <!-- Automated Email Dispatch (Hidden - Always sends credentials to user's email via Brevo) -->

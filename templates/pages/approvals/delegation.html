@@ -18,8 +18,8 @@
         {% csrf_token %}
         <div class="row g-3">
           <div class="col-md-4">
-            <label class="form-label">Delegate To</label>
-            <select name="delegate_id" class="form-select" required>
+            <label for="id_delegate_id" class="form-label fw-semibold">Delegate To <span class="text-danger">*</span></label>
+            <select name="delegate_id" id="id_delegate_id" class="form-select" required>
               <option value="">-- Select User --</option>
               {% for u in eligible_delegates %}
                 <option value="{{ u.pk }}">{{ u.email }} ({{ u.role.name }})</option>
@@ -27,19 +27,19 @@
             </select>
           </div>
           <div class="col-md-3">
-            <label class="form-label">Start Date</label>
-            <input type="date" name="start_date" class="form-control" required>
+            <label for="id_start_date" class="form-label fw-semibold">Start Date <span class="text-danger">*</span></label>
+            <input type="date" name="start_date" id="id_start_date" class="form-control" required>
           </div>
           <div class="col-md-3">
-            <label class="form-label">End Date</label>
-            <input type="date" name="end_date" class="form-control" required>
+            <label for="id_end_date" class="form-label fw-semibold">End Date <span class="text-danger">*</span></label>
+            <input type="date" name="end_date" id="id_end_date" class="form-control" required>
           </div>
           <div class="col-md-2 d-flex align-items-end">
-            <button type="submit" class="btn btn-primary w-100">Set Delegate</button>
+            <button type="submit" class="btn btn-primary w-100 fw-bold">Set Delegate</button>
           </div>
           <div class="col-12">
-            <label class="form-label">Reason (optional)</label>
-            <input type="text" name="reason" class="form-control" placeholder="e.g. Annual leave">
+            <label for="id_reason" class="form-label fw-semibold">Reason (optional)</label>
+            <input type="text" name="reason" id="id_reason" class="form-control" placeholder="e.g. Annual leave">
           </div>
         </div>
       </form>

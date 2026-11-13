@@ -616,8 +616,7 @@
         <div class="px-2 pt-2">
             <div class="workspace-heading sa-workspace-header">
                 <i class="fa-solid fa-user-shield me-2"></i>
-                <span>{% if is_global_superadmin and not scoped_org %}SUPER ADMIN WORKSPACE{% else %}ADMIN WORKSPACE{%
-                    endif %}</span>
+                <span>{% if is_global_superadmin and not scoped_org %}SUPER ADMIN WORKSPACE{% else %}ADMIN WORKSPACE{% endif %}</span>
             </div>
         </div>
 
@@ -874,7 +873,7 @@
                             </thead>
                             <tbody>
                                 {% for org in dashboard_organizations %}
-                                <tr{% if forloop.counter> 5 %} class="admin-org-extra-row d-none"{% endif %}
+                                <tr{% if forloop.counter > 5 %} class="admin-org-extra-row d-none"{% endif %}
                                     style="cursor: pointer;" onclick="if (!event.target.closest('a, button')) {
                                     window.location.href='/admin/organizations/{{ org.pk }}/'; }">
                                     <td class="ps-4 fw-bold text-primary">

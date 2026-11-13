@@ -111,19 +111,19 @@
         {% endif %}
         <div class="row g-3">
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Code <span class="text-danger fw-bold">*</span></label>
+                <label for="id_code" class="form-label fw-semibold text-secondary small">Organization Code <span class="text-danger fw-bold">*</span></label>
                 {{ form.code }}
-                {% if form.code.errors %}<div class="text-danger small mt-1 fw-semibold"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.code.errors|striptags }}</div>{% endif %}
+                {% if form.code.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_code-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.code.errors|striptags }}</span></div>{% endif %}
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Name <span class="text-danger fw-bold">*</span></label>
+                <label for="id_name" class="form-label fw-semibold text-secondary small">Organization Name <span class="text-danger fw-bold">*</span></label>
                 {{ form.name }}
-                {% if form.name.errors %}<div class="text-danger small mt-1 fw-semibold"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.name.errors|striptags }}</div>{% endif %}
+                {% if form.name.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_name-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.name.errors|striptags }}</span></div>{% endif %}
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold text-secondary small">Tax Identifier</label>
+                <label for="id_tax_identifier" class="form-label fw-semibold text-secondary small">Tax Identifier</label>
                 {{ form.tax_identifier }}
-                {% if form.tax_identifier.errors %}<div class="text-danger small mt-1 fw-semibold"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.tax_identifier.errors|striptags }}</div>{% endif %}
+                {% if form.tax_identifier.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_tax_identifier-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.tax_identifier.errors|striptags }}</span></div>{% endif %}
             </div>
             <div class="col-md-6">
                 <label class="form-label fw-semibold text-secondary small">Status (Activate / Deactivate)</label>
@@ -147,9 +147,9 @@
                 </div>
             </div>
             <div class="col-12">
-                <label class="form-label fw-semibold text-secondary small">Registered Address</label>
+                <label for="id_address" class="form-label fw-semibold text-secondary small">Registered Address</label>
                 {{ form.address }}
-                {% if form.address.errors %}<div class="text-danger small mt-1 fw-semibold"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.address.errors|striptags }}</div>{% endif %}
+                {% if form.address.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_address-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.address.errors|striptags }}</span></div>{% endif %}
             </div>
 
             <!-- Organization Administrator Provisioning -->

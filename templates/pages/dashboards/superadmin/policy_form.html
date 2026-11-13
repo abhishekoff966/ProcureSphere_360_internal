@@ -48,69 +48,69 @@
             <div class="tab-pane fade show active" id="tab-scope" role="tabpanel">
                 <div class="row g-3">
                     <div class="col-md-8">
-                        <label class="form-label fw-semibold text-secondary small">Policy Name <span class="text-danger">*</span></label>
+                        <label for="id_name" class="form-label fw-semibold text-secondary small">Policy Name <span class="text-danger">*</span></label>
                         {{ form.name }}
-                        {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors }}</div>{% endif %}
+                        {% if form.name.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_name-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.name.errors.0 }}</span></div>{% endif %}
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold text-secondary small">Currency</label>
+                        <label for="id_currency" class="form-label fw-semibold text-secondary small">Currency</label>
                         {{ form.currency }}
-                        {% if form.currency.errors %}<div class="text-danger small mt-1">{{ form.currency.errors }}</div>{% endif %}
+                        {% if form.currency.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_currency-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.currency.errors.0 }}</span></div>{% endif %}
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold text-secondary small">Transaction Type / Module <span class="text-danger">*</span></label>
+                        <label for="id_module" class="form-label fw-semibold text-secondary small">Transaction Type / Module <span class="text-danger">*</span></label>
                         {{ form.module }}
-                        {% if form.module.errors %}<div class="text-danger small mt-1">{{ form.module.errors }}</div>{% endif %}
+                        {% if form.module.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_module-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.module.errors.0 }}</span></div>{% endif %}
                     </div>
 
                     {% if form.organization.is_hidden %}
                         {{ form.organization }}
                     {% else %}
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold text-secondary small">Organization</label>
+                        <label for="id_policy_organization" class="form-label fw-semibold text-secondary small">Organization</label>
                         {{ form.organization }}
-                        {% if form.organization.errors %}<div class="text-danger small mt-1">{{ form.organization.errors }}</div>{% endif %}
+                        {% if form.organization.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_organization-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.organization.errors.0 }}</span></div>{% endif %}
                     </div>
                     {% endif %}
 
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold text-secondary small">Department Scope</label>
+                        <label for="id_policy_department" class="form-label fw-semibold text-secondary small">Department Scope</label>
                         {{ form.department }}
                         <div class="form-text small text-muted">Leave blank for All Departments (Default policy).</div>
-                        {% if form.department.errors %}<div class="text-danger small mt-1">{{ form.department.errors }}</div>{% endif %}
+                        {% if form.department.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_department-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.department.errors.0 }}</span></div>{% endif %}
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold text-secondary small">Cost Center Scope</label>
+                        <label for="id_policy_cost_center" class="form-label fw-semibold text-secondary small">Cost Center Scope</label>
                         {{ form.cost_center }}
                         <div class="form-text small text-muted">Leave blank for All Cost Centers under department.</div>
-                        {% if form.cost_center.errors %}<div class="text-danger small mt-1">{{ form.cost_center.errors }}</div>{% endif %}
+                        {% if form.cost_center.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_cost_center-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.cost_center.errors.0 }}</span></div>{% endif %}
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold text-secondary small">Minimum Amount <span class="text-danger">*</span></label>
+                        <label for="id_min_amount" class="form-label fw-semibold text-secondary small">Minimum Amount <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text bg-light text-muted fw-bold" id="currPrefixMin">₹</span>
                             {{ form.min_amount }}
                         </div>
-                        {% if form.min_amount.errors %}<div class="text-danger small mt-1">{{ form.min_amount.errors }}</div>{% endif %}
+                        {% if form.min_amount.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_min_amount-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.min_amount.errors.0 }}</span></div>{% endif %}
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold text-secondary small">Maximum Amount (Upper Bound)</label>
+                        <label for="id_max_amount" class="form-label fw-semibold text-secondary small">Maximum Amount (Upper Bound)</label>
                         <div class="input-group">
                             <span class="input-group-text bg-light text-muted fw-bold" id="currPrefixMax">₹</span>
                             {{ form.max_amount }}
                         </div>
                         <div class="form-text small text-muted">Leave blank for unlimited (no ceiling).</div>
-                        {% if form.max_amount.errors %}<div class="text-danger small mt-1">{{ form.max_amount.errors }}</div>{% endif %}
+                        {% if form.max_amount.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_max_amount-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.max_amount.errors.0 }}</span></div>{% endif %}
                     </div>
 
                     <div class="col-12">
-                        <label class="form-label fw-semibold text-secondary small">Description & Governance Notes</label>
+                        <label for="id_description" class="form-label fw-semibold text-secondary small">Description & Governance Notes</label>
                         {{ form.description }}
-                        {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors }}</div>{% endif %}
+                        {% if form.description.errors %}<div class="invalid-feedback d-block mt-1 small fw-semibold" id="id_description-error" role="alert"><i class="fa-solid fa-circle-exclamation me-1 text-danger"></i><span class="text-danger">{{ form.description.errors.0 }}</span></div>{% endif %}
                     </div>
 
                     <!-- Active Policy Switch -->
