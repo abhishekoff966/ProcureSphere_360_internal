@@ -75,10 +75,6 @@ class IsAdminOrReadOnly(BasePermission):
             or role_code in [Role.SUPER_ADMIN, "SUPER_ADMIN"]
         ):
             return True
-        if role_code in [Role.REQUESTER, "REQUESTER"]:
-            if isinstance(view, CostCenterViewSet) and request.method in SAFE_METHODS:
-                return True
-            return False
         return request.method in SAFE_METHODS
 
 

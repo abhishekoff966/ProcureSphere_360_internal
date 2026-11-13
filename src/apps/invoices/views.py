@@ -23,7 +23,6 @@ from apps.vendors.models import Vendor
 
 from .selectors import scope_invoices_queryset
 
-
 INTERNAL_INVOICE_ROLES = [
     Role.FINANCE_AP,
     Role.SUPER_ADMIN,

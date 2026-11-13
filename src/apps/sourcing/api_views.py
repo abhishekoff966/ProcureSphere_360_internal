@@ -211,9 +211,9 @@ class SourcingEventViewSet(
     @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):
         _require_manage(request)
+        event = self.get_object()
         payload = ReasonPayload(data=request.data)
         payload.is_valid(raise_exception=True)
-        event = self.get_object()
         services.cancel_sourcing_event_service(
             event=event, user=request.user, reason=payload.validated_data["reason"]
         )
@@ -279,10 +279,10 @@ class SourcingEventViewSet(
     @action(detail=True, methods=["post"], url_path="evaluate/(?P<stage>(?i:technical|commercial))")
     def evaluate(self, request, pk=None, stage=None):
         _require_manage(request)
+        event = self.get_object()
         stage_lower = (stage or "").lower()
         payload = EvaluationPayload(data=request.data)
         payload.is_valid(raise_exception=True)
-        event = self.get_object()
         bid = get_object_or_404(VendorBid, pk=payload.validated_data["bid_id"], event=event)
         fn = (
             services.record_technical_evaluation_service
@@ -322,9 +322,9 @@ class SourcingEventViewSet(
     @action(detail=True, methods=["post"], url_path="recommend-award")
     def recommend_award(self, request, pk=None):
         _require_manage(request)
+        event = self.get_object()
         payload = RecommendAwardPayload(data=request.data)
         payload.is_valid(raise_exception=True)
-        event = self.get_object()
         bid = get_object_or_404(VendorBid, pk=payload.validated_data["bid_id"], event=event)
         decision = services.recommend_award_service(
             event=event,
@@ -342,9 +342,9 @@ class SourcingEventViewSet(
         permission_classes=[AwardApprovalPermission],
     )
     def approve_award(self, request, pk=None):
+        event = self.get_object()
         payload = CommentsPayload(data=request.data)
         payload.is_valid(raise_exception=True)
-        event = self.get_object()
         decision = services.approve_award_service(
             event=event, approver=request.user, comments=payload.validated_data["comments"]
         )
@@ -358,9 +358,9 @@ class SourcingEventViewSet(
         permission_classes=[AwardApprovalPermission],
     )
     def reject_award(self, request, pk=None):
+        event = self.get_object()
         payload = ReasonPayload(data=request.data)
         payload.is_valid(raise_exception=True)
-        event = self.get_object()
         decision = services.reject_award_service(
             event=event, approver=request.user, comments=payload.validated_data["reason"]
         )

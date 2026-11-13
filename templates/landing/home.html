@@ -374,6 +374,11 @@ html.direct-to-contact body {
   display: none;
 }
 
+@keyframes mobileBadgeBounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(3px); }
+}
+
 @media (max-width: 900px) {
   .desktop-module-hint {
     display: none !important;
@@ -414,12 +419,6 @@ html.direct-to-contact body {
     pointer-events: none;
     animation: mobileBadgeBounce 1.8s infinite ease-in-out;
   }
-}
-
-@keyframes mobileBadgeBounce {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(3px); }
-}
 
   /* Perfectly Center Title on all cards in mobile view (never cut off or shifted right) */
   .uiverse-card .title,

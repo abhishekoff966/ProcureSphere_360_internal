@@ -1805,21 +1805,12 @@ class ManagerSupplierCompareAPIView(APIView):
         vendor_b_id = request.GET.get("vendor_b")
 
         if not vendor_a_id or not vendor_b_id:
-            vendors = list(Vendor.objects.all().order_by("-created_at")[:2])
-            if len(vendors) >= 2:
-                vendor_a = vendors[0]
-                vendor_b = vendors[1]
-            elif len(vendors) == 1:
-                vendor_a = vendors[0]
-                vendor_b = vendors[0]
-            else:
-                return Response(
-                    {"error": {"code": "VALIDATION_ERROR", "message": "Both vendor_a and vendor_b query parameters are required."}},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-        else:
-            vendor_a = get_object_or_404(Vendor, pk=vendor_a_id)
-            vendor_b = get_object_or_404(Vendor, pk=vendor_b_id)
+            return Response(
+                {"error": {"code": "VALIDATION_ERROR", "message": "Both vendor_a and vendor_b query parameters are required."}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        vendor_a = get_object_or_404(Vendor, pk=vendor_a_id)
+        vendor_b = get_object_or_404(Vendor, pk=vendor_b_id)
 
         def get_vendor_summary(v):
             latest_sc = v.scorecards.order_by("-created_at").first()
@@ -2369,7 +2360,7 @@ class ManagerApprovalActionAPIView(APIView):
             role_code = getattr(request.user, "role_code", None) or (
                 request.user.role.code if getattr(request.user, "role", None) else None
             )
-            if role_code in [Role.PROC_MGR, "PROC_MGR"] and item_type != 'PR':
+            if role_code in [Role.PROC_MGR, "PROC_MGR"] and item_type not in ['PR', 'PO_AMENDMENT', 'PO']:
                 return Response(
                     {'error': 'Permission Denied: Procurement Managers maintain approval oversight only and cannot approve or reject.'},
                     status=status.HTTP_403_FORBIDDEN,
@@ -2577,7 +2568,7 @@ class ManagerApprovalActionAPIView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        except (PurchaseRequisition.DoesNotExist, POAmendment.DoesNotExist, PurchaseOrder.DoesNotExist):
+        except (PurchaseRequisition.DoesNotExist, POAmendment.DoesNotExist, PurchaseOrder.DoesNotExist, ValueError):
             return Response(
                 {'error': f"Target {item_type} record with ID {item_id} not found."},
                 status=status.HTTP_404_NOT_FOUND,

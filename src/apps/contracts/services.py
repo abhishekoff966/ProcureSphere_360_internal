@@ -128,9 +128,9 @@ def create_contract_service(
 
         contract = None
         for attempt in range(15):
-            cand_number = generate_document_number(Contract, "contract_number", "CON", offset=attempt)
             try:
                 with transaction.atomic():
+                    cand_number = generate_document_number(Contract, "contract_number", "CON", offset=attempt)
                     contract = Contract.objects.create(
                         contract_number=cand_number,
                         title=title.strip(),

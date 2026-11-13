@@ -241,74 +241,77 @@ class PurchaseRequisitionSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        lines_data = self.initial_data.get("line_items", self.initial_data.get("lines", []))
-        if not lines_data:
-            raise serializers.ValidationError({"lines": ["At least one line item is required."]})
-        validated_data.pop("lines", None)
+        from django.db import transaction
 
-        if not validated_data.get("pr_number"):
-            from apps.core.services import generate_document_number
+        with transaction.atomic():
+            lines_data = self.initial_data.get("line_items", self.initial_data.get("lines", []))
+            if not lines_data:
+                raise serializers.ValidationError({"lines": ["At least one line item is required."]})
+            validated_data.pop("lines", None)
 
-            validated_data["pr_number"] = generate_document_number(
-                PurchaseRequisition, "pr_number", "PR"
+            if not validated_data.get("pr_number"):
+                from apps.core.services import generate_document_number
+
+                validated_data["pr_number"] = generate_document_number(
+                    PurchaseRequisition, "pr_number", "PR"
+                )
+
+            pr = super().create(validated_data)
+
+            total = Decimal("0.00")
+            for item in lines_data:
+                qty = Decimal(str(item.get("quantity", 1)))
+                if qty <= Decimal("0.00"):
+                    raise serializers.ValidationError(
+                        {"quantity": "Quantity must be greater than zero."}
+                    )
+                if qty % 1 != 0:
+                    raise serializers.ValidationError(
+                        {"quantity": "Quantity must be a whole number (no decimal points allowed)."}
+                    )
+                price = Decimal(
+                    str(
+                        item.get("estimated_unit_price")
+                        if item.get("estimated_unit_price") is not None
+                        else item.get("unit_price", 0)
+                    )
+                )
+                line_tot = qty * price
+                total += line_tot
+                PRLine.objects.create(
+                    requisition=pr,
+                    item_description=item.get("item_description", "Line Item"),
+                    quantity=qty,
+                    unit_of_measure=item.get("unit_of_measure", "EA"),
+                    estimated_unit_price=price,
+                    estimated_total=line_tot,
+                    specifications=item.get("specifications", ""),
+                )
+
+            if total > Decimal("0.00"):
+                pr.total_amount = total
+                pr.save(update_fields=["total_amount"])
+
+            from apps.audit.models import AuditLog
+
+            req_user = (
+                self.context.get("request").user
+                if self.context.get("request")
+                else getattr(pr, "requester", None)
+            )
+            AuditLog.objects.create(
+                actor=req_user if req_user and req_user.is_authenticated else None,
+                action=AuditLog.ACTION_CREATE,
+                target_model="PurchaseRequisition",
+                target_object_id=str(pr.id),
+                new_state={
+                    "pr_number": pr.pr_number,
+                    "status": pr.status,
+                    "total_amount": str(pr.total_amount),
+                },
             )
 
-        pr = super().create(validated_data)
-
-        total = Decimal("0.00")
-        for item in lines_data:
-            qty = Decimal(str(item.get("quantity", 1)))
-            if qty <= Decimal("0.00"):
-                raise serializers.ValidationError(
-                    {"quantity": "Quantity must be greater than zero."}
-                )
-            if qty % 1 != 0:
-                raise serializers.ValidationError(
-                    {"quantity": "Quantity must be a whole number (no decimal points allowed)."}
-                )
-            price = Decimal(
-                str(
-                    item.get("estimated_unit_price")
-                    if item.get("estimated_unit_price") is not None
-                    else item.get("unit_price", 0)
-                )
-            )
-            line_tot = qty * price
-            total += line_tot
-            PRLine.objects.create(
-                requisition=pr,
-                item_description=item.get("item_description", "Line Item"),
-                quantity=qty,
-                unit_of_measure=item.get("unit_of_measure", "EA"),
-                estimated_unit_price=price,
-                estimated_total=line_tot,
-                specifications=item.get("specifications", ""),
-            )
-
-        if total > Decimal("0.00"):
-            pr.total_amount = total
-            pr.save(update_fields=["total_amount"])
-
-        from apps.audit.models import AuditLog
-
-        req_user = (
-            self.context.get("request").user
-            if self.context.get("request")
-            else getattr(pr, "requester", None)
-        )
-        AuditLog.objects.create(
-            actor=req_user if req_user and req_user.is_authenticated else None,
-            action=AuditLog.ACTION_CREATE,
-            target_model="PurchaseRequisition",
-            target_object_id=str(pr.id),
-            new_state={
-                "pr_number": pr.pr_number,
-                "status": pr.status,
-                "total_amount": str(pr.total_amount),
-            },
-        )
-
-        return pr
+            return pr
 
     def update(self, instance, validated_data):
         lines_data = self.initial_data.get("line_items", self.initial_data.get("lines", None))
@@ -374,7 +377,7 @@ class CanCreateRequisitionPermission(permissions.BasePermission):
 
         if not request.user.is_superuser and (
             getattr(request.user, "is_vendor", False)
-            or role_code in [Role.VENDOR_USER, Role.STORES_RECEIVER, Role.LEGAL_MGR]
+            or role_code in [Role.VENDOR_USER]
         ):
             return False
 
@@ -400,6 +403,7 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
         PurchaseRequisition.objects.select_related("requester", "department", "cost_center")
         .prefetch_related("lines", "attachments")
         .all()
+        .order_by("-created_at")
     )
     serializer_class = PurchaseRequisitionSerializer
     permission_classes = [
@@ -417,8 +421,8 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
             user.role.code if hasattr(user, "role") and user.role else None
         )
 
-        # Vendors, Stores Receivers, and Legal have zero access to requisitions (DEF-046)
-        if getattr(user, "is_vendor", False) or role_code in [Role.VENDOR_USER, Role.STORES_RECEIVER, Role.LEGAL_MGR]:
+        # External vendor users have zero access to requisitions
+        if getattr(user, "is_vendor", False) or role_code in [Role.VENDOR_USER, "VENDOR_USER"]:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Access to purchase requisitions is denied for your role.")
 
@@ -428,6 +432,8 @@ class PurchaseRequisitionViewSet(viewsets.ModelViewSet):
             Role.PROC_MGR,
             Role.AUDITOR,
             Role.FINANCE_AP,
+            Role.STORES_RECEIVER,
+            Role.LEGAL_MGR,
         ]:
             qs = self.queryset
         elif role_code == Role.DEPT_APPROVER:

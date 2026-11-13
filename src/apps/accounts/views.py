@@ -1,3 +1,5 @@
+import time
+
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
@@ -72,6 +74,7 @@ def portal_login_view(request):
 
 
             login(request, user)
+            request.session["_last_activity_ts"] = time.time()
 
 
 
@@ -141,6 +144,27 @@ def portal_login_view(request):
             from apps.accounts.models import User
 
             inactive_user = User.objects.filter(email__iexact=email).first()
+
+            try:
+                from apps.audit.models import AuditLog
+                from apps.audit.services import create_audit_log_service
+
+                matched_user = User.objects.filter(email__iexact=str(email).strip()).first()
+                create_audit_log_service(
+                    actor=matched_user,
+                    action=AuditLog.ACTION_LOGIN_FAILED,
+                    target_model="User",
+                    target_object_id=str(matched_user.id if matched_user else email),
+                    new_state={
+                        "event": "LOGIN_FAILED",
+                        "email": str(email).strip().lower(),
+                        "reason": "Account deactivated" if (inactive_user and not inactive_user.is_active) else "Invalid credentials",
+                    },
+                    request=request,
+                )
+            except Exception:
+                pass
+
             if (
                 inactive_user
                 and inactive_user.check_password(password)
@@ -158,7 +182,12 @@ def portal_login_view(request):
 
 
 
-    return render(request, "pages/login.html")
+    context = {}
+    if request.GET.get("session_expired") == "1":
+        context["session_expired_notice"] = (
+            "Your session timed out after 5 minutes of inactivity. Please sign in again."
+        )
+    return render(request, "pages/login.html", context)
 
 
 
@@ -300,9 +329,15 @@ def portal_logout_view(request):
 
     logout(request)
 
-    if request.GET.get("reason") == "new_tab":
+    reason = request.GET.get("reason")
+    if reason == "new_tab":
         messages.info(request, "Your previous session expired due to multiple active tabs. Please sign in again.")
         return redirect("/login/?session_expired=1")
+
+    if reason == "inactivity":
+        response = redirect("/login/?session_expired=1")
+        response.set_cookie("ps360_just_logged_out", "1", max_age=60, path="/", samesite="Lax")
+        return response
 
     messages.info(request, "You have been logged out successfully.")
 

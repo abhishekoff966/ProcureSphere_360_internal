@@ -73,6 +73,10 @@ class NotificationSerializer(serializers.ModelSerializer):
         return obj.updated_at.isoformat()
 
     def to_internal_value(self, data):
+        if not isinstance(data, dict):
+            raise serializers.ValidationError(
+                {"non_field_errors": ["Invalid payload format. Expected a JSON object of key-value pairs, but received a list."]}
+            )
         allowed_fields = {
             "recipient",
             "notification_type",

@@ -371,28 +371,34 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
 
 
     def create(self, validated_data):
-        if not validated_data.get("po_number"):
-            from apps.core.services import generate_document_number
-            validated_data["po_number"] = generate_document_number(PurchaseOrder, "po_number", "PO")
-        lines_data = self.initial_data.get("lines", [])
-        po = super().create(validated_data)
-        if lines_data and isinstance(lines_data, list):
-            subtotal = Decimal("0.00")
-            for item in lines_data:
-                line = POLine.objects.create(
-                    po=po,
-                    item_description=item.get("item_description", "Item"),
-                    quantity=Decimal(str(item.get("quantity", "1"))),
-                    unit_price=Decimal(str(item.get("unit_price", "0.00"))),
-                    unit_of_measure=item.get("unit_of_measure", "EA"),
+        from django.db import transaction
+
+        with transaction.atomic():
+            if not validated_data.get("po_number"):
+                from apps.core.services import generate_document_number
+
+                validated_data["po_number"] = generate_document_number(
+                    PurchaseOrder, "po_number", "PO"
                 )
-                subtotal += line.line_total
-            tax = subtotal * Decimal("0.10")
-            po.subtotal = subtotal
-            po.tax_amount = tax
-            po.total_amount = subtotal + tax
-            po.save(update_fields=["subtotal", "tax_amount", "total_amount"])
-        return po
+            lines_data = self.initial_data.get("lines", [])
+            po = super().create(validated_data)
+            if lines_data and isinstance(lines_data, list):
+                subtotal = Decimal("0.00")
+                for item in lines_data:
+                    line = POLine.objects.create(
+                        po=po,
+                        item_description=item.get("item_description", "Item"),
+                        quantity=Decimal(str(item.get("quantity", "1"))),
+                        unit_price=Decimal(str(item.get("unit_price", "0.00"))),
+                        unit_of_measure=item.get("unit_of_measure", "EA"),
+                    )
+                    subtotal += line.line_total
+                tax = subtotal * Decimal("0.10")
+                po.subtotal = subtotal
+                po.tax_amount = tax
+                po.total_amount = subtotal + tax
+                po.save(update_fields=["subtotal", "tax_amount", "total_amount"])
+            return po
 
     def get_vendor_risk_level(self, obj):
         latest_risk = obj.vendor.risk_records.order_by("-created_at").first()
@@ -839,7 +845,8 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"], url_path="issue")
     def issue(self, request, pk=None):
         """APPROVED -> ISSUED. Notifies the vendor and requester."""
-        po = self.get_object()
+        base_qs = scope_purchase_orders_queryset(self.queryset, request.user)
+        po = get_object_or_404(base_qs, pk=pk)
         return self._run_lifecycle_action(
             issue_purchase_order_service, po=po, actor=request.user
         )

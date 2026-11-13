@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -50,8 +51,17 @@ def list_view(request):
             .order_by("-created_at")
         )
 
+    paginator = Paginator(items, 10)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    query_params = request.GET.copy()
+    query_params.pop("page", None)
+    querystring = query_params.urlencode()
+
     context = {
-        "items": items,
+        "items": page_obj,
+        "page_obj": page_obj,
+        "paginator": paginator,
+        "querystring": querystring,
         "role_code": role_code,
         "is_stores_receiver": role_code == Role.STORES_RECEIVER,
         "receivable_statuses": RECEIVABLE_PO_STATUSES,

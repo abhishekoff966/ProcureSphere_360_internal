@@ -26,7 +26,7 @@ class CanManageScorecards(permissions.BasePermission):
         role = getattr(request.user, "role_code", None) or (
             request.user.role.code if getattr(request.user, "role", None) else None
         )
-        if not request.user.is_superuser and role in [Role.REQUESTER, Role.DEPT_APPROVER]:
+        if not request.user.is_superuser and role in [Role.REQUESTER, Role.DEPT_APPROVER, Role.LEGAL_MGR]:
             return False
         if request.method in permissions.SAFE_METHODS:
             return True

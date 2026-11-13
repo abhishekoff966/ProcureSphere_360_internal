@@ -46,3 +46,11 @@ def layout_context(request):
         elif role_code in [Role.REQUESTER, "REQUESTER"]:
             return {"base_layout": "layouts/requester_base.html"}
     return {}
+
+
+def session_security_context(request):
+    """Exposes the configured global inactivity timeout (seconds) to templates."""
+    timeout_seconds = int(getattr(django_settings, "SESSION_IDLE_TIMEOUT_SECONDS", 300))
+    return {
+        "session_idle_timeout_seconds": timeout_seconds,
+    }
