@@ -204,7 +204,12 @@ window.updateUserStatusLabel = function(el) {
             ccSelect.innerHTML = '<option value="">-- Select Cost Center --</option>';
             return;
         }
-        fetch('/superadmin/cost-centers/options/?department=' + encodeURIComponent(deptId))
+        var userId = "{% if is_edit %}{{ form.instance.pk }}{% endif %}";
+        var url = '/superadmin/cost-centers/options/?department=' + encodeURIComponent(deptId);
+        if (userId) {
+            url += '&user_id=' + encodeURIComponent(userId);
+        }
+        fetch(url)
             .then(function(res) { return res.text(); })
             .then(function(html) {
                 var currentVal = ccSelect.value;
